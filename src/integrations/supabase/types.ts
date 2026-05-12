@@ -14,7 +14,234 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      alertas: {
+        Row: {
+          created_at: string
+          detalle: string | null
+          entidad: string | null
+          id: string
+          mensaje: string
+          referencia: string | null
+          resuelta: boolean
+          severidad: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          detalle?: string | null
+          entidad?: string | null
+          id?: string
+          mensaje: string
+          referencia?: string | null
+          resuelta?: boolean
+          severidad?: string
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          detalle?: string | null
+          entidad?: string | null
+          id?: string
+          mensaje?: string
+          referencia?: string | null
+          resuelta?: boolean
+          severidad?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      archivos_carga: {
+        Row: {
+          created_at: string
+          estado: string
+          id: string
+          nombre: string
+          registros: number
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          estado?: string
+          id?: string
+          nombre: string
+          registros?: number
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          estado?: string
+          id?: string
+          nombre?: string
+          registros?: number
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      centros_costo: {
+        Row: {
+          codigo: string
+          created_at: string
+          id: string
+          nombre: string
+          user_id: string
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          id?: string
+          nombre: string
+          user_id: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          id?: string
+          nombre?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      dispositivos: {
+        Row: {
+          asignado_a: string | null
+          created_at: string
+          estado: string | null
+          fabricante: string | null
+          id: string
+          imei: string
+          modelo: string | null
+          so: string | null
+          ultimo_checkin: string | null
+          user_id: string
+        }
+        Insert: {
+          asignado_a?: string | null
+          created_at?: string
+          estado?: string | null
+          fabricante?: string | null
+          id?: string
+          imei: string
+          modelo?: string | null
+          so?: string | null
+          ultimo_checkin?: string | null
+          user_id: string
+        }
+        Update: {
+          asignado_a?: string | null
+          created_at?: string
+          estado?: string | null
+          fabricante?: string | null
+          id?: string
+          imei?: string
+          modelo?: string | null
+          so?: string | null
+          ultimo_checkin?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      lineas: {
+        Row: {
+          centro_costo: string | null
+          consumo_mb: number | null
+          costo_mensual: number | null
+          created_at: string
+          estado: string | null
+          id: string
+          imei: string | null
+          msisdn: string
+          plan: string | null
+          ultimo_uso: string | null
+          user_id: string
+        }
+        Insert: {
+          centro_costo?: string | null
+          consumo_mb?: number | null
+          costo_mensual?: number | null
+          created_at?: string
+          estado?: string | null
+          id?: string
+          imei?: string | null
+          msisdn: string
+          plan?: string | null
+          ultimo_uso?: string | null
+          user_id: string
+        }
+        Update: {
+          centro_costo?: string | null
+          consumo_mb?: number | null
+          costo_mensual?: number | null
+          created_at?: string
+          estado?: string | null
+          id?: string
+          imei?: string | null
+          msisdn?: string
+          plan?: string | null
+          ultimo_uso?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pops: {
+        Row: {
+          centro_costo: string | null
+          codigo: string
+          created_at: string
+          estado: string | null
+          id: string
+          responsable: string | null
+          ubicacion: string | null
+          user_id: string
+        }
+        Insert: {
+          centro_costo?: string | null
+          codigo: string
+          created_at?: string
+          estado?: string | null
+          id?: string
+          responsable?: string | null
+          ubicacion?: string | null
+          user_id: string
+        }
+        Update: {
+          centro_costo?: string | null
+          codigo?: string
+          created_at?: string
+          estado?: string | null
+          id?: string
+          responsable?: string | null
+          ubicacion?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
