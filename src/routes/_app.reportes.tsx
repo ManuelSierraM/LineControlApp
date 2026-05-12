@@ -21,7 +21,7 @@ function ReportesPage() {
     queryFn: async () => {
       const out: Record<string, number> = {};
       for (const r of REPORTES) {
-        const { count } = await supabase.from(r.key).select("*", { count: "exact", head: true });
+        const { count } = await supabase.from(r.key as any).select("*", { count: "exact", head: true });
         out[r.key] = count ?? 0;
       }
       return out;
@@ -29,7 +29,7 @@ function ReportesPage() {
   });
 
   const exportar = async (tabla: string, titulo: string) => {
-    const { data, error } = await supabase.from(tabla).select("*").limit(5000);
+    const { data, error } = await supabase.from(tabla as any).select("*").limit(5000);
     if (error || !data || data.length === 0) { toast.error("Sin datos para exportar"); return; }
     const headers = Object.keys(data[0]);
     const csv = [

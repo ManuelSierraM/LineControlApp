@@ -11,6 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AppReportesRouteImport } from './routes/_app.reportes'
+import { Route as AppPopsRouteImport } from './routes/_app.pops'
+import { Route as AppLineasRouteImport } from './routes/_app.lineas'
+import { Route as AppDispositivosRouteImport } from './routes/_app.dispositivos'
+import { Route as AppCargarRouteImport } from './routes/_app.cargar'
+import { Route as AppAlertasRouteImport } from './routes/_app.alertas'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -21,30 +28,110 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReportesRoute = AppReportesRouteImport.update({
+  id: '/reportes',
+  path: '/reportes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPopsRoute = AppPopsRouteImport.update({
+  id: '/pops',
+  path: '/pops',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLineasRoute = AppLineasRouteImport.update({
+  id: '/lineas',
+  path: '/lineas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDispositivosRoute = AppDispositivosRouteImport.update({
+  id: '/dispositivos',
+  path: '/dispositivos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCargarRoute = AppCargarRouteImport.update({
+  id: '/cargar',
+  path: '/cargar',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAlertasRoute = AppAlertasRouteImport.update({
+  id: '/alertas',
+  path: '/alertas',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AppRoute
+  '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/alertas': typeof AppAlertasRoute
+  '/cargar': typeof AppCargarRoute
+  '/dispositivos': typeof AppDispositivosRoute
+  '/lineas': typeof AppLineasRoute
+  '/pops': typeof AppPopsRoute
+  '/reportes': typeof AppReportesRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof AppRoute
   '/login': typeof LoginRoute
+  '/alertas': typeof AppAlertasRoute
+  '/cargar': typeof AppCargarRoute
+  '/dispositivos': typeof AppDispositivosRoute
+  '/lineas': typeof AppLineasRoute
+  '/pops': typeof AppPopsRoute
+  '/reportes': typeof AppReportesRoute
+  '/': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_app': typeof AppRoute
+  '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/alertas': typeof AppAlertasRoute
+  '/_app/cargar': typeof AppCargarRoute
+  '/_app/dispositivos': typeof AppDispositivosRoute
+  '/_app/lineas': typeof AppLineasRoute
+  '/_app/pops': typeof AppPopsRoute
+  '/_app/reportes': typeof AppReportesRoute
+  '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/alertas'
+    | '/cargar'
+    | '/dispositivos'
+    | '/lineas'
+    | '/pops'
+    | '/reportes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login'
-  id: '__root__' | '/_app' | '/login'
+  to:
+    | '/login'
+    | '/alertas'
+    | '/cargar'
+    | '/dispositivos'
+    | '/lineas'
+    | '/pops'
+    | '/reportes'
+    | '/'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/login'
+    | '/_app/alertas'
+    | '/_app/cargar'
+    | '/_app/dispositivos'
+    | '/_app/lineas'
+    | '/_app/pops'
+    | '/_app/reportes'
+    | '/_app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AppRoute: typeof AppRoute
+  AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
 }
 
@@ -64,23 +151,84 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/': {
+      id: '/_app/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reportes': {
+      id: '/_app/reportes'
+      path: '/reportes'
+      fullPath: '/reportes'
+      preLoaderRoute: typeof AppReportesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/pops': {
+      id: '/_app/pops'
+      path: '/pops'
+      fullPath: '/pops'
+      preLoaderRoute: typeof AppPopsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/lineas': {
+      id: '/_app/lineas'
+      path: '/lineas'
+      fullPath: '/lineas'
+      preLoaderRoute: typeof AppLineasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dispositivos': {
+      id: '/_app/dispositivos'
+      path: '/dispositivos'
+      fullPath: '/dispositivos'
+      preLoaderRoute: typeof AppDispositivosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/cargar': {
+      id: '/_app/cargar'
+      path: '/cargar'
+      fullPath: '/cargar'
+      preLoaderRoute: typeof AppCargarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/alertas': {
+      id: '/_app/alertas'
+      path: '/alertas'
+      fullPath: '/alertas'
+      preLoaderRoute: typeof AppAlertasRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppAlertasRoute: typeof AppAlertasRoute
+  AppCargarRoute: typeof AppCargarRoute
+  AppDispositivosRoute: typeof AppDispositivosRoute
+  AppLineasRoute: typeof AppLineasRoute
+  AppPopsRoute: typeof AppPopsRoute
+  AppReportesRoute: typeof AppReportesRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAlertasRoute: AppAlertasRoute,
+  AppCargarRoute: AppCargarRoute,
+  AppDispositivosRoute: AppDispositivosRoute,
+  AppLineasRoute: AppLineasRoute,
+  AppPopsRoute: AppPopsRoute,
+  AppReportesRoute: AppReportesRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  AppRoute: AppRoute,
+  AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
