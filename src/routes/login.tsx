@@ -7,6 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
+import { lovable } from "@/integrations/lovable";
+
+async function signInWithGoogle() {
+  const result = await lovable.auth.signInWithOAuth("google", {
+    redirect_uri: window.location.origin,
+  });
+  if (result.error) toast.error(result.error.message ?? "Error con Google");
+}
 
 export const Route = createFileRoute("/login")({ component: LoginPage });
 
