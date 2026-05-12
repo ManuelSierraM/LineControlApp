@@ -90,7 +90,7 @@ function CargarPage() {
       let inserted = 0;
       for (let i = 0; i < normalized.length; i += 500) {
         const c = normalized.slice(i, i + 500);
-        const { error, count } = await supabase.from(tipo).insert(c, { count: "exact" });
+        const { error, count } = await supabase.from(tipo).insert(c as any, { count: "exact" });
         if (error) throw error;
         inserted += count ?? c.length;
       }
