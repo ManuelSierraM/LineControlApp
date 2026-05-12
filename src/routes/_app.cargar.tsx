@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { Upload, FileSpreadsheet, CheckCircle2, Loader2 } from "lucide-react";
+import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
@@ -21,12 +21,17 @@ const FIELD_MAP: Record<Tipo, Record<string, string>> = {
   pops: { codigo: "codigo", code: "codigo", ubicacion: "ubicacion", direccion: "ubicacion", centro_costo: "centro_costo", centro: "centro_costo", estado: "estado", responsable: "responsable" },
 };
 
+const CARDS: { tipo: Tipo; titulo: string; descripcion: string; icon: React.ComponentType<any> }[] = [
+  { tipo: "lineas", titulo: "Maestro de Líneas", descripcion: "Archivo principal con todas las líneas corporativas", icon: Wifi },
+  { tipo: "dispositivos", titulo: "Devices UEM", descripcion: "Datos de dispositivos desde plataforma UEM", icon: Smartphone },
+  { tipo: "pops", titulo: "Inventario POPS", descripcion: "Asignación física de equipos por centro", icon: MapPin },
+];
+
 function CargarPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [tipo, setTipo] = useState<Tipo>("lineas");
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<Tipo | null>(null);
+  const [guideTipo, setGuideTipo] = useState<Tipo | null>(null);
 
   const { data: historial } = useQuery({
     queryKey: ["archivos_carga"],
@@ -40,6 +45,16 @@ function CargarPage() {
     const ext = f.name.split(".").pop()?.toLowerCase();
     if (ext === "csv") {
       Papa.parse(f, { header: true, skipEmptyLines: true, complete: (r) => resolve(r.data as any), error: reject });
+    } else if (ext === "json") {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(String(e.target?.result ?? "[]"));
+          resolve(Array.isArray(parsed) ? parsed : [parsed]);
+        } catch (err) { reject(err); }
+      };
+      reader.onerror = reject;
+      reader.readAsText(f);
     } else {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -54,9 +69,9 @@ function CargarPage() {
     }
   });
 
-  const handleUpload = async () => {
-    if (!file || !user) return;
-    setBusy(true);
+  const handleUpload = async (tipo: Tipo, file: File) => {
+    if (!user) return;
+    setBusy(tipo);
     try {
       const rows = await parseFile(file);
       const map = FIELD_MAP[tipo];
@@ -70,14 +85,12 @@ function CargarPage() {
         return out;
       }).filter((r) => Object.keys(r).length > 1);
 
-      if (normalized.length === 0) { toast.error("No se encontraron filas válidas"); setBusy(false); return; }
-
-      const chunks: any[][] = [];
-      for (let i = 0; i < normalized.length; i += 500) chunks.push(normalized.slice(i, i + 500));
+      if (normalized.length === 0) { toast.error("No se encontraron filas válidas"); setBusy(null); return; }
 
       let inserted = 0;
-      for (const c of chunks) {
-        const { error, count } = await supabase.from(tipo).insert(c, { count: "exact" });
+      for (let i = 0; i < normalized.length; i += 500) {
+        const c = normalized.slice(i, i + 500);
+        const { error, count } = await supabase.from(tipo).insert(c as any, { count: "exact" });
         if (error) throw error;
         inserted += count ?? c.length;
       }
@@ -86,59 +99,36 @@ function CargarPage() {
         user_id: user.id, nombre: file.name, tipo, registros: inserted, estado: "completado",
       });
 
-      // Recompute alerts after upload
       await regenerateAlerts(user.id);
-
-      toast.success(`${inserted} registros importados`);
-      setFile(null);
+      toast.success(`${inserted} registros importados en ${tipo}`);
       qc.invalidateQueries();
     } catch (e: any) {
       console.error(e);
       toast.error(`Error: ${e.message ?? "no se pudo procesar"}`);
-    } finally { setBusy(false); }
+    } finally { setBusy(null); }
   };
 
   return (
     <div>
-      <PageHeader title="Cargar Archivos" subtitle="Importa CSV o Excel para Líneas, Dispositivos y POPS" />
+      <PageHeader title="Cargar Archivos" subtitle="Sube los maestros para ejecutar el cruce de información y generar alertas." />
       <div className="space-y-6 p-6">
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-          <h3 className="font-semibold">Nueva carga</h3>
-          <p className="mt-1 text-xs text-muted-foreground">Selecciona el tipo de archivo y súbelo. Acepta .csv, .xlsx, .xls</p>
-          <div className="mt-5 grid gap-4 md:grid-cols-[200px_1fr_auto]">
-            <Select value={tipo} onValueChange={(v) => setTipo(v as Tipo)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="lineas">Maestro de Líneas</SelectItem>
-                <SelectItem value="dispositivos">Dispositivos UEM</SelectItem>
-                <SelectItem value="pops">Inventario POPS</SelectItem>
-              </SelectContent>
-            </Select>
-            <label className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed border-border bg-background px-4 py-3 text-sm transition-colors hover:bg-accent">
-              <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
-              <span className="flex-1 truncate text-foreground">{file ? file.name : "Selecciona un archivo..."}</span>
-              <input type="file" accept=".csv,.xlsx,.xls" hidden onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-            </label>
-            <Button onClick={handleUpload} disabled={!file || busy}>
-              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-              Importar
-            </Button>
-          </div>
-          <div className="mt-4 rounded-lg bg-accent/40 p-3 text-xs text-muted-foreground">
-            <p className="font-medium text-foreground">Columnas reconocidas:</p>
-            <p className="mt-1">{Object.keys(FIELD_MAP[tipo]).join(", ")}</p>
-          </div>
-        </div>
+        {CARDS.map((c) => (
+          <UploadCard
+            key={c.tipo}
+            card={c}
+            busy={busy === c.tipo}
+            onFile={(f) => handleUpload(c.tipo, f)}
+            onGuide={() => setGuideTipo(c.tipo)}
+          />
+        ))}
 
-        <div className="rounded-xl border border-border bg-card shadow-sm">
-          <div className="border-b border-border p-4">
-            <h3 className="font-semibold">Historial de cargas</h3>
-          </div>
-          <div className="divide-y divide-border">
-            {(historial ?? []).length === 0 ? (
-              <p className="p-8 text-center text-sm text-muted-foreground">No hay cargas registradas</p>
-            ) : (
-              historial!.map((h) => (
+        {(historial ?? []).length > 0 && (
+          <div className="rounded-xl border border-border bg-card shadow-sm">
+            <div className="border-b border-border p-4">
+              <h3 className="font-semibold">Historial de cargas</h3>
+            </div>
+            <div className="divide-y divide-border">
+              {historial!.map((h) => (
                 <div key={h.id} className="flex items-center gap-4 p-4">
                   <CheckCircle2 className="h-5 w-5 text-success" />
                   <div className="min-w-0 flex-1">
@@ -147,9 +137,102 @@ function CargarPage() {
                   </div>
                   <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-medium text-success">{h.estado}</span>
                 </div>
-              ))
-            )}
+              ))}
+            </div>
           </div>
+        )}
+      </div>
+
+      <Dialog open={!!guideTipo} onOpenChange={(o) => !o && setGuideTipo(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Formato guía — {guideTipo && CARDS.find((c) => c.tipo === guideTipo)?.titulo}</DialogTitle>
+            <DialogDescription>
+              Tu archivo (CSV, Excel o JSON) debe tener encabezados con cualquiera de los siguientes nombres. Mayúsculas y espacios no importan.
+            </DialogDescription>
+          </DialogHeader>
+          {guideTipo && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {Object.keys(FIELD_MAP[guideTipo]).map((k) => (
+                  <code key={k} className="rounded-md bg-muted px-2 py-1 text-xs">{k}</code>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Filas sin columnas reconocidas se descartan automáticamente.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function UploadCard({
+  card, busy, onFile, onGuide,
+}: {
+  card: { tipo: Tipo; titulo: string; descripcion: string; icon: React.ComponentType<any> };
+  busy: boolean;
+  onFile: (f: File) => void;
+  onGuide: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const Icon = card.icon;
+
+  return (
+    <div className="rounded-xl border border-border bg-card shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3 p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">{card.titulo}</h3>
+            <p className="text-sm text-muted-foreground">{card.descripcion}</p>
+          </div>
+        </div>
+        <button
+          onClick={onGuide}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+        >
+          <HelpCircle className="h-4 w-4" /> Ver formato guía
+        </button>
+      </div>
+
+      <div className="px-5 pb-5">
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault(); setDragOver(false);
+            const f = e.dataTransfer.files?.[0];
+            if (f) onFile(f);
+          }}
+          className={`flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed px-6 py-12 text-center transition-colors ${
+            dragOver ? "border-primary bg-primary/5" : "border-border bg-background"
+          }`}
+        >
+          {busy ? (
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          ) : (
+            <Upload className="h-8 w-8 text-muted-foreground" />
+          )}
+          <div>
+            <p className="font-medium text-foreground">
+              {busy ? "Procesando archivo..." : "Arrastra un archivo aquí o haz clic para seleccionar"}
+            </p>
+            <p className="text-xs text-muted-foreground">.xlsx, .csv, .json</p>
+          </div>
+          <Button variant="secondary" size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>
+            Seleccionar archivo
+          </Button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".csv,.xlsx,.xls,.json"
+            hidden
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }}
+          />
         </div>
       </div>
     </div>
