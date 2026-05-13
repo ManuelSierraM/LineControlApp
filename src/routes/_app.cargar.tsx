@@ -312,6 +312,79 @@ function CargarPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={borrarOpen} onOpenChange={(o) => { setBorrarOpen(o); if (!o) setPurgarDatos(false); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Filter className="h-4 w-4" /> Borrar registros del historial</DialogTitle>
+            <DialogDescription>Selecciona los filtros para acotar qué registros se eliminarán.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Tipo de carga</Label>
+              <Select value={filtroTipo} onValueChange={(v) => setFiltroTipo(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="lineas">Maestro de Líneas</SelectItem>
+                  <SelectItem value="dispositivos">Devices UEM</SelectItem>
+                  <SelectItem value="pops">Inventario POPS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Desde</Label>
+                <Input type="date" value={filtroDesde} onChange={(e) => setFiltroDesde(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Hasta</Label>
+                <Input type="date" value={filtroHasta} onChange={(e) => setFiltroHasta(e.target.value)} />
+              </div>
+            </div>
+            <label className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-3 text-sm">
+              <Checkbox checked={purgarDatos} onCheckedChange={(v) => setPurgarDatos(!!v)} className="mt-0.5" />
+              <span>
+                Borrar también los <strong>datos cargados</strong> de las tablas correspondientes
+                <span className="block text-xs text-muted-foreground">Eliminará líneas, dispositivos o POPS según el tipo seleccionado.</span>
+              </span>
+            </label>
+            <div className="rounded-md bg-muted/40 p-3 text-sm">
+              Coinciden <strong>{afectados.length}</strong> de {(historial ?? []).length} registros visibles.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setBorrarOpen(false)}>Cancelar</Button>
+            <Button variant="destructive" disabled={afectados.length === 0} onClick={() => setConfirmOpen(true)}>
+              <Trash2 className="mr-1.5 h-4 w-4" /> Borrar {afectados.length}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmar borrado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminarán <strong>{afectados.length}</strong> registros del historial
+              {purgarDatos && <> y <strong>todos los datos cargados</strong> de {filtroTipo === "todos" ? "líneas, dispositivos y POPS" : filtroTipo}</>}.
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(e) => { e.preventDefault(); ejecutarBorrado(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1.5 h-4 w-4" />}
+              Sí, borrar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
