@@ -3,10 +3,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, X } from "lucide-react";
+import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
@@ -95,6 +100,13 @@ function CargarPage() {
   const qc = useQueryClient();
   const [busy, setBusy] = useState<Tipo | null>(null);
   const [guideTipo, setGuideTipo] = useState<Tipo | null>(null);
+  const [borrarOpen, setBorrarOpen] = useState(false);
+  const [filtroTipo, setFiltroTipo] = useState<"todos" | Tipo>("todos");
+  const [filtroDesde, setFiltroDesde] = useState("");
+  const [filtroHasta, setFiltroHasta] = useState("");
+  const [purgarDatos, setPurgarDatos] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const { data: historial } = useQuery({
     queryKey: ["archivos_carga"],
@@ -103,6 +115,52 @@ function CargarPage() {
       return data ?? [];
     },
   });
+
+  const matchesFilter = (h: any) => {
+    if (filtroTipo !== "todos" && h.tipo !== filtroTipo) return false;
+    const t = new Date(h.created_at).getTime();
+    if (filtroDesde && t < new Date(filtroDesde).getTime()) return false;
+    if (filtroHasta && t > new Date(filtroHasta).getTime() + 86400000) return false;
+    return true;
+  };
+  const afectados = (historial ?? []).filter(matchesFilter);
+
+  const eliminarRegistroIndividual = async (h: any) => {
+    if (!user) return;
+    await supabase.from("archivos_carga").delete().eq("id", h.id);
+    toast.success("Registro de historial eliminado");
+    qc.invalidateQueries({ queryKey: ["archivos_carga"] });
+  };
+
+  const ejecutarBorrado = async () => {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      let q = supabase.from("archivos_carga").delete().eq("user_id", user.id);
+      if (filtroTipo !== "todos") q = q.eq("tipo", filtroTipo);
+      if (filtroDesde) q = q.gte("created_at", filtroDesde);
+      if (filtroHasta) q = q.lte("created_at", new Date(new Date(filtroHasta).getTime() + 86400000).toISOString());
+      const { error } = await q;
+      if (error) throw error;
+
+      if (purgarDatos) {
+        const tipos: Tipo[] = filtroTipo === "todos" ? ["lineas", "dispositivos", "pops"] : [filtroTipo];
+        for (const t of tipos) {
+          await supabase.from(t).delete().eq("user_id", user.id);
+        }
+        await regenerateAlerts(user.id);
+      }
+
+      toast.success(`Se eliminaron ${afectados.length} registros del historial${purgarDatos ? " y los datos cargados" : ""}`);
+      setConfirmOpen(false);
+      setBorrarOpen(false);
+      qc.invalidateQueries();
+    } catch (e: any) {
+      toast.error(`Error: ${e.message ?? "no se pudo borrar"}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const parseFile = (f: File): Promise<Record<string, any>[]> => new Promise((resolve, reject) => {
     const ext = f.name.split(".").pop()?.toLowerCase();
@@ -189,8 +247,11 @@ function CargarPage() {
 
         {(historial ?? []).length > 0 && (
           <div className="rounded-xl border border-border bg-card shadow-sm">
-            <div className="border-b border-border p-4">
+            <div className="flex items-center justify-between border-b border-border p-4">
               <h3 className="font-semibold">Historial de cargas</h3>
+              <Button variant="outline" size="sm" onClick={() => setBorrarOpen(true)}>
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Borrar registros
+              </Button>
             </div>
             <div className="divide-y divide-border">
               {historial!.map((h) => (
@@ -201,6 +262,9 @@ function CargarPage() {
                     <p className="text-xs text-muted-foreground">{h.tipo} · {h.registros} registros · {new Date(h.created_at).toLocaleString("es-CO")}</p>
                   </div>
                   <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-medium text-success">{h.estado}</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => eliminarRegistroIndividual(h)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
@@ -248,6 +312,79 @@ function CargarPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={borrarOpen} onOpenChange={(o) => { setBorrarOpen(o); if (!o) setPurgarDatos(false); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Filter className="h-4 w-4" /> Borrar registros del historial</DialogTitle>
+            <DialogDescription>Selecciona los filtros para acotar qué registros se eliminarán.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Tipo de carga</Label>
+              <Select value={filtroTipo} onValueChange={(v) => setFiltroTipo(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="lineas">Maestro de Líneas</SelectItem>
+                  <SelectItem value="dispositivos">Devices UEM</SelectItem>
+                  <SelectItem value="pops">Inventario POPS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Desde</Label>
+                <Input type="date" value={filtroDesde} onChange={(e) => setFiltroDesde(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Hasta</Label>
+                <Input type="date" value={filtroHasta} onChange={(e) => setFiltroHasta(e.target.value)} />
+              </div>
+            </div>
+            <label className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-3 text-sm">
+              <Checkbox checked={purgarDatos} onCheckedChange={(v) => setPurgarDatos(!!v)} className="mt-0.5" />
+              <span>
+                Borrar también los <strong>datos cargados</strong> de las tablas correspondientes
+                <span className="block text-xs text-muted-foreground">Eliminará líneas, dispositivos o POPS según el tipo seleccionado.</span>
+              </span>
+            </label>
+            <div className="rounded-md bg-muted/40 p-3 text-sm">
+              Coinciden <strong>{afectados.length}</strong> de {(historial ?? []).length} registros visibles.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setBorrarOpen(false)}>Cancelar</Button>
+            <Button variant="destructive" disabled={afectados.length === 0} onClick={() => setConfirmOpen(true)}>
+              <Trash2 className="mr-1.5 h-4 w-4" /> Borrar {afectados.length}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmar borrado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminarán <strong>{afectados.length}</strong> registros del historial
+              {purgarDatos && <> y <strong>todos los datos cargados</strong> de {filtroTipo === "todos" ? "líneas, dispositivos y POPS" : filtroTipo}</>}.
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(e) => { e.preventDefault(); ejecutarBorrado(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1.5 h-4 w-4" />}
+              Sí, borrar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
