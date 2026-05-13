@@ -3,9 +3,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2 } from "lucide-react";
+import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
@@ -15,16 +16,78 @@ export const Route = createFileRoute("/_app/cargar")({ component: CargarPage });
 
 type Tipo = "lineas" | "dispositivos" | "pops";
 
-const FIELD_MAP: Record<Tipo, Record<string, string>> = {
-  lineas: { msisdn: "msisdn", numero: "msisdn", linea: "msisdn", imei: "imei", plan: "plan", costo: "costo_mensual", costo_mensual: "costo_mensual", centro_costo: "centro_costo", centro: "centro_costo", estado: "estado", ultimo_uso: "ultimo_uso", consumo_mb: "consumo_mb", consumo: "consumo_mb" },
-  dispositivos: { imei: "imei", modelo: "modelo", fabricante: "fabricante", marca: "fabricante", so: "so", os: "so", estado: "estado", ultimo_checkin: "ultimo_checkin", checkin: "ultimo_checkin", asignado_a: "asignado_a", asignado: "asignado_a" },
-  pops: { codigo: "codigo", code: "codigo", ubicacion: "ubicacion", direccion: "ubicacion", centro_costo: "centro_costo", centro: "centro_costo", estado: "estado", responsable: "responsable" },
+type GuideField = { columna: string; ejemplo: string; requerido: boolean; nota: string; target?: string };
+
+const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField[] }> = {
+  lineas: {
+    titulo: "Maestro de Líneas",
+    archivo: "Maestro_Lineas.xlsx",
+    fields: [
+      { columna: "OPERADOR", ejemplo: "CLARO", requerido: true, nota: "Nombre del operador" },
+      { columna: "TIPO_DE_LINEA", ejemplo: "VOZ+DATOS", requerido: false, nota: "Tipo de servicio" },
+      { columna: "TELE_NUMB", ejemplo: "3001234567", requerido: true, nota: "Número de la línea (MSISDN)", target: "msisdn" },
+      { columna: "IDENTIFICACION", ejemplo: "1020304050", requerido: false, nota: "Documento del titular" },
+      { columna: "IDENTIFICACION_MTR", ejemplo: "900123456", requerido: false, nota: "Identificación matriz" },
+      { columna: "NOMBRE_CLIENTE", ejemplo: "Juan Pérez", requerido: false, nota: "Nombre del usuario asignado" },
+      { columna: "EMPRESA", ejemplo: "ACME S.A.S.", requerido: false, nota: "Razón social" },
+      { columna: "IMEI", ejemplo: "356938035643809", requerido: false, nota: "IMEI del equipo asociado", target: "imei" },
+      { columna: "ICCID", ejemplo: "8957000012345678901", requerido: false, nota: "Serial de la SIM" },
+      { columna: "MODELO_EQUIPO", ejemplo: "iPhone 13", requerido: false, nota: "Modelo del equipo" },
+      { columna: "PAQUETE_DESC", ejemplo: "Plan Empresarial 20GB", requerido: false, nota: "Descripción del plan", target: "plan" },
+      { columna: "VALOR_PLAN", ejemplo: "45000", requerido: false, nota: "Costo del plan" },
+      { columna: "VALOR_DATOS", ejemplo: "15000", requerido: false, nota: "Costo de datos adicionales" },
+      { columna: "TOTAL_LINEA", ejemplo: "60000", requerido: true, nota: "Costo total mensual", target: "costo_mensual" },
+      { columna: "CUENTA", ejemplo: "CTA-001", requerido: false, nota: "Cuenta contable" },
+      { columna: "DELEGACION", ejemplo: "Bogotá", requerido: false, nota: "Delegación o sede" },
+      { columna: "DIVISION", ejemplo: "Comercial", requerido: false, nota: "División interna" },
+      { columna: "CENTRO_COSTO", ejemplo: "CC-100", requerido: true, nota: "Centro de costo", target: "centro_costo" },
+      { columna: "TERCERO", ejemplo: "T-001", requerido: false, nota: "Identificador de tercero" },
+      { columna: "SUBTERCERO", ejemplo: "ST-001", requerido: false, nota: "Subtercero" },
+    ],
+  },
+  dispositivos: {
+    titulo: "Devices UEM",
+    archivo: "Devices_Master.csv",
+    fields: [
+      { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del dispositivo", target: "imei" },
+      { columna: "Modelo", ejemplo: "Galaxy S22", requerido: false, nota: "Modelo del equipo", target: "modelo" },
+      { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada" },
+      { columna: "Last_CheckIn", ejemplo: "2025-04-12", requerido: false, nota: "Último reporte UEM (YYYY-MM-DD)", target: "ultimo_checkin" },
+      { columna: "Estado_UEM", ejemplo: "ACTIVO", requerido: true, nota: "Estado en plataforma UEM", target: "estado" },
+      { columna: "País", ejemplo: "Colombia", requerido: false, nota: "País de operación" },
+      { columna: "Usuario", ejemplo: "jperez@empresa.com", requerido: false, nota: "Usuario asignado", target: "asignado_a" },
+    ],
+  },
+  pops: {
+    titulo: "Inventario POPS",
+    archivo: "POPS_Inventory.xlsx",
+    fields: [
+      { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del equipo", target: "codigo" },
+      { columna: "Numero_Telefono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada" },
+      { columna: "Centro", ejemplo: "CC-100", requerido: true, nota: "Centro de costo", target: "centro_costo" },
+      { columna: "Delegación", ejemplo: "Bogotá Norte", requerido: false, nota: "Delegación o sede", target: "ubicacion" },
+      { columna: "Fecha_Alta", ejemplo: "2024-01-15", requerido: false, nota: "Fecha de alta del equipo" },
+      { columna: "Fecha_Baja", ejemplo: "2025-03-30", requerido: false, nota: "Fecha de baja (si aplica)" },
+      { columna: "Modelo", ejemplo: "iPhone 13", requerido: false, nota: "Modelo del equipo" },
+    ],
+  },
 };
 
-const CARDS: { tipo: Tipo; titulo: string; descripcion: string; icon: React.ComponentType<any> }[] = [
-  { tipo: "lineas", titulo: "Maestro de Líneas", descripcion: "Archivo principal con todas las líneas corporativas", icon: Wifi },
-  { tipo: "dispositivos", titulo: "Devices UEM", descripcion: "Datos de dispositivos desde plataforma UEM", icon: Smartphone },
-  { tipo: "pops", titulo: "Inventario POPS", descripcion: "Asignación física de equipos por centro", icon: MapPin },
+function buildFieldMap(tipo: Tipo): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const f of GUIDES[tipo].fields) {
+    if (!f.target) continue;
+    const key = f.columna.toLowerCase().trim().replace(/\s+/g, "_");
+    map[key] = f.target;
+    map[f.columna.toLowerCase().trim()] = f.target;
+  }
+  return map;
+}
+
+const CARDS: { tipo: Tipo; descripcion: string; icon: React.ComponentType<any> }[] = [
+  { tipo: "lineas", descripcion: "Archivo principal con todas las líneas corporativas", icon: Wifi },
+  { tipo: "dispositivos", descripcion: "Datos de dispositivos desde plataforma UEM", icon: Smartphone },
+  { tipo: "pops", descripcion: "Asignación física de equipos por centro", icon: MapPin },
 ];
 
 function CargarPage() {
@@ -74,7 +137,7 @@ function CargarPage() {
     setBusy(tipo);
     try {
       const rows = await parseFile(file);
-      const map = FIELD_MAP[tipo];
+      const map = buildFieldMap(tipo);
       const normalized = rows.map((r) => {
         const out: Record<string, any> = { user_id: user.id };
         for (const [k, v] of Object.entries(r)) {
@@ -108,6 +171,8 @@ function CargarPage() {
     } finally { setBusy(null); }
   };
 
+  const guide = guideTipo ? GUIDES[guideTipo] : null;
+
   return (
     <div>
       <PageHeader title="Cargar Archivos" subtitle="Sube los maestros para ejecutar el cruce de información y generar alertas." />
@@ -115,7 +180,7 @@ function CargarPage() {
         {CARDS.map((c) => (
           <UploadCard
             key={c.tipo}
-            card={c}
+            card={{ ...c, titulo: GUIDES[c.tipo].titulo }}
             busy={busy === c.tipo}
             onFile={(f) => handleUpload(c.tipo, f)}
             onGuide={() => setGuideTipo(c.tipo)}
@@ -144,21 +209,41 @@ function CargarPage() {
       </div>
 
       <Dialog open={!!guideTipo} onOpenChange={(o) => !o && setGuideTipo(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Formato guía — {guideTipo && CARDS.find((c) => c.tipo === guideTipo)?.titulo}</DialogTitle>
+            <DialogTitle>Formato Guía — {guide?.titulo}</DialogTitle>
             <DialogDescription>
-              Tu archivo (CSV, Excel o JSON) debe tener encabezados con cualquiera de los siguientes nombres. Mayúsculas y espacios no importan.
+              Archivo sugerido: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{guide?.archivo}</code>
             </DialogDescription>
           </DialogHeader>
-          {guideTipo && (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {Object.keys(FIELD_MAP[guideTipo]).map((k) => (
-                  <code key={k} className="rounded-md bg-muted px-2 py-1 text-xs">{k}</code>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">Filas sin columnas reconocidas se descartan automáticamente.</p>
+          {guide && (
+            <div className="max-h-[60vh] overflow-auto rounded-md border border-border">
+              <Table>
+                <TableHeader className="sticky top-0 bg-card">
+                  <TableRow>
+                    <TableHead className="w-[28%]">Columna</TableHead>
+                    <TableHead className="w-[24%]">Ejemplo</TableHead>
+                    <TableHead className="w-[14%]">Requerido</TableHead>
+                    <TableHead>Nota</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {guide.fields.map((f) => (
+                    <TableRow key={f.columna}>
+                      <TableCell className="font-mono text-xs">{f.columna}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{f.ejemplo}</TableCell>
+                      <TableCell>
+                        {f.requerido ? (
+                          <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">Sí</span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">No</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs">{f.nota}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </DialogContent>
