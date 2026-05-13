@@ -100,6 +100,13 @@ function CargarPage() {
   const qc = useQueryClient();
   const [busy, setBusy] = useState<Tipo | null>(null);
   const [guideTipo, setGuideTipo] = useState<Tipo | null>(null);
+  const [borrarOpen, setBorrarOpen] = useState(false);
+  const [filtroTipo, setFiltroTipo] = useState<"todos" | Tipo>("todos");
+  const [filtroDesde, setFiltroDesde] = useState("");
+  const [filtroHasta, setFiltroHasta] = useState("");
+  const [purgarDatos, setPurgarDatos] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const { data: historial } = useQuery({
     queryKey: ["archivos_carga"],
@@ -108,6 +115,52 @@ function CargarPage() {
       return data ?? [];
     },
   });
+
+  const matchesFilter = (h: any) => {
+    if (filtroTipo !== "todos" && h.tipo !== filtroTipo) return false;
+    const t = new Date(h.created_at).getTime();
+    if (filtroDesde && t < new Date(filtroDesde).getTime()) return false;
+    if (filtroHasta && t > new Date(filtroHasta).getTime() + 86400000) return false;
+    return true;
+  };
+  const afectados = (historial ?? []).filter(matchesFilter);
+
+  const eliminarRegistroIndividual = async (h: any) => {
+    if (!user) return;
+    await supabase.from("archivos_carga").delete().eq("id", h.id);
+    toast.success("Registro de historial eliminado");
+    qc.invalidateQueries({ queryKey: ["archivos_carga"] });
+  };
+
+  const ejecutarBorrado = async () => {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      let q = supabase.from("archivos_carga").delete().eq("user_id", user.id);
+      if (filtroTipo !== "todos") q = q.eq("tipo", filtroTipo);
+      if (filtroDesde) q = q.gte("created_at", filtroDesde);
+      if (filtroHasta) q = q.lte("created_at", new Date(new Date(filtroHasta).getTime() + 86400000).toISOString());
+      const { error } = await q;
+      if (error) throw error;
+
+      if (purgarDatos) {
+        const tipos: Tipo[] = filtroTipo === "todos" ? ["lineas", "dispositivos", "pops"] : [filtroTipo];
+        for (const t of tipos) {
+          await supabase.from(t).delete().eq("user_id", user.id);
+        }
+        await regenerateAlerts(user.id);
+      }
+
+      toast.success(`Se eliminaron ${afectados.length} registros del historial${purgarDatos ? " y los datos cargados" : ""}`);
+      setConfirmOpen(false);
+      setBorrarOpen(false);
+      qc.invalidateQueries();
+    } catch (e: any) {
+      toast.error(`Error: ${e.message ?? "no se pudo borrar"}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const parseFile = (f: File): Promise<Record<string, any>[]> => new Promise((resolve, reject) => {
     const ext = f.name.split(".").pop()?.toLowerCase();
