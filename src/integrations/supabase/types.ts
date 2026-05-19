@@ -116,6 +116,7 @@ export type Database = {
           id: string
           imei: string
           modelo: string | null
+          numero_telefono: string | null
           so: string | null
           ultimo_checkin: string | null
           user_id: string
@@ -128,6 +129,7 @@ export type Database = {
           id?: string
           imei: string
           modelo?: string | null
+          numero_telefono?: string | null
           so?: string | null
           ultimo_checkin?: string | null
           user_id: string
@@ -140,6 +142,7 @@ export type Database = {
           id?: string
           imei?: string
           modelo?: string | null
+          numero_telefono?: string | null
           so?: string | null
           ultimo_checkin?: string | null
           user_id?: string
@@ -153,12 +156,15 @@ export type Database = {
           costo_mensual: number | null
           created_at: string
           estado: string | null
+          iccid: string | null
           id: string
           imei: string | null
           msisdn: string
           plan: string | null
           ultimo_uso: string | null
           user_id: string
+          valor_datos: number | null
+          valor_plan: number | null
         }
         Insert: {
           centro_costo?: string | null
@@ -166,12 +172,15 @@ export type Database = {
           costo_mensual?: number | null
           created_at?: string
           estado?: string | null
+          iccid?: string | null
           id?: string
           imei?: string | null
           msisdn: string
           plan?: string | null
           ultimo_uso?: string | null
           user_id: string
+          valor_datos?: number | null
+          valor_plan?: number | null
         }
         Update: {
           centro_costo?: string | null
@@ -179,12 +188,15 @@ export type Database = {
           costo_mensual?: number | null
           created_at?: string
           estado?: string | null
+          iccid?: string | null
           id?: string
           imei?: string | null
           msisdn?: string
           plan?: string | null
           ultimo_uso?: string | null
           user_id?: string
+          valor_datos?: number | null
+          valor_plan?: number | null
         }
         Relationships: []
       }
@@ -195,6 +207,7 @@ export type Database = {
           created_at: string
           estado: string | null
           id: string
+          numero_telefono: string | null
           responsable: string | null
           ubicacion: string | null
           user_id: string
@@ -205,6 +218,7 @@ export type Database = {
           created_at?: string
           estado?: string | null
           id?: string
+          numero_telefono?: string | null
           responsable?: string | null
           ubicacion?: string | null
           user_id: string
@@ -215,6 +229,7 @@ export type Database = {
           created_at?: string
           estado?: string | null
           id?: string
+          numero_telefono?: string | null
           responsable?: string | null
           ubicacion?: string | null
           user_id?: string
