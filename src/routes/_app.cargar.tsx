@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter } from "lucide-react";
+import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -211,6 +211,30 @@ function CargarPage() {
     return errors;
   }
 
+  const descargarTemplate = (tipo: Tipo) => {
+    const g = GUIDES[tipo];
+    const headers = g.fields.map((f) => f.requerido ? `${f.columna} *` : f.columna);
+    const ejemplo = g.fields.map((f) => f.ejemplo);
+    const wsData = [headers, ejemplo];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws["!cols"] = g.fields.map((f) => ({ wch: Math.max(14, f.columna.length + 4) }));
+
+    const infoData = [
+      ["Columna", "Requerido", "Ejemplo", "Nota"],
+      ...g.fields.map((f) => [f.columna, f.requerido ? "Sí" : "No", f.ejemplo, f.nota]),
+      [],
+      ["Nota: las columnas marcadas con * son obligatorias."],
+    ];
+    const wsInfo = XLSX.utils.aoa_to_sheet(infoData);
+    wsInfo["!cols"] = [{ wch: 24 }, { wch: 12 }, { wch: 26 }, { wch: 50 }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Datos");
+    XLSX.utils.book_append_sheet(wb, wsInfo, "Instrucciones");
+    XLSX.writeFile(wb, g.archivo.replace(/\.(csv|xlsx)$/i, "") + "_template.xlsx", { bookType: "xlsx", compression: true });
+    toast.success("Template descargado");
+  };
+
   const handleUpload = async (tipo: Tipo, file: File) => {
     if (!user) return;
     setBusy(tipo);
@@ -307,6 +331,13 @@ function CargarPage() {
             <DialogDescription>
               Archivo sugerido: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{guide?.archivo}</code>
             </DialogDescription>
+            {guideTipo && (
+              <div className="pt-2">
+                <Button size="sm" variant="secondary" onClick={() => descargarTemplate(guideTipo)}>
+                  <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar template Excel
+                </Button>
+              </div>
+            )}
           </DialogHeader>
           {guide && (
             <div className="max-h-[60vh] overflow-auto rounded-md border border-border">
