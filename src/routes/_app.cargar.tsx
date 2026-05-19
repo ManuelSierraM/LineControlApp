@@ -216,6 +216,13 @@ function CargarPage() {
     setBusy(tipo);
     try {
       const rows = await parseFile(file);
+      const validationErrors = validateRequiredFields(rows, tipo);
+      if (validationErrors.length > 0) {
+        const summary = validationErrors.slice(0, 5).map((e) => `Fila ${e.row}: ${e.fields.join(", ")}`).join("; ");
+        toast.error(`Campos requeridos faltantes en ${validationErrors.length} filas. ${summary}${validationErrors.length > 5 ? "..." : ""}`);
+        setBusy(null);
+        return;
+      }
       const map = buildFieldMap(tipo);
       const normalized = rows.map((r) => {
         const out: Record<string, any> = { user_id: user.id };
