@@ -307,6 +307,13 @@ function CargarPage() {
             <DialogDescription>
               Archivo sugerido: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{guide?.archivo}</code>
             </DialogDescription>
+            {guideTipo && (
+              <div className="pt-2">
+                <Button size="sm" variant="secondary" onClick={() => descargarTemplate(guideTipo)}>
+                  <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar template Excel
+                </Button>
+              </div>
+            )}
           </DialogHeader>
           {guide && (
             <div className="max-h-[60vh] overflow-auto rounded-md border border-border">
