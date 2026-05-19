@@ -190,6 +190,27 @@ function CargarPage() {
     }
   });
 
+  function validateRequiredFields(rows: Record<string, any>[], tipo: Tipo): { row: number; fields: string[] }[] {
+    const required = GUIDES[tipo].fields.filter((f) => f.requerido);
+    const errors: { row: number; fields: string[] }[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const missing: string[] = [];
+      for (const field of required) {
+        const normalizedKey = field.columna.toLowerCase().trim().replace(/\s+/g, "_");
+        let val = rows[i][field.columna];
+        if (val === undefined) val = rows[i][field.columna.toLowerCase().trim()];
+        if (val === undefined) val = rows[i][normalizedKey];
+        if (val === undefined || val === null || String(val).trim() === "") {
+          missing.push(field.columna);
+        }
+      }
+      if (missing.length > 0) {
+        errors.push({ row: i + 2, fields: missing });
+      }
+    }
+    return errors;
+  }
+
   const handleUpload = async (tipo: Tipo, file: File) => {
     if (!user) return;
     setBusy(tipo);
