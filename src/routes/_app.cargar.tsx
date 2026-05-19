@@ -211,6 +211,30 @@ function CargarPage() {
     return errors;
   }
 
+  const descargarTemplate = (tipo: Tipo) => {
+    const g = GUIDES[tipo];
+    const headers = g.fields.map((f) => f.requerido ? `${f.columna} *` : f.columna);
+    const ejemplo = g.fields.map((f) => f.ejemplo);
+    const wsData = [headers, ejemplo];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws["!cols"] = g.fields.map((f) => ({ wch: Math.max(14, f.columna.length + 4) }));
+
+    const infoData = [
+      ["Columna", "Requerido", "Ejemplo", "Nota"],
+      ...g.fields.map((f) => [f.columna, f.requerido ? "Sí" : "No", f.ejemplo, f.nota]),
+      [],
+      ["Nota: las columnas marcadas con * son obligatorias."],
+    ];
+    const wsInfo = XLSX.utils.aoa_to_sheet(infoData);
+    wsInfo["!cols"] = [{ wch: 24 }, { wch: 12 }, { wch: 26 }, { wch: 50 }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Datos");
+    XLSX.utils.book_append_sheet(wb, wsInfo, "Instrucciones");
+    XLSX.writeFile(wb, g.archivo.replace(/\.(csv|xlsx)$/i, "") + "_template.xlsx", { bookType: "xlsx", compression: true });
+    toast.success("Template descargado");
+  };
+
   const handleUpload = async (tipo: Tipo, file: File) => {
     if (!user) return;
     setBusy(tipo);
