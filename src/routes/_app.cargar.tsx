@@ -217,63 +217,34 @@ function CargarPage() {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Datos");
 
-    const headers = g.fields.map((f) => (f.requerido ? `${f.columna} *` : f.columna));
+    const headers = g.fields.map((f) => f.columna);
     ws.addRow(headers);
     ws.addRow(g.fields.map((f) => f.ejemplo));
 
-    // Style header
+    // Style header: required fields in orange + comment tooltip
     const headerRow = ws.getRow(1);
-    headerRow.font = { bold: true };
-    headerRow.eachCell((cell) => {
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE5E7EB" } };
+    headerRow.eachCell((cell, colNumber) => {
+      const field = g.fields[colNumber - 1];
+      const isReq = !!field?.requerido;
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: isReq ? "FFFFA500" : "FFE5E7EB" },
+      };
+      cell.font = { bold: true, color: { argb: isReq ? "FFFFFFFF" : "FF111827" } };
+      cell.alignment = { horizontal: "center", vertical: "middle" };
       cell.border = { bottom: { style: "thin", color: { argb: "FF9CA3AF" } } };
+      if (isReq) {
+        cell.note = {
+          texts: [{ font: { bold: true, color: { argb: "FFB45309" } }, text: "Campo obligatorio" }],
+          margins: { insetmode: "auto" },
+        } as any;
+      }
     });
-
-    const MAX_ROW = 1000;
-    const colLetter = (n: number) => {
-      let s = ""; let x = n;
-      while (x > 0) { const m = (x - 1) % 26; s = String.fromCharCode(65 + m) + s; x = Math.floor((x - 1) / 26); }
-      return s;
-    };
 
     g.fields.forEach((f, idx) => {
       const col = ws.getColumn(idx + 1);
       col.width = Math.max(14, f.columna.length + 4);
-      if (!f.requerido) return;
-      const letter = colLetter(idx + 1);
-      // Data validation: prevent empty values on edit
-      for (let r = 2; r <= MAX_ROW; r++) {
-        ws.getCell(`${letter}${r}`).dataValidation = {
-          type: "custom",
-          allowBlank: false,
-          showErrorMessage: true,
-          errorStyle: "stop",
-          errorTitle: "Campo requerido",
-          error: "campo requerido",
-          formulae: [`LEN(TRIM(${letter}${r}))>0`],
-        };
-      }
-      // Conditional formatting: red highlight when empty
-      ws.addConditionalFormatting({
-        ref: `${letter}2:${letter}${MAX_ROW}`,
-        rules: [
-          {
-            type: "expression",
-            formulae: [`TRIM(${letter}2)=""`],
-            priority: idx + 1,
-            style: {
-              fill: { type: "pattern", pattern: "solid", bgColor: { argb: "FFFECACA" } },
-              font: { color: { argb: "FFB91C1C" }, bold: true },
-              border: {
-                top: { style: "thin", color: { argb: "FFDC2626" } },
-                left: { style: "thin", color: { argb: "FFDC2626" } },
-                bottom: { style: "thin", color: { argb: "FFDC2626" } },
-                right: { style: "thin", color: { argb: "FFDC2626" } },
-              },
-            },
-          },
-        ],
-      });
     });
 
     // Instrucciones sheet
@@ -281,7 +252,7 @@ function CargarPage() {
     wsInfo.addRow(["Columna", "Requerido", "Ejemplo", "Nota"]);
     g.fields.forEach((f) => wsInfo.addRow([f.columna, f.requerido ? "Sí" : "No", f.ejemplo, f.nota]));
     wsInfo.addRow([]);
-    wsInfo.addRow(["Nota: las columnas marcadas con * son obligatorias. Los campos requeridos vacíos se resaltan en rojo y muestran 'campo requerido' al editar."]);
+    wsInfo.addRow(["Nota: las columnas con encabezado naranja son obligatorias. Pase el cursor sobre el encabezado para ver el aviso 'Campo obligatorio'."]);
     wsInfo.getRow(1).font = { bold: true };
     wsInfo.columns = [{ width: 24 }, { width: 12 }, { width: 26 }, { width: 60 }];
 
