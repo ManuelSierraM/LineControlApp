@@ -26,7 +26,7 @@ function DispPage() {
         supabase.from("lineas").select("imei,msisdn").limit(10000),
       ]);
       const byImei = new Map((lineas ?? []).map((l) => [l.imei, l.msisdn]));
-      return (disp ?? []).map((d) => ({ ...d, telefono: byImei.get(d.imei) ?? "—" }));
+      return (disp ?? []).map((d) => ({ ...d, telefono: byImei.get(d.imei) ?? d.numero_telefono ?? "—" }));
     },
   });
   const rows = data ?? [];
