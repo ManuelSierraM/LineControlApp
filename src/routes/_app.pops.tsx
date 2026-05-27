@@ -28,7 +28,7 @@ function PopsPage() {
         <DataTable
           title="Inventario POPS"
           rows={rows}
-          searchKeys={["codigo", "ubicacion", "centro_costo", "responsable"]}
+          searchKeys={["codigo", "ubicacion", "centro_costo", "responsable", "numero_telefono"]}
           columns={[
             { key: "imei", header: "IMEI", render: (r) => r.codigo ?? "—" },
             { key: "telefono", header: "Teléfono", render: (r) => r.numero_telefono ?? "—" },
