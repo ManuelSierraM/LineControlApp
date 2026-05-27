@@ -31,9 +31,10 @@ function PopsPage() {
           searchKeys={["codigo", "ubicacion", "centro_costo", "responsable"]}
           columns={[
             { key: "imei", header: "IMEI", render: (r) => r.codigo ?? "—" },
-            { key: "telefono", header: "Teléfono", render: (r) => r.responsable ?? "—" },
+            { key: "telefono", header: "Teléfono", render: (r) => r.numero_telefono ?? "—" },
             { key: "centro", header: "Centro", render: (r) => r.centro_costo ?? "—" },
             { key: "delegacion", header: "Delegación", render: (r) => r.ubicacion ?? "—" },
+            { key: "responsable", header: "Responsable", render: (r) => r.responsable ?? "—" },
             { key: "fecha_alta", header: "Fecha Alta", render: (r) => fmtDate(r.created_at) },
             { key: "fecha_baja", header: "Fecha Baja", render: () => "—" },
             { key: "modelo", header: "Modelo", render: () => "—" },
