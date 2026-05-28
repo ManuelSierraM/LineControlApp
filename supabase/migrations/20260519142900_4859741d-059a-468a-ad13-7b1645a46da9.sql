@@ -1,0 +1,7 @@
+ALTER TABLE public.lineas ADD COLUMN IF NOT EXISTS iccid TEXT;
+ALTER TABLE public.lineas ADD COLUMN IF NOT EXISTS valor_plan NUMERIC DEFAULT 0;
+ALTER TABLE public.lineas ADD COLUMN IF NOT EXISTS valor_datos NUMERIC DEFAULT 0;
+
+ALTER TABLE public.dispositivos ADD COLUMN IF NOT EXISTS numero_telefono TEXT;
+
+ALTER TABLE public.pops ADD COLUMN IF NOT EXISTS numero_telefono TEXT;

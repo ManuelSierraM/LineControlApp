@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter } from "lucide-react";
+import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -35,12 +35,12 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
       { columna: "IDENTIFICACION_MTR", ejemplo: "900123456", requerido: false, nota: "Identificación matriz" },
       { columna: "NOMBRE_CLIENTE", ejemplo: "Juan Pérez", requerido: false, nota: "Nombre del usuario asignado" },
       { columna: "EMPRESA", ejemplo: "ACME S.A.S.", requerido: false, nota: "Razón social" },
-      { columna: "IMEI", ejemplo: "356938035643809", requerido: false, nota: "IMEI del equipo asociado", target: "imei" },
-      { columna: "ICCID", ejemplo: "8957000012345678901", requerido: false, nota: "Serial de la SIM" },
+      { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del equipo asociado", target: "imei" },
+      { columna: "ICCID", ejemplo: "8957000012345678901", requerido: true, nota: "Serial de la SIM", target: "iccid" },
       { columna: "MODELO_EQUIPO", ejemplo: "iPhone 13", requerido: false, nota: "Modelo del equipo" },
       { columna: "PAQUETE_DESC", ejemplo: "Plan Empresarial 20GB", requerido: false, nota: "Descripción del plan", target: "plan" },
-      { columna: "VALOR_PLAN", ejemplo: "45000", requerido: false, nota: "Costo del plan" },
-      { columna: "VALOR_DATOS", ejemplo: "15000", requerido: false, nota: "Costo de datos adicionales" },
+      { columna: "VALOR_PLAN", ejemplo: "45000", requerido: true, nota: "Costo del plan", target: "valor_plan" },
+      { columna: "VALOR_DATOS", ejemplo: "15000", requerido: true, nota: "Costo de datos adicionales", target: "valor_datos" },
       { columna: "TOTAL_LINEA", ejemplo: "60000", requerido: true, nota: "Costo total mensual", target: "costo_mensual" },
       { columna: "CUENTA", ejemplo: "CTA-001", requerido: false, nota: "Cuenta contable" },
       { columna: "DELEGACION", ejemplo: "Bogotá", requerido: false, nota: "Delegación o sede" },
@@ -56,8 +56,8 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     fields: [
       { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del dispositivo", target: "imei" },
       { columna: "Modelo", ejemplo: "Galaxy S22", requerido: false, nota: "Modelo del equipo", target: "modelo" },
-      { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada" },
-      { columna: "Last_CheckIn", ejemplo: "2025-04-12", requerido: false, nota: "Último reporte UEM (YYYY-MM-DD)", target: "ultimo_checkin" },
+      { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: true, nota: "Línea asociada", target: "numero_telefono" },
+      { columna: "Last_CheckIn", ejemplo: "2025-04-12", requerido: true, nota: "Último reporte UEM (YYYY-MM-DD)", target: "ultimo_checkin" },
       { columna: "Estado_UEM", ejemplo: "ACTIVO", requerido: true, nota: "Estado en plataforma UEM", target: "estado" },
       { columna: "País", ejemplo: "Colombia", requerido: false, nota: "País de operación" },
       { columna: "Usuario", ejemplo: "jperez@empresa.com", requerido: false, nota: "Usuario asignado", target: "asignado_a" },
@@ -68,9 +68,9 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     archivo: "POPS_Inventory.xlsx",
     fields: [
       { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del equipo", target: "codigo" },
-      { columna: "Numero_Telefono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada" },
+      { columna: "Numero_Telefono", ejemplo: "3001234567", requerido: true, nota: "Línea asociada", target: "numero_telefono" },
       { columna: "Centro", ejemplo: "CC-100", requerido: true, nota: "Centro de costo", target: "centro_costo" },
-      { columna: "Delegación", ejemplo: "Bogotá Norte", requerido: false, nota: "Delegación o sede", target: "ubicacion" },
+      { columna: "Delegación", ejemplo: "Bogotá Norte", requerido: true, nota: "Delegación o sede", target: "ubicacion" },
       { columna: "Fecha_Alta", ejemplo: "2024-01-15", requerido: false, nota: "Fecha de alta del equipo" },
       { columna: "Fecha_Baja", ejemplo: "2025-03-30", requerido: false, nota: "Fecha de baja (si aplica)" },
       { columna: "Modelo", ejemplo: "iPhone 13", requerido: false, nota: "Modelo del equipo" },
@@ -190,11 +190,97 @@ function CargarPage() {
     }
   });
 
+  function validateRequiredFields(rows: Record<string, any>[], tipo: Tipo): { row: number; fields: string[] }[] {
+    const required = GUIDES[tipo].fields.filter((f) => f.requerido);
+    const errors: { row: number; fields: string[] }[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const missing: string[] = [];
+      for (const field of required) {
+        const normalizedKey = field.columna.toLowerCase().trim().replace(/\s+/g, "_");
+        let val = rows[i][field.columna];
+        if (val === undefined) val = rows[i][field.columna.toLowerCase().trim()];
+        if (val === undefined) val = rows[i][normalizedKey];
+        if (val === undefined || val === null || String(val).trim() === "") {
+          missing.push(field.columna);
+        }
+      }
+      if (missing.length > 0) {
+        errors.push({ row: i + 2, fields: missing });
+      }
+    }
+    return errors;
+  }
+
+  const descargarTemplate = async (tipo: Tipo) => {
+    const g = GUIDES[tipo];
+    const ExcelJS = (await import("exceljs")).default;
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Datos");
+
+    const headers = g.fields.map((f) => f.columna);
+    ws.addRow(headers);
+    ws.addRow(g.fields.map((f) => f.ejemplo));
+
+    // Style header: required fields in orange + comment tooltip
+    const headerRow = ws.getRow(1);
+    headerRow.eachCell((cell, colNumber) => {
+      const field = g.fields[colNumber - 1];
+      const isReq = !!field?.requerido;
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: isReq ? "FFFFA500" : "FFE5E7EB" },
+      };
+      cell.font = { bold: true, color: { argb: isReq ? "FFFFFFFF" : "FF111827" } };
+      cell.alignment = { horizontal: "center", vertical: "middle" };
+      cell.border = { bottom: { style: "thin", color: { argb: "FF9CA3AF" } } };
+      if (isReq) {
+        cell.note = {
+          texts: [{ font: { bold: true, color: { argb: "FFB45309" } }, text: "Campo obligatorio" }],
+          margins: { insetmode: "auto" },
+        } as any;
+      }
+    });
+
+    g.fields.forEach((f, idx) => {
+      const col = ws.getColumn(idx + 1);
+      col.width = Math.max(14, f.columna.length + 4);
+    });
+
+    // Instrucciones sheet
+    const wsInfo = wb.addWorksheet("Instrucciones");
+    wsInfo.addRow(["Columna", "Requerido", "Ejemplo", "Nota"]);
+    g.fields.forEach((f) => wsInfo.addRow([f.columna, f.requerido ? "Sí" : "No", f.ejemplo, f.nota]));
+    wsInfo.addRow([]);
+    wsInfo.addRow(["Nota: las columnas con encabezado naranja son obligatorias. Pase el cursor sobre el encabezado para ver el aviso 'Campo obligatorio'."]);
+    wsInfo.getRow(1).font = { bold: true };
+    wsInfo.columns = [{ width: 24 }, { width: 12 }, { width: 26 }, { width: 60 }];
+
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = g.archivo.replace(/\.(csv|xlsx)$/i, "") + "_template.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success("Template descargado");
+  };
+
   const handleUpload = async (tipo: Tipo, file: File) => {
     if (!user) return;
     setBusy(tipo);
     try {
       const rows = await parseFile(file);
+      const validationErrors = validateRequiredFields(rows, tipo);
+      if (validationErrors.length > 0) {
+        const summary = validationErrors.slice(0, 5).map((e) => `Fila ${e.row}: ${e.fields.join(", ")}`).join("; ");
+        toast.error(`Campos requeridos faltantes en ${validationErrors.length} filas. ${summary}${validationErrors.length > 5 ? "..." : ""}`);
+        setBusy(null);
+        return;
+      }
       const map = buildFieldMap(tipo);
       const normalized = rows.map((r) => {
         const out: Record<string, any> = { user_id: user.id };
@@ -279,6 +365,13 @@ function CargarPage() {
             <DialogDescription>
               Archivo sugerido: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{guide?.archivo}</code>
             </DialogDescription>
+            {guideTipo && (
+              <div className="pt-2">
+                <Button size="sm" variant="secondary" onClick={() => descargarTemplate(guideTipo)}>
+                  <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar template Excel
+                </Button>
+              </div>
+            )}
           </DialogHeader>
           {guide && (
             <div className="max-h-[60vh] overflow-auto rounded-md border border-border">
