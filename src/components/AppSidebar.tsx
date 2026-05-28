@@ -1,25 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard,
-  Upload,
-  Wifi,
-  Smartphone,
-  MapPin,
-  AlertTriangle,
-  FileBarChart,
-  LogOut,
-  BarChart3,
+  LayoutDashboard, Upload, Wifi, Smartphone, MapPin, AlertTriangle, FileBarChart, LogOut, BarChart3,
 } from "lucide-react";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
+  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
 
@@ -74,7 +59,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-3">
         <div className="flex flex-col gap-2 group-data-[collapsible=icon]:hidden">
           <span className="truncate text-xs text-sidebar-foreground/60">{user?.email}</span>
-          <span className="text-[10px] text-sidebar-foreground/40">v0 — Control de Líneas</span>
+          <span className="text-[10px] text-sidebar-foreground/40">v1.0 — Control de Líneas</span>
         </div>
         <SidebarMenu>
           <SidebarMenuItem>
