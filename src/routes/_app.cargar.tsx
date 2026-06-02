@@ -35,7 +35,7 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
       { columna: "IDENTIFICACION_MTR", ejemplo: "900123456", requerido: false, nota: "Identificación matriz" },
       { columna: "NOMBRE_CLIENTE", ejemplo: "Juan Pérez", requerido: false, nota: "Nombre del usuario asignado" },
       { columna: "EMPRESA", ejemplo: "ACME S.A.S.", requerido: false, nota: "Razón social" },
-      { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del equipo asociado", target: "imei" },
+      
       { columna: "ICCID", ejemplo: "8957000012345678901", requerido: true, nota: "Serial de la SIM", target: "iccid" },
       { columna: "MODELO_EQUIPO", ejemplo: "iPhone 13", requerido: false, nota: "Modelo del equipo" },
       { columna: "PAQUETE_DESC", ejemplo: "Plan Empresarial 20GB", requerido: false, nota: "Descripción del plan", target: "plan" },
