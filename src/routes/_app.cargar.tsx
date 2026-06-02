@@ -229,7 +229,7 @@ function CargarPage() {
       cell.fill = {
         type: "pattern",
         pattern: "solid",
-        fgColor: { argb: isReq ? "FFFFA500" : "FFE5E7EB" },
+        fgColor: { argb: isReq ? "FFE26B0A" : "FFE5E7EB" },
       };
       cell.font = { bold: true, color: { argb: isReq ? "FFFFFFFF" : "FF111827" } };
       cell.alignment = { horizontal: "center", vertical: "middle" };
