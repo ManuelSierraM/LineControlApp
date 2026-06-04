@@ -61,19 +61,18 @@ function LineasPage() {
         <DataTable
           title="Inventario de Líneas"
           rows={rows}
-          searchKeys={["msisdn", "imei", "plan", "centro_costo", "modelo", "cliente", "cod_empresa"]}
+          searchKeys={["msisdn", "iccid", "plan", "cliente", "cod_empresa"]}
           columns={[
-            { key: "msisdn", header: "Número" },
-            { key: "operador", header: "Operador", render: (r) => operador(r.msisdn) },
-            { key: "tipo", header: "Tipo", render: () => "Móvil" },
-            { key: "cliente", header: "Nombre Cliente", render: (r) => r.cliente ?? "—" },
+            { key: "operador", header: "OPERADOR", render: (r) => operador(r.msisdn) },
+            { key: "tipo_de_linea", header: "TIPO_DE_LINEA", render: () => "VOZ+DATOS" },
+            { key: "msisdn", header: "TELE_NUMB" },
+            { key: "identificacion", header: "IDENTIFICACION", render: () => "—" },
+            { key: "identificacion_mtr", header: "IDENTIFICACION_MTR", render: () => "—" },
+            { key: "cliente", header: "NOMBRE_CLIENTE", render: (r) => r.cliente ?? "—" },
             { key: "cod_empresa", header: "Cod Empresa", render: (r) => r.cod_empresa ?? "—" },
-            { key: "imei", header: "IMEI", render: (r) => r.imei ?? "—" },
-            { key: "modelo", header: "Modelo" },
-            { key: "plan", header: "Plan Desc", render: (r) => r.plan ?? "—" },
-            { key: "valor_cfm", header: "Valor CFM", render: (r) => fmtMoney(Number(r.valor_plan ?? r.costo_mensual ?? 0)) },
-            { key: "delegacion", header: "Delegación", render: (r) => r.centro_costo ?? "—" },
-            { key: "centro_costo", header: "Centro Costo" },
+            { key: "iccid", header: "ICCID", render: (r) => r.iccid ?? "—" },
+            { key: "plan", header: "PLAN_DESC", render: (r) => r.plan ?? "—" },
+            { key: "valor_cfm", header: "VALOR_CFM", render: (r) => fmtMoney(Number(r.valor_plan ?? r.costo_mensual ?? 0)) },
           ]}
         />
       </div>
