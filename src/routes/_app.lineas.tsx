@@ -48,7 +48,7 @@ function LineasPage() {
           ...l,
           imei,
           modelo: d?.modelo ?? "—",
-          cliente: d?.asignado_a ?? "—",
+          cliente: l.nombre_cliente ?? d?.asignado_a ?? "—",
         };
       });
     },
@@ -61,17 +61,17 @@ function LineasPage() {
         <DataTable
           title="Inventario de Líneas"
           rows={rows}
-          searchKeys={["msisdn", "imei", "plan", "centro_costo", "modelo", "cliente"]}
+          searchKeys={["msisdn", "imei", "plan", "centro_costo", "modelo", "cliente", "cod_empresa"]}
           columns={[
             { key: "msisdn", header: "Número" },
             { key: "operador", header: "Operador", render: (r) => operador(r.msisdn) },
             { key: "tipo", header: "Tipo", render: () => "Móvil" },
-            { key: "cliente", header: "Cliente", render: (r) => r.cliente ?? "—" },
-            { key: "empresa", header: "Empresa", render: () => "Prosegur" },
+            { key: "cliente", header: "Nombre Cliente", render: (r) => r.cliente ?? "—" },
+            { key: "cod_empresa", header: "Cod Empresa", render: (r) => r.cod_empresa ?? "—" },
             { key: "imei", header: "IMEI", render: (r) => r.imei ?? "—" },
             { key: "modelo", header: "Modelo" },
-            { key: "plan", header: "Plan" },
-            { key: "total", header: "Total", render: (r) => fmtMoney(Number(r.costo_mensual ?? 0)) },
+            { key: "plan", header: "Plan Desc", render: (r) => r.plan ?? "—" },
+            { key: "valor_cfm", header: "Valor CFM", render: (r) => fmtMoney(Number(r.valor_plan ?? r.costo_mensual ?? 0)) },
             { key: "delegacion", header: "Delegación", render: (r) => r.centro_costo ?? "—" },
             { key: "centro_costo", header: "Centro Costo" },
           ]}

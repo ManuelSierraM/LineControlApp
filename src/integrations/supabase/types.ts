@@ -152,6 +152,7 @@ export type Database = {
       lineas: {
         Row: {
           centro_costo: string | null
+          cod_empresa: string | null
           consumo_mb: number | null
           costo_mensual: number | null
           created_at: string
@@ -160,6 +161,7 @@ export type Database = {
           id: string
           imei: string | null
           msisdn: string
+          nombre_cliente: string | null
           plan: string | null
           ultimo_uso: string | null
           user_id: string
@@ -168,6 +170,7 @@ export type Database = {
         }
         Insert: {
           centro_costo?: string | null
+          cod_empresa?: string | null
           consumo_mb?: number | null
           costo_mensual?: number | null
           created_at?: string
@@ -176,6 +179,7 @@ export type Database = {
           id?: string
           imei?: string | null
           msisdn: string
+          nombre_cliente?: string | null
           plan?: string | null
           ultimo_uso?: string | null
           user_id: string
@@ -184,6 +188,7 @@ export type Database = {
         }
         Update: {
           centro_costo?: string | null
+          cod_empresa?: string | null
           consumo_mb?: number | null
           costo_mensual?: number | null
           created_at?: string
@@ -192,6 +197,7 @@ export type Database = {
           id?: string
           imei?: string | null
           msisdn?: string
+          nombre_cliente?: string | null
           plan?: string | null
           ultimo_uso?: string | null
           user_id?: string
