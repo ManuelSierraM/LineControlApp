@@ -37,17 +37,8 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
       { columna: "EMPRESA", ejemplo: "ACME S.A.S.", requerido: false, nota: "Razón social" },
       
       { columna: "ICCID", ejemplo: "8957000012345678901", requerido: true, nota: "Serial de la SIM", target: "iccid" },
-      { columna: "MODELO_EQUIPO", ejemplo: "iPhone 13", requerido: false, nota: "Modelo del equipo" },
       { columna: "PAQUETE_DESC", ejemplo: "Plan Empresarial 20GB", requerido: false, nota: "Descripción del plan", target: "plan" },
       { columna: "VALOR_PLAN", ejemplo: "45000", requerido: true, nota: "Costo del plan", target: "valor_plan" },
-      { columna: "VALOR_DATOS", ejemplo: "15000", requerido: true, nota: "Costo de datos adicionales", target: "valor_datos" },
-      { columna: "TOTAL_LINEA", ejemplo: "60000", requerido: true, nota: "Costo total mensual", target: "costo_mensual" },
-      { columna: "CUENTA", ejemplo: "CTA-001", requerido: false, nota: "Cuenta contable" },
-      { columna: "DELEGACION", ejemplo: "Bogotá", requerido: false, nota: "Delegación o sede" },
-      { columna: "DIVISION", ejemplo: "Comercial", requerido: false, nota: "División interna" },
-      { columna: "CENTRO_COSTO", ejemplo: "CC-100", requerido: true, nota: "Centro de costo", target: "centro_costo" },
-      { columna: "TERCERO", ejemplo: "T-001", requerido: false, nota: "Identificador de tercero" },
-      { columna: "SUBTERCERO", ejemplo: "ST-001", requerido: false, nota: "Subtercero" },
     ],
   },
   dispositivos: {
