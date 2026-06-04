@@ -33,12 +33,12 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
       { columna: "TELE_NUMB", ejemplo: "3001234567", requerido: true, nota: "Número de la línea (MSISDN)", target: "msisdn" },
       { columna: "IDENTIFICACION", ejemplo: "1020304050", requerido: false, nota: "Documento del titular" },
       { columna: "IDENTIFICACION_MTR", ejemplo: "900123456", requerido: false, nota: "Identificación matriz" },
-      { columna: "NOMBRE_CLIENTE", ejemplo: "Juan Pérez", requerido: false, nota: "Nombre del usuario asignado" },
-      { columna: "EMPRESA", ejemplo: "ACME S.A.S.", requerido: false, nota: "Razón social" },
-      
+      { columna: "NOMBRE_CLIENTE", ejemplo: "vigilancia", requerido: false, nota: "Nombre del usuario asignado", target: "nombre_cliente" },
+      { columna: "Cod Empresa", ejemplo: "CO0070", requerido: false, nota: "Código de empresa", target: "cod_empresa" },
+
       { columna: "ICCID", ejemplo: "8957000012345678901", requerido: true, nota: "Serial de la SIM", target: "iccid" },
-      { columna: "PAQUETE_DESC", ejemplo: "Plan Empresarial 20GB", requerido: false, nota: "Descripción del plan", target: "plan" },
-      { columna: "VALOR_PLAN", ejemplo: "45000", requerido: true, nota: "Costo del plan", target: "valor_plan" },
+      { columna: "PLAN_DESC", ejemplo: "Plan Empresarial 20GB", requerido: false, nota: "Descripción del plan", target: "plan" },
+      { columna: "VALOR_CFM", ejemplo: "45000", requerido: true, nota: "Costo del plan", target: "valor_plan" },
     ],
   },
   dispositivos: {
