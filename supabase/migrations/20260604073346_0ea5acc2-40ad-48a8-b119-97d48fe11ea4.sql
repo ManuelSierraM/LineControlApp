@@ -1,0 +1,1 @@
+ALTER TABLE public.lineas ADD COLUMN IF NOT EXISTS nombre_cliente text, ADD COLUMN IF NOT EXISTS cod_empresa text;
