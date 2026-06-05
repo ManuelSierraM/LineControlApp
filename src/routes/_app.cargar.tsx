@@ -69,11 +69,146 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
   },
 };
 
+// ───────── Esquemas de validación de tipos / formatos ─────────
+type DataType = "text" | "digits" | "number" | "date" | "email";
+type FieldRule = {
+  columna: string;
+  target?: string;
+  required?: boolean;
+  type: DataType;
+  minLen?: number;
+  maxLen?: number;
+  min?: number;
+  max?: number;
+  enum?: string[];
+  unique?: boolean;
+  hint: string;
+};
+
+const SCHEMAS: Record<Tipo, FieldRule[]> = {
+  lineas: [
+    { columna: "OPERADOR", required: true, type: "text", maxLen: 50, hint: "Texto, ej. CLARO / TIGO / MOVISTAR (máx. 50)." },
+    { columna: "TIPO_DE_LINEA", type: "text", maxLen: 50, hint: "Texto, ej. VOZ+DATOS." },
+    { columna: "TELE_NUMB", target: "msisdn", required: true, type: "digits", minLen: 10, maxLen: 12, unique: true, hint: "Solo dígitos, 10–12 caracteres. Sin espacios, guiones ni '+'. No debe repetirse." },
+    { columna: "IDENTIFICACION", type: "digits", maxLen: 20, hint: "Solo dígitos (máx. 20)." },
+    { columna: "IDENTIFICACION_MTR", type: "digits", maxLen: 20, hint: "Solo dígitos (máx. 20)." },
+    { columna: "NOMBRE_CLIENTE", target: "nombre_cliente", type: "text", maxLen: 100, hint: "Texto (máx. 100)." },
+    { columna: "Cod Empresa", target: "cod_empresa", type: "text", maxLen: 30, hint: "Texto corto, ej. CO0070 (máx. 30)." },
+    { columna: "ICCID", target: "iccid", required: true, type: "digits", minLen: 18, maxLen: 22, hint: "Solo dígitos, 18–22 caracteres." },
+    { columna: "PLAN_DESC", target: "plan", type: "text", maxLen: 100, hint: "Texto (máx. 100)." },
+    { columna: "VALOR_CFM", target: "valor_plan", required: true, type: "number", min: 0, hint: "Número ≥ 0. Sin símbolos $, ni texto." },
+  ],
+  dispositivos: [
+    { columna: "IMEI", target: "imei", required: true, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "Solo dígitos, 14–16 caracteres. No debe repetirse." },
+    { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
+    { columna: "Número_Teléfono", target: "numero_telefono", required: true, type: "digits", minLen: 10, maxLen: 12, hint: "Solo dígitos, 10–12 caracteres." },
+    { columna: "Last_CheckIn", target: "ultimo_checkin", required: true, type: "date", hint: "Fecha YYYY-MM-DD (ej. 2025-04-12)." },
+    { columna: "Estado_UEM", target: "estado", required: true, type: "text", maxLen: 30, enum: ["ACTIVO","INACTIVO","SUSPENDIDO","BAJA","ENROLADO"], hint: "Valores recomendados: ACTIVO, INACTIVO, SUSPENDIDO, BAJA, ENROLADO." },
+    { columna: "País", type: "text", maxLen: 40, hint: "Texto (máx. 40)." },
+    { columna: "Usuario", target: "asignado_a", type: "text", maxLen: 120, hint: "Texto / correo (máx. 120)." },
+  ],
+  pops: [
+    { columna: "IMEI", target: "codigo", required: true, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "Solo dígitos, 14–16 caracteres. No debe repetirse." },
+    { columna: "Numero_Telefono", target: "numero_telefono", required: true, type: "digits", minLen: 10, maxLen: 12, hint: "Solo dígitos, 10–12 caracteres." },
+    { columna: "Centro", target: "centro_costo", required: true, type: "text", maxLen: 30, hint: "Texto corto, ej. CC-100 (máx. 30)." },
+    { columna: "Delegación", target: "ubicacion", required: true, type: "text", maxLen: 80, hint: "Texto (máx. 80)." },
+    { columna: "Fecha_Alta", type: "date", hint: "Fecha YYYY-MM-DD." },
+    { columna: "Fecha_Baja", type: "date", hint: "Fecha YYYY-MM-DD." },
+    { columna: "Modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
+  ],
+};
+
+function normKey(s: string) { return String(s).toLowerCase().trim().replace(/\s+/g, "_"); }
+
+function getCell(row: Record<string, any>, columna: string) {
+  if (row[columna] !== undefined) return row[columna];
+  const lower = columna.toLowerCase().trim();
+  if (row[lower] !== undefined) return row[lower];
+  const nk = normKey(columna);
+  for (const k of Object.keys(row)) if (normKey(k) === nk) return row[k];
+  return undefined;
+}
+
+function excelSerialToISO(n: number): string | null {
+  if (!isFinite(n) || n < 1 || n > 80000) return null;
+  const ms = Math.round((n - 25569) * 86400 * 1000);
+  const d = new Date(ms);
+  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+function coerceDate(v: any): string | null {
+  if (v == null || v === "") return null;
+  if (v instanceof Date && !isNaN(v.getTime())) return v.toISOString().slice(0, 10);
+  if (typeof v === "number") return excelSerialToISO(v);
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+function coerceNumber(v: any): number | null {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return isFinite(v) ? v : null;
+  const s = String(v).replace(/[\s$]/g, "").replace(/\./g, "").replace(/,/g, ".");
+  const n = Number(s);
+  return isFinite(n) ? n : null;
+}
+function coerceDigits(v: any): string | null {
+  if (v == null || v === "") return null;
+  const s = typeof v === "number" ? String(Math.trunc(v)) : String(v).trim();
+  const cleaned = s.replace(/[^\d]/g, "");
+  return cleaned || null;
+}
+
+function validateValue(rule: FieldRule, raw: any): { ok: boolean; reason?: string; warn?: string; coerced?: any } {
+  const empty = raw == null || String(raw).trim() === "";
+  if (empty) {
+    if (rule.required) return { ok: false, reason: `obligatorio vacío — ${rule.hint}` };
+    return { ok: true, coerced: null };
+  }
+  switch (rule.type) {
+    case "number": {
+      const n = coerceNumber(raw);
+      if (n === null) return { ok: false, reason: `no es numérico ("${String(raw).slice(0,30)}") — ${rule.hint}` };
+      if (rule.min !== undefined && n < rule.min) return { ok: false, reason: `debe ser ≥ ${rule.min}` };
+      if (rule.max !== undefined && n > rule.max) return { ok: false, reason: `debe ser ≤ ${rule.max}` };
+      return { ok: true, coerced: n };
+    }
+    case "date": {
+      const d = coerceDate(raw);
+      if (!d) return { ok: false, reason: `fecha inválida ("${String(raw).slice(0,30)}") — ${rule.hint}` };
+      return { ok: true, coerced: d };
+    }
+    case "digits": {
+      const s = coerceDigits(raw);
+      if (!s) return { ok: false, reason: `no contiene dígitos — ${rule.hint}` };
+      if (rule.minLen && s.length < rule.minLen) return { ok: false, reason: `longitud ${s.length}, mínimo ${rule.minLen} — ${rule.hint}` };
+      if (rule.maxLen && s.length > rule.maxLen) return { ok: false, reason: `longitud ${s.length}, máximo ${rule.maxLen} — ${rule.hint}` };
+      return { ok: true, coerced: s };
+    }
+    case "email": {
+      const s = String(raw).trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) return { ok: false, reason: `correo inválido — ${rule.hint}` };
+      return { ok: true, coerced: s };
+    }
+    default: {
+      const s = String(raw).trim();
+      if (rule.maxLen && s.length > rule.maxLen) return { ok: false, reason: `excede ${rule.maxLen} caracteres — ${rule.hint}` };
+      if (rule.minLen && s.length < rule.minLen) return { ok: false, reason: `mínimo ${rule.minLen} caracteres — ${rule.hint}` };
+      let warn: string | undefined;
+      if (rule.enum && !rule.enum.map((e)=>e.toLowerCase()).includes(s.toLowerCase())) {
+        warn = `"${s}" no es un valor recomendado (${rule.enum.join(", ")})`;
+      }
+      return { ok: true, coerced: s, warn };
+    }
+  }
+}
+
 function buildFieldMap(tipo: Tipo): Record<string, string> {
   const map: Record<string, string> = {};
   for (const f of GUIDES[tipo].fields) {
     if (!f.target) continue;
-    const key = f.columna.toLowerCase().trim().replace(/\s+/g, "_");
+    const key = normKey(f.columna);
     map[key] = f.target;
     map[f.columna.toLowerCase().trim()] = f.target;
   }
@@ -101,20 +236,28 @@ function CargarPage() {
 
   // Pre-upload validation card state
   type ValidationIssue = { row: number; fields: string[] };
+  type TypeIssue = { row: number; field: string; reason: string };
+  type DuplicateIssue = { field: string; value: string; rows: number[] };
+  type WarnIssue = { row: number; field: string; warn: string };
   type ValidationResult = {
     tipo: Tipo;
     fileName: string;
     rows: Record<string, any>[];
+    coercedRows: Record<string, any>[];
     totalRows: number;
     presentRequired: string[];
     presentOptional: string[];
     missingRequiredColumns: string[];
     unknownColumns: string[];
     rowIssues: ValidationIssue[];
+    typeIssues: TypeIssue[];
+    duplicateIssues: DuplicateIssue[];
+    warnings: WarnIssue[];
     canContinue: boolean;
   };
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [inserting, setInserting] = useState(false);
+
 
   const { data: historial } = useQuery({
     queryKey: ["archivos_carga"],
@@ -283,10 +426,11 @@ function CargarPage() {
     try {
       const rows = await parseFile(file);
       const fields = GUIDES[tipo].fields;
+      const schema = SCHEMAS[tipo];
+      const schemaByCol = new Map(schema.map((r) => [r.columna.toLowerCase().trim(), r]));
       const requiredCols = fields.filter((f) => f.requerido).map((f) => f.columna);
       const knownColsLower = new Set(fields.map((f) => f.columna.toLowerCase().trim()));
 
-      // Detect headers from first row
       const firstRow = rows[0] ?? {};
       const headerKeys = Object.keys(firstRow);
       const headerKeysLower = headerKeys.map((h) => h.toLowerCase().trim());
@@ -298,19 +442,71 @@ function CargarPage() {
         .map((f) => f.columna);
       const unknownColumns = headerKeys.filter((h) => !knownColsLower.has(h.toLowerCase().trim()));
 
-      const rowIssues = validateRequiredFields(rows, tipo);
-      const canContinue = rows.length > 0 && missingRequiredColumns.length === 0 && rowIssues.length === 0;
+      // Validación por fila: requeridos + tipos/formatos + únicos
+      const rowIssues: { row: number; fields: string[] }[] = [];
+      const typeIssues: { row: number; field: string; reason: string }[] = [];
+      const warnings: { row: number; field: string; warn: string }[] = [];
+      const uniqueTrack = new Map<string, Map<string, number[]>>(); // field -> value -> rows
+      const coercedRows: Record<string, any>[] = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const rowNum = i + 2;
+        const missing: string[] = [];
+        const coerced: Record<string, any> = {};
+        for (const rule of schema) {
+          const raw = getCell(r, rule.columna);
+          const empty = raw == null || String(raw).trim() === "";
+          if (empty && rule.required) { missing.push(rule.columna); continue; }
+          if (empty) continue;
+          const res = validateValue(rule, raw);
+          if (!res.ok) {
+            typeIssues.push({ row: rowNum, field: rule.columna, reason: res.reason ?? "valor inválido" });
+            continue;
+          }
+          if (res.warn) warnings.push({ row: rowNum, field: rule.columna, warn: res.warn });
+          if (rule.target) coerced[rule.target] = res.coerced;
+          if (rule.unique && res.coerced != null) {
+            const key = String(res.coerced);
+            if (!uniqueTrack.has(rule.columna)) uniqueTrack.set(rule.columna, new Map());
+            const m = uniqueTrack.get(rule.columna)!;
+            const arr = m.get(key) ?? [];
+            arr.push(rowNum);
+            m.set(key, arr);
+          }
+        }
+        if (missing.length > 0) rowIssues.push({ row: rowNum, fields: missing });
+        coercedRows.push(coerced);
+      }
+
+      const duplicateIssues: { field: string; value: string; rows: number[] }[] = [];
+      for (const [field, m] of uniqueTrack.entries()) {
+        for (const [value, rs] of m.entries()) {
+          if (rs.length > 1) duplicateIssues.push({ field, value, rows: rs });
+        }
+      }
+
+      const canContinue =
+        rows.length > 0 &&
+        missingRequiredColumns.length === 0 &&
+        rowIssues.length === 0 &&
+        typeIssues.length === 0 &&
+        duplicateIssues.length === 0;
 
       setValidation({
         tipo,
         fileName: file.name,
         rows,
+        coercedRows,
         totalRows: rows.length,
         presentRequired,
         presentOptional,
         missingRequiredColumns,
         unknownColumns,
         rowIssues,
+        typeIssues,
+        duplicateIssues,
+        warnings,
         canContinue,
       });
     } catch (e: any) {
@@ -323,19 +519,12 @@ function CargarPage() {
 
   const confirmInsert = async () => {
     if (!user || !validation || !validation.canContinue) return;
-    const { tipo, rows, fileName } = validation;
+    const { tipo, coercedRows, fileName } = validation;
     setInserting(true);
     try {
-      const map = buildFieldMap(tipo);
-      const normalized = rows.map((r) => {
-        const out: Record<string, any> = { user_id: user.id };
-        for (const [k, v] of Object.entries(r)) {
-          const key = String(k).toLowerCase().trim().replace(/\s+/g, "_");
-          const target = map[key];
-          if (target) out[target] = typeof v === "string" ? v.trim() : v;
-        }
-        return out;
-      }).filter((r) => Object.keys(r).length > 1);
+      const normalized = coercedRows
+        .map((r) => ({ user_id: user.id, ...r }))
+        .filter((r) => Object.keys(r).length > 1);
 
       if (normalized.length === 0) { toast.error("No se encontraron filas válidas"); setInserting(false); return; }
 
@@ -346,6 +535,7 @@ function CargarPage() {
         if (error) throw error;
         inserted += count ?? c.length;
       }
+
 
       await supabase.from("archivos_carga").insert({
         user_id: user.id, nombre: fileName, tipo, registros: inserted, estado: "completado",
@@ -573,7 +763,7 @@ function CargarPage() {
               </section>
 
               {/* Por corregir */}
-              {(validation.missingRequiredColumns.length > 0 || validation.rowIssues.length > 0) && (
+              {(validation.missingRequiredColumns.length > 0 || validation.rowIssues.length > 0 || validation.typeIssues.length > 0 || validation.duplicateIssues.length > 0) && (
                 <section>
                   <h4 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
                     <XCircle className="h-4 w-4 text-[#E26B0A]" /> Por corregir
@@ -590,11 +780,31 @@ function CargarPage() {
                         <p className="font-medium">Filas con campos obligatorios vacíos ({validation.rowIssues.length}):</p>
                         <ul className="ml-4 list-disc text-muted-foreground">
                           {validation.rowIssues.slice(0, 10).map((it) => (
-                            <li key={it.row}>Fila {it.row} — completar: {it.fields.join(", ")}</li>
+                            <li key={`r-${it.row}`}>Fila {it.row} — completar: {it.fields.join(", ")}</li>
                           ))}
-                          {validation.rowIssues.length > 10 && (
-                            <li>… y {validation.rowIssues.length - 10} filas más</li>
-                          )}
+                          {validation.rowIssues.length > 10 && (<li>… y {validation.rowIssues.length - 10} filas más</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {validation.typeIssues.length > 0 && (
+                      <div>
+                        <p className="font-medium">Errores de tipo o formato ({validation.typeIssues.length}):</p>
+                        <ul className="ml-4 list-disc text-muted-foreground">
+                          {validation.typeIssues.slice(0, 15).map((it, i) => (
+                            <li key={`t-${i}`}>Fila {it.row} · <code className="font-mono">{it.field}</code>: {it.reason}</li>
+                          ))}
+                          {validation.typeIssues.length > 15 && (<li>… y {validation.typeIssues.length - 15} más</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {validation.duplicateIssues.length > 0 && (
+                      <div>
+                        <p className="font-medium">Valores duplicados en columnas únicas ({validation.duplicateIssues.length}):</p>
+                        <ul className="ml-4 list-disc text-muted-foreground">
+                          {validation.duplicateIssues.slice(0, 10).map((d, i) => (
+                            <li key={`d-${i}`}><code className="font-mono">{d.field}</code> = <strong>{d.value}</strong> aparece en filas {d.rows.join(", ")}. Deje un único valor por fila.</li>
+                          ))}
+                          {validation.duplicateIssues.length > 10 && (<li>… y {validation.duplicateIssues.length - 10} más</li>)}
                         </ul>
                       </div>
                     )}
@@ -603,17 +813,34 @@ function CargarPage() {
               )}
 
               {/* Indicaciones */}
-              {validation.unknownColumns.length > 0 && (
+              {(validation.unknownColumns.length > 0 || validation.warnings.length > 0) && (
                 <section>
                   <h4 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
                     <AlertTriangle className="h-4 w-4 text-[#E26B0A]" /> Indicaciones
                   </h4>
-                  <div className="rounded-md border border-border bg-muted/30 p-3 text-xs">
-                    <p>Las siguientes columnas no están en el formato guía y serán ignoradas:</p>
-                    <p className="mt-1 text-muted-foreground">{validation.unknownColumns.join(", ")}</p>
+                  <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3 text-xs">
+                    {validation.unknownColumns.length > 0 && (
+                      <div>
+                        <p>Columnas fuera del formato guía (serán ignoradas al cargar):</p>
+                        <p className="mt-1 text-muted-foreground">{validation.unknownColumns.join(", ")}</p>
+                      </div>
+                    )}
+                    {validation.warnings.length > 0 && (
+                      <div>
+                        <p className="font-medium">Advertencias ({validation.warnings.length}):</p>
+                        <ul className="ml-4 list-disc text-muted-foreground">
+                          {validation.warnings.slice(0, 10).map((w, i) => (
+                            <li key={`w-${i}`}>Fila {w.row} · <code className="font-mono">{w.field}</code>: {w.warn}</li>
+                          ))}
+                          {validation.warnings.length > 10 && (<li>… y {validation.warnings.length - 10} más</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    <p className="pt-1 text-muted-foreground">Recomendaciones para evitar problemas al mostrar los datos: respete los encabezados exactos del template, mantenga los números sin símbolos ($, comas de miles), use fechas en formato <code>YYYY-MM-DD</code>, deje los IMEI/MSISDN/ICCID solo con dígitos, y no repita los identificadores únicos.</p>
                   </div>
                 </section>
               )}
+
             </div>
           )}
 
