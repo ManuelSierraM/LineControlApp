@@ -236,20 +236,28 @@ function CargarPage() {
 
   // Pre-upload validation card state
   type ValidationIssue = { row: number; fields: string[] };
+  type TypeIssue = { row: number; field: string; reason: string };
+  type DuplicateIssue = { field: string; value: string; rows: number[] };
+  type WarnIssue = { row: number; field: string; warn: string };
   type ValidationResult = {
     tipo: Tipo;
     fileName: string;
     rows: Record<string, any>[];
+    coercedRows: Record<string, any>[];
     totalRows: number;
     presentRequired: string[];
     presentOptional: string[];
     missingRequiredColumns: string[];
     unknownColumns: string[];
     rowIssues: ValidationIssue[];
+    typeIssues: TypeIssue[];
+    duplicateIssues: DuplicateIssue[];
+    warnings: WarnIssue[];
     canContinue: boolean;
   };
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [inserting, setInserting] = useState(false);
+
 
   const { data: historial } = useQuery({
     queryKey: ["archivos_carga"],
