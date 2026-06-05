@@ -526,6 +526,114 @@ function CargarPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!validation} onOpenChange={(o) => { if (!o && !inserting) setValidation(null); }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {validation?.canContinue ? (
+                <CheckCircle2 className="h-5 w-5 text-success" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-[#E26B0A]" />
+              )}
+              Validación previa — {validation ? GUIDES[validation.tipo].titulo : ""}
+            </DialogTitle>
+            <DialogDescription>
+              Archivo: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{validation?.fileName}</code> · {validation?.totalRows ?? 0} filas detectadas
+            </DialogDescription>
+          </DialogHeader>
+
+          {validation && (
+            <div className="max-h-[60vh] space-y-4 overflow-auto pr-1">
+              {/* Estado general */}
+              {validation.canContinue ? (
+                <div className="rounded-md border border-success/30 bg-success/10 p-3 text-sm">
+                  <p className="font-medium text-success">El archivo cumple con el formato requerido.</p>
+                  <p className="text-xs text-muted-foreground">¿Desea continuar el cargue?</p>
+                </div>
+              ) : (
+                <div className="rounded-md border border-[#E26B0A]/30 bg-[#E26B0A]/10 p-3 text-sm">
+                  <p className="font-medium text-[#E26B0A]">Cargue inválido</p>
+                  <p className="text-xs text-muted-foreground">Realice los cambios indicados en el Excel y vuelva a intentarlo.</p>
+                </div>
+              )}
+
+              {/* Correcto */}
+              <section>
+                <h4 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
+                  <CheckCircle2 className="h-4 w-4 text-success" /> Correcto
+                </h4>
+                <ul className="space-y-1 rounded-md border border-border bg-muted/30 p-3 text-xs">
+                  <li>· Filas detectadas: <strong>{validation.totalRows}</strong></li>
+                  <li>· Columnas obligatorias presentes: <strong>{validation.presentRequired.length}</strong>{validation.presentRequired.length > 0 && <> ({validation.presentRequired.join(", ")})</>}</li>
+                  {validation.presentOptional.length > 0 && (
+                    <li>· Columnas opcionales reconocidas: {validation.presentOptional.join(", ")}</li>
+                  )}
+                </ul>
+              </section>
+
+              {/* Por corregir */}
+              {(validation.missingRequiredColumns.length > 0 || validation.rowIssues.length > 0) && (
+                <section>
+                  <h4 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
+                    <XCircle className="h-4 w-4 text-[#E26B0A]" /> Por corregir
+                  </h4>
+                  <div className="space-y-2 rounded-md border border-[#E26B0A]/30 bg-[#E26B0A]/5 p-3 text-xs">
+                    {validation.missingRequiredColumns.length > 0 && (
+                      <div>
+                        <p className="font-medium">Columnas obligatorias faltantes:</p>
+                        <p className="text-muted-foreground">Agregue las columnas: <strong>{validation.missingRequiredColumns.join(", ")}</strong> con el encabezado exacto.</p>
+                      </div>
+                    )}
+                    {validation.rowIssues.length > 0 && (
+                      <div>
+                        <p className="font-medium">Filas con campos obligatorios vacíos ({validation.rowIssues.length}):</p>
+                        <ul className="ml-4 list-disc text-muted-foreground">
+                          {validation.rowIssues.slice(0, 10).map((it) => (
+                            <li key={it.row}>Fila {it.row} — completar: {it.fields.join(", ")}</li>
+                          ))}
+                          {validation.rowIssues.length > 10 && (
+                            <li>… y {validation.rowIssues.length - 10} filas más</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {/* Indicaciones */}
+              {validation.unknownColumns.length > 0 && (
+                <section>
+                  <h4 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
+                    <AlertTriangle className="h-4 w-4 text-[#E26B0A]" /> Indicaciones
+                  </h4>
+                  <div className="rounded-md border border-border bg-muted/30 p-3 text-xs">
+                    <p>Las siguientes columnas no están en el formato guía y serán ignoradas:</p>
+                    <p className="mt-1 text-muted-foreground">{validation.unknownColumns.join(", ")}</p>
+                  </div>
+                </section>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" disabled={inserting} onClick={() => setValidation(null)}>
+              <X className="mr-1.5 h-4 w-4" /> Cerrar
+            </Button>
+            {validation?.canContinue ? (
+              <Button disabled={inserting} onClick={confirmInsert}>
+                {inserting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-4 w-4" />}
+                Sí, continuar el cargue
+              </Button>
+            ) : (
+              <Button variant="secondary" disabled={inserting} onClick={() => setValidation(null)}>
+                Aceptar y volver a intentar
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
