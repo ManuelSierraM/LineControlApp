@@ -282,13 +282,50 @@ function CargarPage() {
     setBusy(tipo);
     try {
       const rows = await parseFile(file);
-      const validationErrors = validateRequiredFields(rows, tipo);
-      if (validationErrors.length > 0) {
-        const summary = validationErrors.slice(0, 5).map((e) => `Fila ${e.row}: ${e.fields.join(", ")}`).join("; ");
-        toast.error(`Campos requeridos faltantes en ${validationErrors.length} filas. ${summary}${validationErrors.length > 5 ? "..." : ""}`);
-        setBusy(null);
-        return;
-      }
+      const fields = GUIDES[tipo].fields;
+      const requiredCols = fields.filter((f) => f.requerido).map((f) => f.columna);
+      const knownColsLower = new Set(fields.map((f) => f.columna.toLowerCase().trim()));
+
+      // Detect headers from first row
+      const firstRow = rows[0] ?? {};
+      const headerKeys = Object.keys(firstRow);
+      const headerKeysLower = headerKeys.map((h) => h.toLowerCase().trim());
+
+      const presentRequired = requiredCols.filter((c) => headerKeysLower.includes(c.toLowerCase().trim()));
+      const missingRequiredColumns = requiredCols.filter((c) => !headerKeysLower.includes(c.toLowerCase().trim()));
+      const presentOptional = fields
+        .filter((f) => !f.requerido && headerKeysLower.includes(f.columna.toLowerCase().trim()))
+        .map((f) => f.columna);
+      const unknownColumns = headerKeys.filter((h) => !knownColsLower.has(h.toLowerCase().trim()));
+
+      const rowIssues = validateRequiredFields(rows, tipo);
+      const canContinue = rows.length > 0 && missingRequiredColumns.length === 0 && rowIssues.length === 0;
+
+      setValidation({
+        tipo,
+        fileName: file.name,
+        rows,
+        totalRows: rows.length,
+        presentRequired,
+        presentOptional,
+        missingRequiredColumns,
+        unknownColumns,
+        rowIssues,
+        canContinue,
+      });
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Error: ${e.message ?? "no se pudo leer el archivo"}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const confirmInsert = async () => {
+    if (!user || !validation || !validation.canContinue) return;
+    const { tipo, rows, fileName } = validation;
+    setInserting(true);
+    try {
       const map = buildFieldMap(tipo);
       const normalized = rows.map((r) => {
         const out: Record<string, any> = { user_id: user.id };
@@ -300,7 +337,7 @@ function CargarPage() {
         return out;
       }).filter((r) => Object.keys(r).length > 1);
 
-      if (normalized.length === 0) { toast.error("No se encontraron filas válidas"); setBusy(null); return; }
+      if (normalized.length === 0) { toast.error("No se encontraron filas válidas"); setInserting(false); return; }
 
       let inserted = 0;
       for (let i = 0; i < normalized.length; i += 500) {
@@ -311,16 +348,19 @@ function CargarPage() {
       }
 
       await supabase.from("archivos_carga").insert({
-        user_id: user.id, nombre: file.name, tipo, registros: inserted, estado: "completado",
+        user_id: user.id, nombre: fileName, tipo, registros: inserted, estado: "completado",
       });
 
       await regenerateAlerts(user.id);
       toast.success(`${inserted} registros importados en ${tipo}`);
       qc.invalidateQueries();
+      setValidation(null);
     } catch (e: any) {
       console.error(e);
       toast.error(`Error: ${e.message ?? "no se pudo procesar"}`);
-    } finally { setBusy(null); }
+    } finally {
+      setInserting(false);
+    }
   };
 
   const guide = guideTipo ? GUIDES[guideTipo] : null;
