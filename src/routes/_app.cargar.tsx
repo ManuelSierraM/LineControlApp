@@ -69,11 +69,146 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
   },
 };
 
+// ───────── Esquemas de validación de tipos / formatos ─────────
+type DataType = "text" | "digits" | "number" | "date" | "email";
+type FieldRule = {
+  columna: string;
+  target?: string;
+  required?: boolean;
+  type: DataType;
+  minLen?: number;
+  maxLen?: number;
+  min?: number;
+  max?: number;
+  enum?: string[];
+  unique?: boolean;
+  hint: string;
+};
+
+const SCHEMAS: Record<Tipo, FieldRule[]> = {
+  lineas: [
+    { columna: "OPERADOR", required: true, type: "text", maxLen: 50, hint: "Texto, ej. CLARO / TIGO / MOVISTAR (máx. 50)." },
+    { columna: "TIPO_DE_LINEA", type: "text", maxLen: 50, hint: "Texto, ej. VOZ+DATOS." },
+    { columna: "TELE_NUMB", target: "msisdn", required: true, type: "digits", minLen: 10, maxLen: 12, unique: true, hint: "Solo dígitos, 10–12 caracteres. Sin espacios, guiones ni '+'. No debe repetirse." },
+    { columna: "IDENTIFICACION", type: "digits", maxLen: 20, hint: "Solo dígitos (máx. 20)." },
+    { columna: "IDENTIFICACION_MTR", type: "digits", maxLen: 20, hint: "Solo dígitos (máx. 20)." },
+    { columna: "NOMBRE_CLIENTE", target: "nombre_cliente", type: "text", maxLen: 100, hint: "Texto (máx. 100)." },
+    { columna: "Cod Empresa", target: "cod_empresa", type: "text", maxLen: 30, hint: "Texto corto, ej. CO0070 (máx. 30)." },
+    { columna: "ICCID", target: "iccid", required: true, type: "digits", minLen: 18, maxLen: 22, hint: "Solo dígitos, 18–22 caracteres." },
+    { columna: "PLAN_DESC", target: "plan", type: "text", maxLen: 100, hint: "Texto (máx. 100)." },
+    { columna: "VALOR_CFM", target: "valor_plan", required: true, type: "number", min: 0, hint: "Número ≥ 0. Sin símbolos $, ni texto." },
+  ],
+  dispositivos: [
+    { columna: "IMEI", target: "imei", required: true, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "Solo dígitos, 14–16 caracteres. No debe repetirse." },
+    { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
+    { columna: "Número_Teléfono", target: "numero_telefono", required: true, type: "digits", minLen: 10, maxLen: 12, hint: "Solo dígitos, 10–12 caracteres." },
+    { columna: "Last_CheckIn", target: "ultimo_checkin", required: true, type: "date", hint: "Fecha YYYY-MM-DD (ej. 2025-04-12)." },
+    { columna: "Estado_UEM", target: "estado", required: true, type: "text", maxLen: 30, enum: ["ACTIVO","INACTIVO","SUSPENDIDO","BAJA","ENROLADO"], hint: "Valores recomendados: ACTIVO, INACTIVO, SUSPENDIDO, BAJA, ENROLADO." },
+    { columna: "País", type: "text", maxLen: 40, hint: "Texto (máx. 40)." },
+    { columna: "Usuario", target: "asignado_a", type: "text", maxLen: 120, hint: "Texto / correo (máx. 120)." },
+  ],
+  pops: [
+    { columna: "IMEI", target: "codigo", required: true, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "Solo dígitos, 14–16 caracteres. No debe repetirse." },
+    { columna: "Numero_Telefono", target: "numero_telefono", required: true, type: "digits", minLen: 10, maxLen: 12, hint: "Solo dígitos, 10–12 caracteres." },
+    { columna: "Centro", target: "centro_costo", required: true, type: "text", maxLen: 30, hint: "Texto corto, ej. CC-100 (máx. 30)." },
+    { columna: "Delegación", target: "ubicacion", required: true, type: "text", maxLen: 80, hint: "Texto (máx. 80)." },
+    { columna: "Fecha_Alta", type: "date", hint: "Fecha YYYY-MM-DD." },
+    { columna: "Fecha_Baja", type: "date", hint: "Fecha YYYY-MM-DD." },
+    { columna: "Modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
+  ],
+};
+
+function normKey(s: string) { return String(s).toLowerCase().trim().replace(/\s+/g, "_"); }
+
+function getCell(row: Record<string, any>, columna: string) {
+  if (row[columna] !== undefined) return row[columna];
+  const lower = columna.toLowerCase().trim();
+  if (row[lower] !== undefined) return row[lower];
+  const nk = normKey(columna);
+  for (const k of Object.keys(row)) if (normKey(k) === nk) return row[k];
+  return undefined;
+}
+
+function excelSerialToISO(n: number): string | null {
+  if (!isFinite(n) || n < 1 || n > 80000) return null;
+  const ms = Math.round((n - 25569) * 86400 * 1000);
+  const d = new Date(ms);
+  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+function coerceDate(v: any): string | null {
+  if (v == null || v === "") return null;
+  if (v instanceof Date && !isNaN(v.getTime())) return v.toISOString().slice(0, 10);
+  if (typeof v === "number") return excelSerialToISO(v);
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+function coerceNumber(v: any): number | null {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return isFinite(v) ? v : null;
+  const s = String(v).replace(/[\s$]/g, "").replace(/\./g, "").replace(/,/g, ".");
+  const n = Number(s);
+  return isFinite(n) ? n : null;
+}
+function coerceDigits(v: any): string | null {
+  if (v == null || v === "") return null;
+  const s = typeof v === "number" ? String(Math.trunc(v)) : String(v).trim();
+  const cleaned = s.replace(/[^\d]/g, "");
+  return cleaned || null;
+}
+
+function validateValue(rule: FieldRule, raw: any): { ok: boolean; reason?: string; warn?: string; coerced?: any } {
+  const empty = raw == null || String(raw).trim() === "";
+  if (empty) {
+    if (rule.required) return { ok: false, reason: `obligatorio vacío — ${rule.hint}` };
+    return { ok: true, coerced: null };
+  }
+  switch (rule.type) {
+    case "number": {
+      const n = coerceNumber(raw);
+      if (n === null) return { ok: false, reason: `no es numérico ("${String(raw).slice(0,30)}") — ${rule.hint}` };
+      if (rule.min !== undefined && n < rule.min) return { ok: false, reason: `debe ser ≥ ${rule.min}` };
+      if (rule.max !== undefined && n > rule.max) return { ok: false, reason: `debe ser ≤ ${rule.max}` };
+      return { ok: true, coerced: n };
+    }
+    case "date": {
+      const d = coerceDate(raw);
+      if (!d) return { ok: false, reason: `fecha inválida ("${String(raw).slice(0,30)}") — ${rule.hint}` };
+      return { ok: true, coerced: d };
+    }
+    case "digits": {
+      const s = coerceDigits(raw);
+      if (!s) return { ok: false, reason: `no contiene dígitos — ${rule.hint}` };
+      if (rule.minLen && s.length < rule.minLen) return { ok: false, reason: `longitud ${s.length}, mínimo ${rule.minLen} — ${rule.hint}` };
+      if (rule.maxLen && s.length > rule.maxLen) return { ok: false, reason: `longitud ${s.length}, máximo ${rule.maxLen} — ${rule.hint}` };
+      return { ok: true, coerced: s };
+    }
+    case "email": {
+      const s = String(raw).trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) return { ok: false, reason: `correo inválido — ${rule.hint}` };
+      return { ok: true, coerced: s };
+    }
+    default: {
+      const s = String(raw).trim();
+      if (rule.maxLen && s.length > rule.maxLen) return { ok: false, reason: `excede ${rule.maxLen} caracteres — ${rule.hint}` };
+      if (rule.minLen && s.length < rule.minLen) return { ok: false, reason: `mínimo ${rule.minLen} caracteres — ${rule.hint}` };
+      let warn: string | undefined;
+      if (rule.enum && !rule.enum.map((e)=>e.toLowerCase()).includes(s.toLowerCase())) {
+        warn = `"${s}" no es un valor recomendado (${rule.enum.join(", ")})`;
+      }
+      return { ok: true, coerced: s, warn };
+    }
+  }
+}
+
 function buildFieldMap(tipo: Tipo): Record<string, string> {
   const map: Record<string, string> = {};
   for (const f of GUIDES[tipo].fields) {
     if (!f.target) continue;
-    const key = f.columna.toLowerCase().trim().replace(/\s+/g, "_");
+    const key = normKey(f.columna);
     map[key] = f.target;
     map[f.columna.toLowerCase().trim()] = f.target;
   }
