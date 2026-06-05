@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter, Download } from "lucide-react";
+import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter, Download, AlertTriangle, XCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -98,6 +98,23 @@ function CargarPage() {
   const [purgarDatos, setPurgarDatos] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Pre-upload validation card state
+  type ValidationIssue = { row: number; fields: string[] };
+  type ValidationResult = {
+    tipo: Tipo;
+    fileName: string;
+    rows: Record<string, any>[];
+    totalRows: number;
+    presentRequired: string[];
+    presentOptional: string[];
+    missingRequiredColumns: string[];
+    unknownColumns: string[];
+    rowIssues: ValidationIssue[];
+    canContinue: boolean;
+  };
+  const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [inserting, setInserting] = useState(false);
 
   const { data: historial } = useQuery({
     queryKey: ["archivos_carga"],
@@ -265,13 +282,50 @@ function CargarPage() {
     setBusy(tipo);
     try {
       const rows = await parseFile(file);
-      const validationErrors = validateRequiredFields(rows, tipo);
-      if (validationErrors.length > 0) {
-        const summary = validationErrors.slice(0, 5).map((e) => `Fila ${e.row}: ${e.fields.join(", ")}`).join("; ");
-        toast.error(`Campos requeridos faltantes en ${validationErrors.length} filas. ${summary}${validationErrors.length > 5 ? "..." : ""}`);
-        setBusy(null);
-        return;
-      }
+      const fields = GUIDES[tipo].fields;
+      const requiredCols = fields.filter((f) => f.requerido).map((f) => f.columna);
+      const knownColsLower = new Set(fields.map((f) => f.columna.toLowerCase().trim()));
+
+      // Detect headers from first row
+      const firstRow = rows[0] ?? {};
+      const headerKeys = Object.keys(firstRow);
+      const headerKeysLower = headerKeys.map((h) => h.toLowerCase().trim());
+
+      const presentRequired = requiredCols.filter((c) => headerKeysLower.includes(c.toLowerCase().trim()));
+      const missingRequiredColumns = requiredCols.filter((c) => !headerKeysLower.includes(c.toLowerCase().trim()));
+      const presentOptional = fields
+        .filter((f) => !f.requerido && headerKeysLower.includes(f.columna.toLowerCase().trim()))
+        .map((f) => f.columna);
+      const unknownColumns = headerKeys.filter((h) => !knownColsLower.has(h.toLowerCase().trim()));
+
+      const rowIssues = validateRequiredFields(rows, tipo);
+      const canContinue = rows.length > 0 && missingRequiredColumns.length === 0 && rowIssues.length === 0;
+
+      setValidation({
+        tipo,
+        fileName: file.name,
+        rows,
+        totalRows: rows.length,
+        presentRequired,
+        presentOptional,
+        missingRequiredColumns,
+        unknownColumns,
+        rowIssues,
+        canContinue,
+      });
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Error: ${e.message ?? "no se pudo leer el archivo"}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const confirmInsert = async () => {
+    if (!user || !validation || !validation.canContinue) return;
+    const { tipo, rows, fileName } = validation;
+    setInserting(true);
+    try {
       const map = buildFieldMap(tipo);
       const normalized = rows.map((r) => {
         const out: Record<string, any> = { user_id: user.id };
@@ -283,7 +337,7 @@ function CargarPage() {
         return out;
       }).filter((r) => Object.keys(r).length > 1);
 
-      if (normalized.length === 0) { toast.error("No se encontraron filas válidas"); setBusy(null); return; }
+      if (normalized.length === 0) { toast.error("No se encontraron filas válidas"); setInserting(false); return; }
 
       let inserted = 0;
       for (let i = 0; i < normalized.length; i += 500) {
@@ -294,16 +348,19 @@ function CargarPage() {
       }
 
       await supabase.from("archivos_carga").insert({
-        user_id: user.id, nombre: file.name, tipo, registros: inserted, estado: "completado",
+        user_id: user.id, nombre: fileName, tipo, registros: inserted, estado: "completado",
       });
 
       await regenerateAlerts(user.id);
       toast.success(`${inserted} registros importados en ${tipo}`);
       qc.invalidateQueries();
+      setValidation(null);
     } catch (e: any) {
       console.error(e);
       toast.error(`Error: ${e.message ?? "no se pudo procesar"}`);
-    } finally { setBusy(null); }
+    } finally {
+      setInserting(false);
+    }
   };
 
   const guide = guideTipo ? GUIDES[guideTipo] : null;
@@ -469,6 +526,114 @@ function CargarPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!validation} onOpenChange={(o) => { if (!o && !inserting) setValidation(null); }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {validation?.canContinue ? (
+                <CheckCircle2 className="h-5 w-5 text-success" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-[#E26B0A]" />
+              )}
+              Validación previa — {validation ? GUIDES[validation.tipo].titulo : ""}
+            </DialogTitle>
+            <DialogDescription>
+              Archivo: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{validation?.fileName}</code> · {validation?.totalRows ?? 0} filas detectadas
+            </DialogDescription>
+          </DialogHeader>
+
+          {validation && (
+            <div className="max-h-[60vh] space-y-4 overflow-auto pr-1">
+              {/* Estado general */}
+              {validation.canContinue ? (
+                <div className="rounded-md border border-success/30 bg-success/10 p-3 text-sm">
+                  <p className="font-medium text-success">El archivo cumple con el formato requerido.</p>
+                  <p className="text-xs text-muted-foreground">¿Desea continuar el cargue?</p>
+                </div>
+              ) : (
+                <div className="rounded-md border border-[#E26B0A]/30 bg-[#E26B0A]/10 p-3 text-sm">
+                  <p className="font-medium text-[#E26B0A]">Cargue inválido</p>
+                  <p className="text-xs text-muted-foreground">Realice los cambios indicados en el Excel y vuelva a intentarlo.</p>
+                </div>
+              )}
+
+              {/* Correcto */}
+              <section>
+                <h4 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
+                  <CheckCircle2 className="h-4 w-4 text-success" /> Correcto
+                </h4>
+                <ul className="space-y-1 rounded-md border border-border bg-muted/30 p-3 text-xs">
+                  <li>· Filas detectadas: <strong>{validation.totalRows}</strong></li>
+                  <li>· Columnas obligatorias presentes: <strong>{validation.presentRequired.length}</strong>{validation.presentRequired.length > 0 && <> ({validation.presentRequired.join(", ")})</>}</li>
+                  {validation.presentOptional.length > 0 && (
+                    <li>· Columnas opcionales reconocidas: {validation.presentOptional.join(", ")}</li>
+                  )}
+                </ul>
+              </section>
+
+              {/* Por corregir */}
+              {(validation.missingRequiredColumns.length > 0 || validation.rowIssues.length > 0) && (
+                <section>
+                  <h4 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
+                    <XCircle className="h-4 w-4 text-[#E26B0A]" /> Por corregir
+                  </h4>
+                  <div className="space-y-2 rounded-md border border-[#E26B0A]/30 bg-[#E26B0A]/5 p-3 text-xs">
+                    {validation.missingRequiredColumns.length > 0 && (
+                      <div>
+                        <p className="font-medium">Columnas obligatorias faltantes:</p>
+                        <p className="text-muted-foreground">Agregue las columnas: <strong>{validation.missingRequiredColumns.join(", ")}</strong> con el encabezado exacto.</p>
+                      </div>
+                    )}
+                    {validation.rowIssues.length > 0 && (
+                      <div>
+                        <p className="font-medium">Filas con campos obligatorios vacíos ({validation.rowIssues.length}):</p>
+                        <ul className="ml-4 list-disc text-muted-foreground">
+                          {validation.rowIssues.slice(0, 10).map((it) => (
+                            <li key={it.row}>Fila {it.row} — completar: {it.fields.join(", ")}</li>
+                          ))}
+                          {validation.rowIssues.length > 10 && (
+                            <li>… y {validation.rowIssues.length - 10} filas más</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {/* Indicaciones */}
+              {validation.unknownColumns.length > 0 && (
+                <section>
+                  <h4 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
+                    <AlertTriangle className="h-4 w-4 text-[#E26B0A]" /> Indicaciones
+                  </h4>
+                  <div className="rounded-md border border-border bg-muted/30 p-3 text-xs">
+                    <p>Las siguientes columnas no están en el formato guía y serán ignoradas:</p>
+                    <p className="mt-1 text-muted-foreground">{validation.unknownColumns.join(", ")}</p>
+                  </div>
+                </section>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" disabled={inserting} onClick={() => setValidation(null)}>
+              <X className="mr-1.5 h-4 w-4" /> Cerrar
+            </Button>
+            {validation?.canContinue ? (
+              <Button disabled={inserting} onClick={confirmInsert}>
+                {inserting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-4 w-4" />}
+                Sí, continuar el cargue
+              </Button>
+            ) : (
+              <Button variant="secondary" disabled={inserting} onClick={() => setValidation(null)}>
+                Aceptar y volver a intentar
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
