@@ -426,10 +426,11 @@ function CargarPage() {
     try {
       const rows = await parseFile(file);
       const fields = GUIDES[tipo].fields;
+      const schema = SCHEMAS[tipo];
+      const schemaByCol = new Map(schema.map((r) => [r.columna.toLowerCase().trim(), r]));
       const requiredCols = fields.filter((f) => f.requerido).map((f) => f.columna);
       const knownColsLower = new Set(fields.map((f) => f.columna.toLowerCase().trim()));
 
-      // Detect headers from first row
       const firstRow = rows[0] ?? {};
       const headerKeys = Object.keys(firstRow);
       const headerKeysLower = headerKeys.map((h) => h.toLowerCase().trim());
@@ -441,19 +442,71 @@ function CargarPage() {
         .map((f) => f.columna);
       const unknownColumns = headerKeys.filter((h) => !knownColsLower.has(h.toLowerCase().trim()));
 
-      const rowIssues = validateRequiredFields(rows, tipo);
-      const canContinue = rows.length > 0 && missingRequiredColumns.length === 0 && rowIssues.length === 0;
+      // Validación por fila: requeridos + tipos/formatos + únicos
+      const rowIssues: { row: number; fields: string[] }[] = [];
+      const typeIssues: { row: number; field: string; reason: string }[] = [];
+      const warnings: { row: number; field: string; warn: string }[] = [];
+      const uniqueTrack = new Map<string, Map<string, number[]>>(); // field -> value -> rows
+      const coercedRows: Record<string, any>[] = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const rowNum = i + 2;
+        const missing: string[] = [];
+        const coerced: Record<string, any> = {};
+        for (const rule of schema) {
+          const raw = getCell(r, rule.columna);
+          const empty = raw == null || String(raw).trim() === "";
+          if (empty && rule.required) { missing.push(rule.columna); continue; }
+          if (empty) continue;
+          const res = validateValue(rule, raw);
+          if (!res.ok) {
+            typeIssues.push({ row: rowNum, field: rule.columna, reason: res.reason ?? "valor inválido" });
+            continue;
+          }
+          if (res.warn) warnings.push({ row: rowNum, field: rule.columna, warn: res.warn });
+          if (rule.target) coerced[rule.target] = res.coerced;
+          if (rule.unique && res.coerced != null) {
+            const key = String(res.coerced);
+            if (!uniqueTrack.has(rule.columna)) uniqueTrack.set(rule.columna, new Map());
+            const m = uniqueTrack.get(rule.columna)!;
+            const arr = m.get(key) ?? [];
+            arr.push(rowNum);
+            m.set(key, arr);
+          }
+        }
+        if (missing.length > 0) rowIssues.push({ row: rowNum, fields: missing });
+        coercedRows.push(coerced);
+      }
+
+      const duplicateIssues: { field: string; value: string; rows: number[] }[] = [];
+      for (const [field, m] of uniqueTrack.entries()) {
+        for (const [value, rs] of m.entries()) {
+          if (rs.length > 1) duplicateIssues.push({ field, value, rows: rs });
+        }
+      }
+
+      const canContinue =
+        rows.length > 0 &&
+        missingRequiredColumns.length === 0 &&
+        rowIssues.length === 0 &&
+        typeIssues.length === 0 &&
+        duplicateIssues.length === 0;
 
       setValidation({
         tipo,
         fileName: file.name,
         rows,
+        coercedRows,
         totalRows: rows.length,
         presentRequired,
         presentOptional,
         missingRequiredColumns,
         unknownColumns,
         rowIssues,
+        typeIssues,
+        duplicateIssues,
+        warnings,
         canContinue,
       });
     } catch (e: any) {
@@ -466,19 +519,12 @@ function CargarPage() {
 
   const confirmInsert = async () => {
     if (!user || !validation || !validation.canContinue) return;
-    const { tipo, rows, fileName } = validation;
+    const { tipo, coercedRows, fileName } = validation;
     setInserting(true);
     try {
-      const map = buildFieldMap(tipo);
-      const normalized = rows.map((r) => {
-        const out: Record<string, any> = { user_id: user.id };
-        for (const [k, v] of Object.entries(r)) {
-          const key = String(k).toLowerCase().trim().replace(/\s+/g, "_");
-          const target = map[key];
-          if (target) out[target] = typeof v === "string" ? v.trim() : v;
-        }
-        return out;
-      }).filter((r) => Object.keys(r).length > 1);
+      const normalized = coercedRows
+        .map((r) => ({ user_id: user.id, ...r }))
+        .filter((r) => Object.keys(r).length > 1);
 
       if (normalized.length === 0) { toast.error("No se encontraron filas válidas"); setInserting(false); return; }
 
@@ -489,6 +535,7 @@ function CargarPage() {
         if (error) throw error;
         inserted += count ?? c.length;
       }
+
 
       await supabase.from("archivos_carga").insert({
         user_id: user.id, nombre: fileName, tipo, registros: inserted, estado: "completado",
