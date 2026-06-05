@@ -763,7 +763,7 @@ function CargarPage() {
               </section>
 
               {/* Por corregir */}
-              {(validation.missingRequiredColumns.length > 0 || validation.rowIssues.length > 0) && (
+              {(validation.missingRequiredColumns.length > 0 || validation.rowIssues.length > 0 || validation.typeIssues.length > 0 || validation.duplicateIssues.length > 0) && (
                 <section>
                   <h4 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
                     <XCircle className="h-4 w-4 text-[#E26B0A]" /> Por corregir
@@ -780,11 +780,31 @@ function CargarPage() {
                         <p className="font-medium">Filas con campos obligatorios vacíos ({validation.rowIssues.length}):</p>
                         <ul className="ml-4 list-disc text-muted-foreground">
                           {validation.rowIssues.slice(0, 10).map((it) => (
-                            <li key={it.row}>Fila {it.row} — completar: {it.fields.join(", ")}</li>
+                            <li key={`r-${it.row}`}>Fila {it.row} — completar: {it.fields.join(", ")}</li>
                           ))}
-                          {validation.rowIssues.length > 10 && (
-                            <li>… y {validation.rowIssues.length - 10} filas más</li>
-                          )}
+                          {validation.rowIssues.length > 10 && (<li>… y {validation.rowIssues.length - 10} filas más</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {validation.typeIssues.length > 0 && (
+                      <div>
+                        <p className="font-medium">Errores de tipo o formato ({validation.typeIssues.length}):</p>
+                        <ul className="ml-4 list-disc text-muted-foreground">
+                          {validation.typeIssues.slice(0, 15).map((it, i) => (
+                            <li key={`t-${i}`}>Fila {it.row} · <code className="font-mono">{it.field}</code>: {it.reason}</li>
+                          ))}
+                          {validation.typeIssues.length > 15 && (<li>… y {validation.typeIssues.length - 15} más</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {validation.duplicateIssues.length > 0 && (
+                      <div>
+                        <p className="font-medium">Valores duplicados en columnas únicas ({validation.duplicateIssues.length}):</p>
+                        <ul className="ml-4 list-disc text-muted-foreground">
+                          {validation.duplicateIssues.slice(0, 10).map((d, i) => (
+                            <li key={`d-${i}`}><code className="font-mono">{d.field}</code> = <strong>{d.value}</strong> aparece en filas {d.rows.join(", ")}. Deje un único valor por fila.</li>
+                          ))}
+                          {validation.duplicateIssues.length > 10 && (<li>… y {validation.duplicateIssues.length - 10} más</li>)}
                         </ul>
                       </div>
                     )}
@@ -793,17 +813,34 @@ function CargarPage() {
               )}
 
               {/* Indicaciones */}
-              {validation.unknownColumns.length > 0 && (
+              {(validation.unknownColumns.length > 0 || validation.warnings.length > 0) && (
                 <section>
                   <h4 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold">
                     <AlertTriangle className="h-4 w-4 text-[#E26B0A]" /> Indicaciones
                   </h4>
-                  <div className="rounded-md border border-border bg-muted/30 p-3 text-xs">
-                    <p>Las siguientes columnas no están en el formato guía y serán ignoradas:</p>
-                    <p className="mt-1 text-muted-foreground">{validation.unknownColumns.join(", ")}</p>
+                  <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3 text-xs">
+                    {validation.unknownColumns.length > 0 && (
+                      <div>
+                        <p>Columnas fuera del formato guía (serán ignoradas al cargar):</p>
+                        <p className="mt-1 text-muted-foreground">{validation.unknownColumns.join(", ")}</p>
+                      </div>
+                    )}
+                    {validation.warnings.length > 0 && (
+                      <div>
+                        <p className="font-medium">Advertencias ({validation.warnings.length}):</p>
+                        <ul className="ml-4 list-disc text-muted-foreground">
+                          {validation.warnings.slice(0, 10).map((w, i) => (
+                            <li key={`w-${i}`}>Fila {w.row} · <code className="font-mono">{w.field}</code>: {w.warn}</li>
+                          ))}
+                          {validation.warnings.length > 10 && (<li>… y {validation.warnings.length - 10} más</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    <p className="pt-1 text-muted-foreground">Recomendaciones para evitar problemas al mostrar los datos: respete los encabezados exactos del template, mantenga los números sin símbolos ($, comas de miles), use fechas en formato <code>YYYY-MM-DD</code>, deje los IMEI/MSISDN/ICCID solo con dígitos, y no repita los identificadores únicos.</p>
                   </div>
                 </section>
               )}
+
             </div>
           )}
 
