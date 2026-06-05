@@ -99,6 +99,23 @@ function CargarPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Pre-upload validation card state
+  type ValidationIssue = { row: number; fields: string[] };
+  type ValidationResult = {
+    tipo: Tipo;
+    fileName: string;
+    rows: Record<string, any>[];
+    totalRows: number;
+    presentRequired: string[];
+    presentOptional: string[];
+    missingRequiredColumns: string[];
+    unknownColumns: string[];
+    rowIssues: ValidationIssue[];
+    canContinue: boolean;
+  };
+  const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [inserting, setInserting] = useState(false);
+
   const { data: historial } = useQuery({
     queryKey: ["archivos_carga"],
     queryFn: async () => {
