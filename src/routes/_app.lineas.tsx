@@ -70,6 +70,7 @@ function LineasPage() {
             { key: "identificacion_mtr", header: "IDENTIFICACION_MTR", render: () => "—" },
             { key: "cliente", header: "NOMBRE_CLIENTE", render: (r) => r.cliente ?? "—" },
             { key: "cod_empresa", header: "Cod Empresa", render: (r) => r.cod_empresa ?? "—" },
+            { key: "imei", header: "IMEI", render: (r) => r.imei ?? "—" },
             { key: "iccid", header: "ICCID", render: (r) => r.iccid ?? "—" },
             { key: "plan", header: "PLAN_DESC", render: (r) => r.plan ?? "—" },
             { key: "valor_cfm", header: "VALOR_CFM", render: (r) => fmtMoney(Number(r.valor_plan ?? r.costo_mensual ?? 0)) },
