@@ -28,11 +28,9 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     titulo: "Maestro de Líneas",
     archivo: "Maestro_Lineas.xlsx",
     fields: [
-      { columna: "OPERADOR", ejemplo: "CLARO", requerido: true, nota: "Nombre del operador" },
+      { columna: "OPERADOR", ejemplo: "CLARO", requerido: true, nota: "Nombre del operador", target: "operador" },
       { columna: "TIPO_DE_LINEA", ejemplo: "VOZ+DATOS", requerido: false, nota: "Tipo de servicio" },
       { columna: "TELE_NUMB", ejemplo: "3001234567", requerido: true, nota: "Número de la línea (MSISDN)", target: "msisdn" },
-      { columna: "IDENTIFICACION", ejemplo: "1020304050", requerido: false, nota: "Documento del titular" },
-      { columna: "IDENTIFICACION_MTR", ejemplo: "900123456", requerido: false, nota: "Identificación matriz" },
       { columna: "NOMBRE_CLIENTE", ejemplo: "vigilancia", requerido: false, nota: "Nombre del usuario asignado", target: "nombre_cliente" },
       { columna: "Cod Empresa", ejemplo: "CO0070", requerido: false, nota: "Código de empresa", target: "cod_empresa" },
 
@@ -87,11 +85,9 @@ type FieldRule = {
 
 const SCHEMAS: Record<Tipo, FieldRule[]> = {
   lineas: [
-    { columna: "OPERADOR", required: true, type: "text", maxLen: 50, hint: "Texto, ej. CLARO / TIGO / MOVISTAR (máx. 50)." },
+    { columna: "OPERADOR", target: "operador", required: true, type: "text", maxLen: 50, hint: "Texto, ej. CLARO / TIGO / MOVISTAR (máx. 50)." },
     { columna: "TIPO_DE_LINEA", type: "text", maxLen: 50, hint: "Texto, ej. VOZ+DATOS." },
     { columna: "TELE_NUMB", target: "msisdn", required: true, type: "digits", minLen: 10, maxLen: 12, unique: true, hint: "Solo dígitos, 10–12 caracteres. Sin espacios, guiones ni '+'. No debe repetirse." },
-    { columna: "IDENTIFICACION", type: "digits", maxLen: 20, hint: "Solo dígitos (máx. 20)." },
-    { columna: "IDENTIFICACION_MTR", type: "digits", maxLen: 20, hint: "Solo dígitos (máx. 20)." },
     { columna: "NOMBRE_CLIENTE", target: "nombre_cliente", type: "text", maxLen: 100, hint: "Texto (máx. 100)." },
     { columna: "Cod Empresa", target: "cod_empresa", type: "text", maxLen: 30, hint: "Texto corto, ej. CO0070 (máx. 30)." },
     { columna: "ICCID", target: "iccid", required: true, type: "digits", minLen: 18, maxLen: 22, hint: "Solo dígitos, 18–22 caracteres." },

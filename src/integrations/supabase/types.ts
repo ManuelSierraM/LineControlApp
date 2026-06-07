@@ -162,6 +162,7 @@ export type Database = {
           imei: string | null
           msisdn: string
           nombre_cliente: string | null
+          operador: string | null
           plan: string | null
           ultimo_uso: string | null
           user_id: string
@@ -180,6 +181,7 @@ export type Database = {
           imei?: string | null
           msisdn: string
           nombre_cliente?: string | null
+          operador?: string | null
           plan?: string | null
           ultimo_uso?: string | null
           user_id: string
@@ -198,6 +200,7 @@ export type Database = {
           imei?: string | null
           msisdn?: string
           nombre_cliente?: string | null
+          operador?: string | null
           plan?: string | null
           ultimo_uso?: string | null
           user_id?: string
