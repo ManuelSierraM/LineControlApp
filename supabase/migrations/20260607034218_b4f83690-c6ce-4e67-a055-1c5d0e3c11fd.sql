@@ -1,0 +1,1 @@
+ALTER TABLE public.lineas ADD COLUMN IF NOT EXISTS operador text;
