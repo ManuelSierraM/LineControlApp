@@ -63,11 +63,9 @@ function LineasPage() {
           rows={rows}
           searchKeys={["msisdn", "iccid", "plan", "cliente", "cod_empresa"]}
           columns={[
-            { key: "operador", header: "OPERADOR", render: (r) => operador(r.msisdn) },
+            { key: "operador", header: "OPERADOR", render: (r) => r.operador ?? operador(r.msisdn) },
             { key: "tipo_de_linea", header: "TIPO_DE_LINEA", render: () => "VOZ+DATOS" },
             { key: "msisdn", header: "TELE_NUMB" },
-            { key: "identificacion", header: "IDENTIFICACION", render: () => "—" },
-            { key: "identificacion_mtr", header: "IDENTIFICACION_MTR", render: () => "—" },
             { key: "cliente", header: "NOMBRE_CLIENTE", render: (r) => r.cliente ?? "—" },
             { key: "cod_empresa", header: "Cod Empresa", render: (r) => r.cod_empresa ?? "—" },
             { key: "imei", header: "IMEI", render: (r) => r.imei ?? "—" },
