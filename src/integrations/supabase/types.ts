@@ -215,9 +215,11 @@ export type Database = {
           codigo: string
           created_at: string
           estado: string | null
+          fecha_alta: string | null
+          fecha_baja: string | null
           id: string
+          modelo: string | null
           numero_telefono: string | null
-          responsable: string | null
           ubicacion: string | null
           user_id: string
         }
@@ -226,9 +228,11 @@ export type Database = {
           codigo: string
           created_at?: string
           estado?: string | null
+          fecha_alta?: string | null
+          fecha_baja?: string | null
           id?: string
+          modelo?: string | null
           numero_telefono?: string | null
-          responsable?: string | null
           ubicacion?: string | null
           user_id: string
         }
@@ -237,9 +241,11 @@ export type Database = {
           codigo?: string
           created_at?: string
           estado?: string | null
+          fecha_alta?: string | null
+          fecha_baja?: string | null
           id?: string
+          modelo?: string | null
           numero_telefono?: string | null
-          responsable?: string | null
           ubicacion?: string | null
           user_id?: string
         }
