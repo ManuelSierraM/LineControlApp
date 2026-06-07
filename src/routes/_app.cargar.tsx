@@ -60,9 +60,9 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
       { columna: "Numero_Telefono", ejemplo: "3001234567", requerido: true, nota: "Línea asociada", target: "numero_telefono" },
       { columna: "Centro", ejemplo: "CC-100", requerido: true, nota: "Centro de costo", target: "centro_costo" },
       { columna: "Delegación", ejemplo: "Bogotá Norte", requerido: true, nota: "Delegación o sede", target: "ubicacion" },
-      { columna: "Fecha_Alta", ejemplo: "2024-01-15", requerido: false, nota: "Fecha de alta del equipo" },
-      { columna: "Fecha_Baja", ejemplo: "2025-03-30", requerido: false, nota: "Fecha de baja (si aplica)" },
-      { columna: "Modelo", ejemplo: "iPhone 13", requerido: false, nota: "Modelo del equipo" },
+      { columna: "Fecha_Alta", ejemplo: "2024-01-15", requerido: false, nota: "Fecha de alta del equipo (YYYY-MM-DD)", target: "fecha_alta" },
+      { columna: "Fecha_Baja", ejemplo: "2025-03-30", requerido: false, nota: "Fecha de baja si aplica (YYYY-MM-DD)", target: "fecha_baja" },
+      { columna: "Modelo", ejemplo: "iPhone 13", requerido: false, nota: "Modelo del equipo", target: "modelo" },
     ],
   },
 };
@@ -108,9 +108,9 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
     { columna: "Numero_Telefono", target: "numero_telefono", required: true, type: "digits", minLen: 10, maxLen: 12, hint: "Solo dígitos, 10–12 caracteres." },
     { columna: "Centro", target: "centro_costo", required: true, type: "text", maxLen: 30, hint: "Texto corto, ej. CC-100 (máx. 30)." },
     { columna: "Delegación", target: "ubicacion", required: true, type: "text", maxLen: 80, hint: "Texto (máx. 80)." },
-    { columna: "Fecha_Alta", type: "date", hint: "Fecha YYYY-MM-DD." },
-    { columna: "Fecha_Baja", type: "date", hint: "Fecha YYYY-MM-DD." },
-    { columna: "Modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
+    { columna: "Fecha_Alta", target: "fecha_alta", type: "date", hint: "Fecha YYYY-MM-DD." },
+    { columna: "Fecha_Baja", target: "fecha_baja", type: "date", hint: "Fecha YYYY-MM-DD." },
+    { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
   ],
 };
 
