@@ -143,11 +143,11 @@ function AlertasPage() {
           <DataTable
             title="POPS sin centro de costo asignado"
             rows={popsSC}
-            searchKeys={["codigo", "ubicacion", "responsable"]}
+            searchKeys={["codigo", "ubicacion", "modelo"]}
             columns={[
-              { key: "codigo", header: "Código" },
-              { key: "ubicacion", header: "Ubicación" },
-              { key: "responsable", header: "Responsable" },
+              { key: "codigo", header: "IMEI" },
+              { key: "ubicacion", header: "Delegación" },
+              { key: "modelo", header: "Modelo" },
               { key: "estado", header: "Estado" },
             ]}
           />
