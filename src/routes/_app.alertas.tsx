@@ -27,6 +27,13 @@ function diffDays(d?: string | null) {
   return Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
 }
 
+function normPhone(p?: string | null) {
+  if (!p) return "";
+  let s = String(p).replace(/[^\d]/g, "");
+  if (s.startsWith("57") && s.length > 10) s = s.slice(2);
+  return s;
+}
+
 function AlertasPage() {
   const [tab, setTab] = useState<TabKey>("sin_uso");
   const { data } = useQuery({
@@ -44,21 +51,42 @@ function AlertasPage() {
   const lineas = data?.lineas ?? [];
   const disp = data?.disp ?? [];
   const pops = data?.pops ?? [];
-  const byImei = new Map(disp.map((d) => [d.imei, d]));
 
-  const sinUso = lineas
-    .map((l) => ({ ...l, dias: diffDays(l.ultimo_uso), modelo: byImei.get(l.imei ?? "")?.modelo ?? "—", cliente: byImei.get(l.imei ?? "")?.asignado_a ?? "—" }))
+  // Lookups
+  const dispByImei = new Map(disp.map((d) => [d.imei, d]));
+  const popsByPhone = new Map<string, typeof pops[number]>();
+  for (const p of pops) {
+    const key = normPhone(p.numero_telefono);
+    if (key) popsByPhone.set(key, p);
+  }
+
+  // Derive IMEI per línea: prefer línea.imei, fall back to POP código matched by teléfono
+  const lineasEnriched = lineas.map((l) => {
+    const pop = popsByPhone.get(normPhone(l.msisdn));
+    const imei = l.imei || pop?.codigo || null;
+    const d = imei ? dispByImei.get(imei) : undefined;
+    return {
+      ...l,
+      imei,
+      modelo: d?.modelo ?? pop?.modelo ?? "—",
+      cliente: l.nombre_cliente ?? d?.asignado_a ?? "—",
+      centro_costo: l.centro_costo ?? pop?.centro_costo ?? "—",
+    };
+  });
+
+  const sinUso = lineasEnriched
+    .map((l) => ({ ...l, dias: diffDays(l.ultimo_uso) }))
     .filter((l) => l.dias == null || l.dias > 30);
 
-  const sinEquipo = lineas.filter((l) => !l.imei).map((l) => ({ ...l, modelo: "—", cliente: "—" }));
+  const sinEquipo = lineasEnriched.filter((l) => !l.imei);
 
-  const sobredim = lineas
-    .filter((l) => Number(l.costo_mensual ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100)
-    .map((l) => ({ ...l, modelo: byImei.get(l.imei ?? "")?.modelo ?? "—" }));
+  const sobredim = lineasEnriched.filter(
+    (l) => Number(l.costo_mensual ?? l.valor_plan ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100,
+  );
 
   const popsSC = pops.filter((p) => !p.centro_costo);
 
-  const imeisLineas = new Set(lineas.map((l) => l.imei).filter(Boolean));
+  const imeisLineas = new Set(lineasEnriched.map((l) => l.imei).filter(Boolean));
   const inconsist = disp.filter((d) => d.imei && !imeisLineas.has(d.imei));
 
   const counts: Record<TabKey, number> = {
