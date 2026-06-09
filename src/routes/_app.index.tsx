@@ -12,6 +12,13 @@ function fmtMoney(n: number) {
   return new Intl.NumberFormat("es-CO", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
+function normPhone(p?: string | null) {
+  if (!p) return "";
+  let s = String(p).replace(/[^\d]/g, "");
+  if (s.startsWith("57") && s.length > 10) s = s.slice(2);
+  return s;
+}
+
 function Dashboard() {
   const { data } = useQuery({
     queryKey: ["dashboard"],
@@ -31,30 +38,42 @@ function Dashboard() {
     },
   });
 
-  const lineas = data?.lineas ?? [];
+  const lineasRaw = data?.lineas ?? [];
   const dispositivos = data?.dispositivos ?? [];
   const pops = data?.pops ?? [];
   const alertas = data?.alertas ?? [];
 
-  const costoTotal = lineas.reduce((s, l) => s + Number(l.costo_mensual ?? 0), 0);
+  // Derive IMEI per línea cruzando POPS por número de teléfono (igual que Alertas / Maestro de Líneas)
+  const popsByPhone = new Map<string, (typeof pops)[number]>();
+  for (const p of pops) {
+    const key = normPhone(p.numero_telefono);
+    if (key) popsByPhone.set(key, p);
+  }
+  const lineas = lineasRaw.map((l) => {
+    const pop = popsByPhone.get(normPhone(l.msisdn));
+    return { ...l, imei: l.imei || pop?.codigo || null };
+  });
+
+  const costoTotal = lineas.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
   const hoy = Date.now();
   const sinUso30 = lineas.filter((l) => {
     if (!l.ultimo_uso) return true;
     return (hoy - new Date(l.ultimo_uso).getTime()) / (1000 * 60 * 60 * 24) > 30;
   }).length;
   const sinEquipo = lineas.filter((l) => !l.imei).length;
-  const planSobre = lineas.filter((l) => Number(l.costo_mensual ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100).length;
+  const planSobre = lineas.filter((l) => Number(l.costo_mensual ?? l.valor_plan ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100).length;
   const imeisLineas = new Set(lineas.map((l) => l.imei).filter(Boolean));
   const inconsistencias = dispositivos.filter((d) => d.imei && !imeisLineas.has(d.imei)).length;
   const popsSinCC = pops.filter((p) => !p.centro_costo).length;
   const ahorroSinUso = lineas
     .filter((l) => !l.ultimo_uso || (hoy - new Date(l.ultimo_uso).getTime()) / 86400000 > 30)
-    .reduce((s, l) => s + Number(l.costo_mensual ?? 0), 0);
-  const ahorroSinEquipo = lineas.filter((l) => !l.imei).reduce((s, l) => s + Number(l.costo_mensual ?? 0), 0);
+    .reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
+  const ahorroSinEquipo = lineas.filter((l) => !l.imei).reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
   const ahorroPlan = lineas
-    .filter((l) => Number(l.costo_mensual ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100)
-    .reduce((s, l) => s + Number(l.costo_mensual ?? 0) * 0.4, 0);
+    .filter((l) => Number(l.costo_mensual ?? l.valor_plan ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100)
+    .reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0) * 0.4, 0);
   const ahorroTotal = ahorroSinUso + ahorroSinEquipo + ahorroPlan;
+
 
   const chartData = [
     { name: "Sin uso", valor: ahorroSinUso },
