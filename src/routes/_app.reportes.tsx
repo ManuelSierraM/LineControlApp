@@ -12,6 +12,14 @@ function fmtMoney(n: number) {
   return `$ ${Number(n ?? 0).toLocaleString("es-CO")}`;
 }
 
+function normPhone(p?: string | null) {
+  if (!p) return "";
+  let s = String(p).replace(/[^\d]/g, "");
+  if (s.startsWith("57") && s.length > 10) s = s.slice(2);
+  return s;
+}
+
+
 function toCsv(rows: any[]): string {
   if (!rows.length) return "";
   const headers = Object.keys(rows[0]);
