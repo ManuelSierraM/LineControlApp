@@ -152,6 +152,7 @@ export type Database = {
       lineas: {
         Row: {
           centro_costo: string | null
+          cod_empresa: string | null
           consumo_mb: number | null
           costo_mensual: number | null
           created_at: string
@@ -160,6 +161,8 @@ export type Database = {
           id: string
           imei: string | null
           msisdn: string
+          nombre_cliente: string | null
+          operador: string | null
           plan: string | null
           ultimo_uso: string | null
           user_id: string
@@ -168,6 +171,7 @@ export type Database = {
         }
         Insert: {
           centro_costo?: string | null
+          cod_empresa?: string | null
           consumo_mb?: number | null
           costo_mensual?: number | null
           created_at?: string
@@ -176,6 +180,8 @@ export type Database = {
           id?: string
           imei?: string | null
           msisdn: string
+          nombre_cliente?: string | null
+          operador?: string | null
           plan?: string | null
           ultimo_uso?: string | null
           user_id: string
@@ -184,6 +190,7 @@ export type Database = {
         }
         Update: {
           centro_costo?: string | null
+          cod_empresa?: string | null
           consumo_mb?: number | null
           costo_mensual?: number | null
           created_at?: string
@@ -192,6 +199,8 @@ export type Database = {
           id?: string
           imei?: string | null
           msisdn?: string
+          nombre_cliente?: string | null
+          operador?: string | null
           plan?: string | null
           ultimo_uso?: string | null
           user_id?: string
@@ -206,9 +215,11 @@ export type Database = {
           codigo: string
           created_at: string
           estado: string | null
+          fecha_alta: string | null
+          fecha_baja: string | null
           id: string
+          modelo: string | null
           numero_telefono: string | null
-          responsable: string | null
           ubicacion: string | null
           user_id: string
         }
@@ -217,9 +228,11 @@ export type Database = {
           codigo: string
           created_at?: string
           estado?: string | null
+          fecha_alta?: string | null
+          fecha_baja?: string | null
           id?: string
+          modelo?: string | null
           numero_telefono?: string | null
-          responsable?: string | null
           ubicacion?: string | null
           user_id: string
         }
@@ -228,9 +241,11 @@ export type Database = {
           codigo?: string
           created_at?: string
           estado?: string | null
+          fecha_alta?: string | null
+          fecha_baja?: string | null
           id?: string
+          modelo?: string | null
           numero_telefono?: string | null
-          responsable?: string | null
           ubicacion?: string | null
           user_id?: string
         }
