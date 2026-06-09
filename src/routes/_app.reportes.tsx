@@ -45,25 +45,37 @@ function ReportesPage() {
     },
   });
 
-  const lineas = data?.lineas ?? [];
+  const lineasRaw = data?.lineas ?? [];
   const disp = data?.disp ?? [];
   const pops = data?.pops ?? [];
   const alertas = data?.alertas ?? [];
 
+  // Derivar IMEI por cruce de teléfono con POPS (consistente con Alertas / Maestro de Líneas)
+  const popsByPhone = new Map<string, (typeof pops)[number]>();
+  for (const p of pops) {
+    const key = normPhone(p.numero_telefono);
+    if (key) popsByPhone.set(key, p);
+  }
+  const lineas = lineasRaw.map((l) => {
+    const pop = popsByPhone.get(normPhone(l.msisdn));
+    return { ...l, imei: l.imei || pop?.codigo || null };
+  });
+
   const hoy = Date.now();
-  const costoTotal = lineas.reduce((s, l) => s + Number(l.costo_mensual ?? 0), 0);
+  const costoTotal = lineas.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
   const sinUso = lineas.filter((l) => !l.ultimo_uso || (hoy - new Date(l.ultimo_uso).getTime()) / 86400000 > 30);
   const sinEquipo = lineas.filter((l) => !l.imei);
-  const sobredim = lineas.filter((l) => Number(l.costo_mensual ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100);
+  const sobredim = lineas.filter((l) => Number(l.costo_mensual ?? l.valor_plan ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100);
   const popsSC = pops.filter((p) => !p.centro_costo);
   const imeisLineas = new Set(lineas.map((l) => l.imei).filter(Boolean));
   const inconsist = disp.filter((d) => d.imei && !imeisLineas.has(d.imei));
   const centros = new Set(lineas.map((l) => l.centro_costo).filter(Boolean));
 
-  const ahorroSinUso = sinUso.reduce((s, l) => s + Number(l.costo_mensual ?? 0), 0);
-  const ahorroSinEq = sinEquipo.reduce((s, l) => s + Number(l.costo_mensual ?? 0), 0);
-  const ahorroSobre = sobredim.reduce((s, l) => s + Number(l.costo_mensual ?? 0) * 0.4, 0);
+  const ahorroSinUso = sinUso.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
+  const ahorroSinEq = sinEquipo.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
+  const ahorroSobre = sobredim.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0) * 0.4, 0);
   const ahorroTotal = ahorroSinUso + ahorroSinEq + ahorroSobre;
+
 
   const reportes = [
     { key: "sin_uso", icon: Smartphone, titulo: "Líneas sin uso (>30 días)", desc: `${sinUso.length.toLocaleString("es-CO")} equipos sin reporte`, ahorro: ahorroSinUso, rows: sinUso },
