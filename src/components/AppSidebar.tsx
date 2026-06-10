@@ -1,12 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard, Upload, Wifi, Smartphone, MapPin, AlertTriangle, FileBarChart, LogOut, BarChart3,
+  LayoutDashboard, Upload, Wifi, Smartphone, MapPin, AlertTriangle, FileBarChart, LogOut, BarChart3, Shield,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
+import { useRoles } from "@/lib/roles";
 
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -21,6 +22,8 @@ const items = [
 export function AppSidebar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { signOut, user } = useAuth();
+  const { isAdmin, roles } = useRoles();
+  const navItems = isAdmin ? [...items, { title: "Administración", url: "/admin", icon: Shield }] : items;
 
   return (
     <Sidebar collapsible="icon">
@@ -39,7 +42,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((it) => {
+              {navItems.map((it) => {
                 const active = path === it.url;
                 return (
                   <SidebarMenuItem key={it.url}>
@@ -59,6 +62,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-3">
         <div className="flex flex-col gap-2 group-data-[collapsible=icon]:hidden">
           <span className="truncate text-xs text-sidebar-foreground/60">{user?.email}</span>
+          <span className="text-[10px] uppercase text-sidebar-foreground/50">{roles.join(", ") || "sin rol"}</span>
           <span className="text-[10px] text-sidebar-foreground/40">v1.0 — Control de Líneas</span>
         </div>
         <SidebarMenu>
