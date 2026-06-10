@@ -18,6 +18,7 @@ import { Route as AppLineasRouteImport } from './routes/_app.lineas'
 import { Route as AppDispositivosRouteImport } from './routes/_app.dispositivos'
 import { Route as AppCargarRouteImport } from './routes/_app.cargar'
 import { Route as AppAlertasRouteImport } from './routes/_app.alertas'
+import { Route as AppAdminRouteImport } from './routes/_app.admin'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -63,10 +64,16 @@ const AppAlertasRoute = AppAlertasRouteImport.update({
   path: '/alertas',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/admin': typeof AppAdminRoute
   '/alertas': typeof AppAlertasRoute
   '/cargar': typeof AppCargarRoute
   '/dispositivos': typeof AppDispositivosRoute
@@ -76,6 +83,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/admin': typeof AppAdminRoute
   '/alertas': typeof AppAlertasRoute
   '/cargar': typeof AppCargarRoute
   '/dispositivos': typeof AppDispositivosRoute
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/admin': typeof AppAdminRoute
   '/_app/alertas': typeof AppAlertasRoute
   '/_app/cargar': typeof AppCargarRoute
   '/_app/dispositivos': typeof AppDispositivosRoute
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/admin'
     | '/alertas'
     | '/cargar'
     | '/dispositivos'
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/admin'
     | '/alertas'
     | '/cargar'
     | '/dispositivos'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/login'
+    | '/_app/admin'
     | '/_app/alertas'
     | '/_app/cargar'
     | '/_app/dispositivos'
@@ -200,10 +212,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAlertasRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
   AppAlertasRoute: typeof AppAlertasRoute
   AppCargarRoute: typeof AppCargarRoute
   AppDispositivosRoute: typeof AppDispositivosRoute
@@ -214,6 +234,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
   AppAlertasRoute: AppAlertasRoute,
   AppCargarRoute: AppCargarRoute,
   AppDispositivosRoute: AppDispositivosRoute,
@@ -232,3 +253,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
