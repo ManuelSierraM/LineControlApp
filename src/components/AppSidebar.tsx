@@ -1,12 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard, Upload, Wifi, Smartphone, MapPin, AlertTriangle, FileBarChart, LogOut, BarChart3,
+  LayoutDashboard, Upload, Wifi, Smartphone, MapPin, AlertTriangle, FileBarChart, LogOut, BarChart3, Shield,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
+import { useRoles } from "@/lib/roles";
 
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
