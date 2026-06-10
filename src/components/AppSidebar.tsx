@@ -22,6 +22,8 @@ const items = [
 export function AppSidebar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { signOut, user } = useAuth();
+  const { isAdmin, roles } = useRoles();
+  const navItems = isAdmin ? [...items, { title: "Administración", url: "/admin", icon: Shield }] : items;
 
   return (
     <Sidebar collapsible="icon">
