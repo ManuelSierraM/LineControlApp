@@ -62,6 +62,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-3">
         <div className="flex flex-col gap-2 group-data-[collapsible=icon]:hidden">
           <span className="truncate text-xs text-sidebar-foreground/60">{user?.email}</span>
+          <span className="text-[10px] uppercase text-sidebar-foreground/50">{roles.join(", ") || "sin rol"}</span>
           <span className="text-[10px] text-sidebar-foreground/40">v1.0 — Control de Líneas</span>
         </div>
         <SidebarMenu>
