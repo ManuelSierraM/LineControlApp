@@ -42,7 +42,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((it) => {
+              {navItems.map((it) => {
                 const active = path === it.url;
                 return (
                   <SidebarMenuItem key={it.url}>
