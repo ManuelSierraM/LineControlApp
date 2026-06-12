@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Navigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Navigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { BarChart3, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,11 @@ function LoginPage() {
                 <Button type="submit" className="w-full" disabled={busy}>
                   {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Entrar
                 </Button>
+                <div className="text-center">
+                  <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground hover:underline">
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                </div>
               </form>
             </TabsContent>
             <TabsContent value="signup">
