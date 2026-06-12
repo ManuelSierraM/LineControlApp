@@ -1,6 +1,6 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, Shield, ShieldCheck, User as UserIcon } from "lucide-react";
+import { Loader2, Shield, ShieldCheck, User as UserIcon, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -71,6 +71,15 @@ function AdminPage() {
     }
   };
 
+  const sendRecovery = async (email: string | null) => {
+    if (!email) return toast.error("Usuario sin email");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) return toast.error(error.message);
+    toast.success(`Enlace de recuperación enviado a ${email}`);
+  };
+
   return (
     <>
       <PageHeader title="Administración de Usuarios" subtitle="Asigna roles a los usuarios del sistema" />
@@ -133,6 +142,9 @@ function AdminPage() {
                                   </Button>
                                 );
                               })}
+                              <Button size="sm" variant="secondary" onClick={() => sendRecovery(p.email)}>
+                                <KeyRound className="mr-1 h-3 w-3" /> Enviar recuperación
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
