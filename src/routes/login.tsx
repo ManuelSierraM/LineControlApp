@@ -51,14 +51,6 @@ function LoginPage() {
           </div>
         </div>
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lg">
-          <Button type="button" variant="outline" className="w-full mb-4" onClick={signInWithMicrosoft}>
-            <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24"><path fill="#F25022" d="M1 1h10v10H1z"/><path fill="#7FBA00" d="M13 1h10v10H13z"/><path fill="#00A4EF" d="M1 13h10v10H1z"/><path fill="#FFB900" d="M13 13h10v10H13z"/></svg>
-            Continuar con Microsoft
-          </Button>
-          <div className="relative mb-4">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-            <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">o con email</span></div>
-          </div>
           <Tabs defaultValue="signin">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Iniciar sesión</TabsTrigger>
