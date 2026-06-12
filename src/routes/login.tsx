@@ -9,11 +9,11 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable";
 
-async function signInWithGoogle() {
-  const result = await lovable.auth.signInWithOAuth("google", {
+async function signInWithMicrosoft() {
+  const result = await lovable.auth.signInWithOAuth("microsoft", {
     redirect_uri: window.location.origin,
   });
-  if (result.error) toast.error(result.error.message ?? "Error con Google");
+  if (result.error) toast.error(result.error.message ?? "Error con Microsoft");
 }
 
 export const Route = createFileRoute("/login")({ component: LoginPage });
