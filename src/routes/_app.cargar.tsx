@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useRoles } from "@/lib/roles";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
@@ -219,6 +220,7 @@ const CARDS: { tipo: Tipo; descripcion: string; icon: React.ComponentType<any> }
 
 function CargarPage() {
   const { user } = useAuth();
+  const { isAdmin } = useRoles();
   const qc = useQueryClient();
   const [busy, setBusy] = useState<Tipo | null>(null);
   const [guideTipo, setGuideTipo] = useState<Tipo | null>(null);
@@ -569,9 +571,11 @@ function CargarPage() {
           <div className="rounded-xl border border-border bg-card shadow-sm">
             <div className="flex items-center justify-between border-b border-border p-4">
               <h3 className="font-semibold">Historial de cargas</h3>
-              <Button variant="outline" size="sm" onClick={() => setBorrarOpen(true)}>
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Borrar registros
-              </Button>
+              {isAdmin && (
+                <Button variant="outline" size="sm" onClick={() => setBorrarOpen(true)}>
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Borrar registros
+                </Button>
+              )}
             </div>
             <div className="divide-y divide-border">
               {historial!.map((h) => (
@@ -582,9 +586,11 @@ function CargarPage() {
                     <p className="text-xs text-muted-foreground">{h.tipo} · {h.registros} registros · {new Date(h.created_at).toLocaleString("es-CO")}</p>
                   </div>
                   <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-medium text-success">{h.estado}</span>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => eliminarRegistroIndividual(h)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => eliminarRegistroIndividual(h)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
