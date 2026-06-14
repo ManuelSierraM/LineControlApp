@@ -220,6 +220,7 @@ const CARDS: { tipo: Tipo; descripcion: string; icon: React.ComponentType<any> }
 
 function CargarPage() {
   const { user } = useAuth();
+  const { isAdmin } = useRoles();
   const qc = useQueryClient();
   const [busy, setBusy] = useState<Tipo | null>(null);
   const [guideTipo, setGuideTipo] = useState<Tipo | null>(null);
