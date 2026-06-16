@@ -15,6 +15,7 @@
 LineControl centraliza la operación de telefonía móvil corporativa: maestro de líneas (MSISDN/ICCID), dispositivos UEM (IMEI), POPS, centros de costo, cargas masivas de archivos y motor de alertas. La aplicación se distribuye como una SPA con SSR ligero y backend serverless gestionado.
 
 ### 1.1 Alcance funcional
+
 - Autenticación (email/contraseña + recuperación) y control de acceso por roles (`admin`, `supervisor`, `operador`).
 - Maestros: Líneas, Dispositivos, POPS, Centros de Costo.
 - Cargas masivas con historial y borrado restringido al rol `admin`.
@@ -23,6 +24,7 @@ LineControl centraliza la operación de telefonía móvil corporativa: maestro d
 - Administración de usuarios y roles.
 
 ### 1.2 Fuera de alcance
+
 - Integración con APIs de operadores en tiempo real (placeholder).
 - Facturación electrónica.
 
@@ -31,20 +33,22 @@ LineControl centraliza la operación de telefonía móvil corporativa: maestro d
 ## 2. Arquitectura
 
 ### 2.1 Stack tecnológico
-| Capa | Tecnología | Versión |
-|------|-----------|---------|
-| Framework Full-stack | TanStack Start | v1 |
-| UI | React | 19 |
-| Build | Vite | 7 |
-| Lenguaje | TypeScript (strict) | 5.x |
-| Estilos | Tailwind CSS | v4 (CSS-first) |
-| Componentes | shadcn/ui + Radix | — |
-| Estado servidor | TanStack Query | v5 |
-| Backend (BaaS) | Lovable Cloud (Supabase compatible) | — |
-| DB | PostgreSQL | 15+ |
-| Runtime servidor | Cloudflare Workers (workerd, nodejs_compat) | — |
+
+| Capa                 | Tecnología                                  | Versión        |
+| -------------------- | ------------------------------------------- | -------------- |
+| Framework Full-stack | TanStack Start                              | v1             |
+| UI                   | React                                       | 19             |
+| Build                | Vite                                        | 7              |
+| Lenguaje             | TypeScript (strict)                         | 5.x            |
+| Estilos              | Tailwind CSS                                | v4 (CSS-first) |
+| Componentes          | shadcn/ui + Radix                           | —              |
+| Estado servidor      | TanStack Query                              | v5             |
+| Backend (BaaS)       | Lovable Cloud (Supabase compatible)         | —              |
+| DB                   | PostgreSQL                                  | 15+            |
+| Runtime servidor     | Cloudflare Workers (workerd, nodejs_compat) | —              |
 
 ### 2.2 Vista de despliegue
+
 ```text
 Browser (SPA + SSR hidratada)
         │ HTTPS
@@ -62,6 +66,7 @@ Lovable Cloud
 ```
 
 ### 2.3 Patrones aplicados
+
 - **File-based routing** plano con prefijos `_app.*` para layout autenticado.
 - **Server Functions tipadas** (`createServerFn`) para lógica privilegiada; nunca claves de servicio en el bundle del cliente.
 - **RLS por usuario** con función `SECURITY DEFINER` `has_role()` para evitar recursión.
@@ -73,22 +78,27 @@ Lovable Cloud
 ## 3. Modelo de Seguridad
 
 ### 3.1 Autenticación
+
 - Email + contraseña con persistencia en `localStorage`.
 - Flujo de recuperación de contraseña vía link mágico (`/forgot-password` → `/reset-password`).
 - Toggle de visualización de caracteres en todos los inputs sensibles.
 
 ### 3.2 Autorización (RBAC)
+
 Tres roles definidos en el ENUM `app_role`:
+
 - `admin` — gestión total, único con permiso de borrado de archivos de carga y de gestión de usuarios.
 - `supervisor` — visualización transversal + cargas.
 - `operador` (default al registrarse) — cargas y consulta de sus propios datos.
 
 ### 3.3 Row Level Security
+
 - RLS habilitada en **todas** las tablas de `public`.
 - Patrón: `auth.uid() = user_id` para datos propios; `public.has_role(auth.uid(), 'admin')` para acceso transversal.
 - `GRANT` explícitos por tabla a `authenticated` y `service_role`. Sin `anon`.
 
 ### 3.4 Funciones SECURITY DEFINER
+
 - `has_role(_user_id, _role)`: indispensable para RLS sin recursión.
 - `handle_new_user()`, `assign_default_role()`: triggers en `auth.users`; sin contexto de trigger no son explotables.
 - Hallazgo del linter `0029` marcado como **ignorado** con justificación técnica en la `@security-memory`.
@@ -98,6 +108,7 @@ Tres roles definidos en el ENUM `app_role`:
 ## 4. Modelo de Datos
 
 ### 4.1 Convenciones físicas
+
 - PK: `id uuid DEFAULT gen_random_uuid()`.
 - Auditoría mínima: `created_at timestamptz DEFAULT now()`.
 - Propiedad: `user_id uuid NOT NULL` en toda tabla de negocio.
@@ -107,87 +118,95 @@ Tres roles definidos en el ENUM `app_role`:
 ### 4.2 Tablas
 
 #### `profiles`
+
 Perfil 1:1 con `auth.users`. PK = `auth.users.id`.
 
-| Columna | Tipo | Nulo | Notas |
-|---|---|---|---|
-| id | uuid | NO | PK / FK lógica → `auth.users(id)` |
-| email | text | SI | |
-| full_name | text | SI | |
-| created_at | timestamptz | NO | default `now()` |
+| Columna    | Tipo        | Nulo | Notas                             |
+| ---------- | ----------- | ---- | --------------------------------- |
+| id         | uuid        | NO   | PK / FK lógica → `auth.users(id)` |
+| email      | text        | SI   |                                   |
+| full_name  | text        | SI   |                                   |
+| created_at | timestamptz | NO   | default `now()`                   |
 
 #### `user_roles`
-| Columna | Tipo | Nulo | Notas |
-|---|---|---|---|
-| id | uuid | NO | PK |
-| user_id | uuid | NO | FK → `auth.users(id)` ON DELETE CASCADE |
-| role | app_role | NO | ENUM |
-| created_at | timestamptz | NO | |
-| **UNIQUE** | | | `(user_id, role)` |
+
+| Columna    | Tipo        | Nulo | Notas                                   |
+| ---------- | ----------- | ---- | --------------------------------------- |
+| id         | uuid        | NO   | PK                                      |
+| user_id    | uuid        | NO   | FK → `auth.users(id)` ON DELETE CASCADE |
+| role       | app_role    | NO   | ENUM                                    |
+| created_at | timestamptz | NO   |                                         |
+| **UNIQUE** |             |      | `(user_id, role)`                       |
 
 #### `dispositivos`
-| Columna | Tipo | Notas |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid FK | propietario |
-| imei | text NOT NULL | identificador lógico, usado como join key |
-| modelo, fabricante, so, estado, asignado_a, numero_telefono | text | `estado` default `enrolado` |
-| ultimo_checkin | date | |
-| created_at | timestamptz | |
+
+| Columna                                                     | Tipo          | Notas                                     |
+| ----------------------------------------------------------- | ------------- | ----------------------------------------- |
+| id                                                          | uuid PK       |                                           |
+| user_id                                                     | uuid FK       | propietario                               |
+| imei                                                        | text NOT NULL | identificador lógico, usado como join key |
+| modelo, fabricante, so, estado, asignado_a, numero_telefono | text          | `estado` default `enrolado`               |
+| ultimo_checkin                                              | date          |                                           |
+| created_at                                                  | timestamptz   |                                           |
 
 #### `lineas`
-| Columna | Tipo | Notas |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid FK | |
-| msisdn | text NOT NULL | número de la línea |
-| imei | text | FK lógica → `dispositivos.imei` |
-| iccid, plan, operador, cod_empresa, nombre_cliente, estado | text | |
-| centro_costo | text | FK lógica → `centros_costo.codigo` |
-| costo_mensual, valor_plan, valor_datos, consumo_mb | numeric | default 0 |
-| ultimo_uso | date | |
-| created_at | timestamptz | |
+
+| Columna                                                    | Tipo          | Notas                              |
+| ---------------------------------------------------------- | ------------- | ---------------------------------- |
+| id                                                         | uuid PK       |                                    |
+| user_id                                                    | uuid FK       |                                    |
+| msisdn                                                     | text NOT NULL | número de la línea                 |
+| imei                                                       | text          | FK lógica → `dispositivos.imei`    |
+| iccid, plan, operador, cod_empresa, nombre_cliente, estado | text          |                                    |
+| centro_costo                                               | text          | FK lógica → `centros_costo.codigo` |
+| costo_mensual, valor_plan, valor_datos, consumo_mb         | numeric       | default 0                          |
+| ultimo_uso                                                 | date          |                                    |
+| created_at                                                 | timestamptz   |                                    |
 
 #### `pops`
-| Columna | Tipo | Notas |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid FK | |
-| codigo | text NOT NULL | |
-| modelo, numero_telefono, ubicacion, estado | text | |
-| centro_costo | text | FK lógica → `centros_costo.codigo` |
-| fecha_alta, fecha_baja | date | |
-| created_at | timestamptz | |
+
+| Columna                                    | Tipo          | Notas                              |
+| ------------------------------------------ | ------------- | ---------------------------------- |
+| id                                         | uuid PK       |                                    |
+| user_id                                    | uuid FK       |                                    |
+| codigo                                     | text NOT NULL |                                    |
+| modelo, numero_telefono, ubicacion, estado | text          |                                    |
+| centro_costo                               | text          | FK lógica → `centros_costo.codigo` |
+| fecha_alta, fecha_baja                     | date          |                                    |
+| created_at                                 | timestamptz   |                                    |
 
 #### `centros_costo`
-| Columna | Tipo | Notas |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid FK | |
-| codigo | text NOT NULL | clave de negocio |
-| nombre | text NOT NULL | |
-| created_at | timestamptz | |
+
+| Columna    | Tipo          | Notas            |
+| ---------- | ------------- | ---------------- |
+| id         | uuid PK       |                  |
+| user_id    | uuid FK       |                  |
+| codigo     | text NOT NULL | clave de negocio |
+| nombre     | text NOT NULL |                  |
+| created_at | timestamptz   |                  |
 
 #### `archivos_carga`
-| Columna | Tipo | Notas |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid FK | |
+
+| Columna      | Tipo          | Notas                                               |
+| ------------ | ------------- | --------------------------------------------------- |
+| id           | uuid PK       |                                                     |
+| user_id      | uuid FK       |                                                     |
 | nombre, tipo | text NOT NULL | `tipo`: `lineas` \| `dispositivos` \| `pops` \| ... |
-| registros | int | default 0 |
-| estado | text | default `completado` |
-| created_at | timestamptz | |
+| registros    | int           | default 0                                           |
+| estado       | text          | default `completado`                                |
+| created_at   | timestamptz   |                                                     |
 
 #### `alertas`
-| Columna | Tipo | Notas |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid FK | |
-| tipo | text NOT NULL | |
-| severidad | text | default `media` |
-| entidad, referencia, mensaje, detalle | text | |
-| resuelta | bool | default `false` |
-| created_at | timestamptz | |
+
+| Columna                               | Tipo          | Notas           |
+| ------------------------------------- | ------------- | --------------- |
+| id                                    | uuid PK       |                 |
+| user_id                               | uuid FK       |                 |
+| tipo                                  | text NOT NULL |                 |
+| severidad                             | text          | default `media` |
+| entidad, referencia, mensaje, detalle | text          |                 |
+| resuelta                              | bool          | default `false` |
+| created_at                            | timestamptz   |                 |
 
 ### 4.3 Relaciones (Diagrama ER físico)
 
@@ -211,16 +230,18 @@ centros_costo (1) ────< pops      [join lógico por codigo]
 > **Nota:** Las relaciones `dispositivos↔lineas`, `centros_costo↔lineas` y `centros_costo↔pops` son **referenciales lógicas** (no FKs físicas) porque los datos provienen de cargas masivas heterogéneas que deben tolerar inconsistencias temporales. La integridad se valida a nivel aplicación y se materializan alertas cuando falla.
 
 ### 4.4 ENUMs
+
 ```sql
 CREATE TYPE app_role AS ENUM ('admin', 'supervisor', 'operador');
 ```
 
 ### 4.5 Funciones y Triggers
-| Objeto | Tipo | Disparador | Propósito |
-|---|---|---|---|
-| `handle_new_user()` | SECURITY DEFINER | AFTER INSERT ON `auth.users` | Crea `profiles` |
-| `assign_default_role()` | SECURITY DEFINER | AFTER INSERT ON `auth.users` | Asigna rol `operador` |
-| `has_role(uuid, app_role)` | SECURITY DEFINER STABLE | invocada en políticas | Evita recursión RLS |
+
+| Objeto                     | Tipo                    | Disparador                   | Propósito             |
+| -------------------------- | ----------------------- | ---------------------------- | --------------------- |
+| `handle_new_user()`        | SECURITY DEFINER        | AFTER INSERT ON `auth.users` | Crea `profiles`       |
+| `assign_default_role()`    | SECURITY DEFINER        | AFTER INSERT ON `auth.users` | Asigna rol `operador` |
+| `has_role(uuid, app_role)` | SECURITY DEFINER STABLE | invocada en políticas        | Evita recursión RLS   |
 
 ---
 
@@ -269,19 +290,22 @@ src/
 ## 7. Operación
 
 ### 7.1 Variables de entorno
-| Ámbito | Variable | Uso |
-|---|---|---|
-| Cliente (Vite) | `VITE_SUPABASE_URL` | endpoint público |
-| Cliente | `VITE_SUPABASE_PUBLISHABLE_KEY` | clave anónima |
-| Servidor | `SUPABASE_URL` | server fns |
-| Servidor | `SUPABASE_PUBLISHABLE_KEY` | server fns autenticadas |
-| Servidor (secreto) | `SUPABASE_SERVICE_ROLE_KEY` | sólo operaciones admin |
+
+| Ámbito             | Variable                        | Uso                     |
+| ------------------ | ------------------------------- | ----------------------- |
+| Cliente (Vite)     | `VITE_SUPABASE_URL`             | endpoint público        |
+| Cliente            | `VITE_SUPABASE_PUBLISHABLE_KEY` | clave anónima           |
+| Servidor           | `SUPABASE_URL`                  | server fns              |
+| Servidor           | `SUPABASE_PUBLISHABLE_KEY`      | server fns autenticadas |
+| Servidor (secreto) | `SUPABASE_SERVICE_ROLE_KEY`     | sólo operaciones admin  |
 
 ### 7.2 Despliegue
+
 - CI/CD gestionado por Lovable; cada cambio publica preview inmutable.
 - Producción: `linecontrolapp.lovable.app`.
 
 ### 7.3 Observabilidad
+
 - Logs de server functions vía panel de Lovable Cloud.
 - Alertas funcionales en tabla `alertas`.
 
@@ -289,12 +313,12 @@ src/
 
 ## 8. Riesgos y Decisiones Técnicas
 
-| ID | Decisión | Justificación |
-|---|---|---|
-| ADR-01 | Sin FKs físicas entre maestros cargados por archivo | Tolerancia a cargas parciales / inconsistencias temporales |
-| ADR-02 | Roles en tabla separada `user_roles` | Previene escalada de privilegios |
-| ADR-03 | `has_role()` SECURITY DEFINER autorizada para `authenticated` | Indispensable para RLS no recursiva; hallazgo de linter ignorado con justificación |
-| ADR-04 | Recuperación de contraseña vía email link, no por admin | Reduce superficie de ataque y cumple buenas prácticas (admin no ve ni cambia contraseñas) |
+| ID     | Decisión                                                      | Justificación                                                                             |
+| ------ | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| ADR-01 | Sin FKs físicas entre maestros cargados por archivo           | Tolerancia a cargas parciales / inconsistencias temporales                                |
+| ADR-02 | Roles en tabla separada `user_roles`                          | Previene escalada de privilegios                                                          |
+| ADR-03 | `has_role()` SECURITY DEFINER autorizada para `authenticated` | Indispensable para RLS no recursiva; hallazgo de linter ignorado con justificación        |
+| ADR-04 | Recuperación de contraseña vía email link, no por admin       | Reduce superficie de ataque y cumple buenas prácticas (admin no ve ni cambia contraseñas) |
 
 ---
 
@@ -310,5 +334,4 @@ src/
 
 ## 10. Anexos
 
-- **Diagrama ER físico (Mermaid):** `diagrama_er_fisico.mmd`
 - **Memoria de seguridad:** gestionada vía `@security-memory`.

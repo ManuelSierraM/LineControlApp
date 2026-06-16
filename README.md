@@ -73,17 +73,17 @@ LineControl es una aplicación web responsiva que permite a las áreas de tecnol
 
 ## 👥 Roles y permisos
 
-| Acción | 👑 Admin | 🛡️ Supervisor | 👤 Operador |
-|---|:---:|:---:|:---:|
-| Iniciar sesión | ✅ | ✅ | ✅ |
-| Ver dashboard | ✅ | ✅ | ✅ |
-| Consultar líneas / dispositivos / POPS | ✅ | ✅ | ✅ (propios) |
-| Cargar archivos | ✅ | ✅ | ✅ |
-| Ver historial de cargas | ✅ | ✅ | ✅ |
-| **Borrar archivos del historial** | ✅ | ❌ | ❌ |
-| Ver / gestionar alertas | ✅ | ✅ | ✅ (propias) |
-| Ver reportes | ✅ | ✅ | ✅ |
-| **Administrar usuarios y roles** | ✅ | ❌ | ❌ |
+| Acción                                 | 👑 Admin | 🛡️ Supervisor | 👤 Operador  |
+| -------------------------------------- | :------: | :-----------: | :----------: |
+| Iniciar sesión                         |    ✅    |      ✅       |      ✅      |
+| Ver dashboard                          |    ✅    |      ✅       |      ✅      |
+| Consultar líneas / dispositivos / POPS |    ✅    |      ✅       | ✅ (propios) |
+| Cargar archivos                        |    ✅    |      ✅       |      ✅      |
+| Ver historial de cargas                |    ✅    |      ✅       |      ✅      |
+| **Borrar archivos del historial**      |    ✅    |      ❌       |      ❌      |
+| Ver / gestionar alertas                |    ✅    |      ✅       | ✅ (propias) |
+| Ver reportes                           |    ✅    |      ✅       |      ✅      |
+| **Administrar usuarios y roles**       |    ✅    |      ❌       |      ❌      |
 
 > Por defecto, los nuevos usuarios reciben el rol `operador`. Sólo un `admin` puede promover a otros usuarios.
 
@@ -94,9 +94,11 @@ LineControl es una aplicación web responsiva que permite a las áreas de tecnol
 La aplicación cuenta con una barra lateral con acceso a todos los módulos. Usa el botón ☰ para colapsarla en dispositivos móviles.
 
 ### Dashboard
+
 Vista de bienvenida con indicadores clave: total de líneas, dispositivos activos, alertas abiertas y últimas cargas.
 
 ### Líneas
+
 Maestro de líneas móviles.
 
 - 🔎 Busca por MSISDN, ICCID o cliente.
@@ -104,40 +106,48 @@ Maestro de líneas móviles.
 - 📤 Exporta el listado filtrado.
 
 ### Dispositivos
+
 Inventario de equipos UEM.
 
 - Visualiza el estado (`enrolado`, `pendiente`, `dado de baja`).
-- Consulta el último *check-in* y a quién está asignado.
+- Consulta el último _check-in_ y a quién está asignado.
 
 ### POPS
+
 Puntos operativos con línea asociada.
 
 - Ubicación, estado y centro de costo.
 - Fechas de alta y baja.
 
 ### Cargar archivos
+
 Punto de entrada para cargas masivas (líneas, dispositivos, POPS, etc.).
 
 **Cómo cargar un archivo:**
+
 1. Selecciona el **tipo de carga**.
 2. Arrastra el archivo o haz clic en **Seleccionar archivo**.
 3. Confirma la previsualización y pulsa **Procesar**.
 4. Al finalizar verás la confirmación con el número de registros importados.
 
 **Historial de cargas:**
+
 - Todos los roles pueden **consultar** el historial.
 - 🗑️ Sólo el rol **admin** ve y puede usar el botón de borrado. Los demás roles ven el historial en modo lectura.
 
 ### Alertas
+
 Listado de alertas funcionales con severidad (`alta`, `media`, `baja`).
 
 - Marca como **resuelta** cuando atiendas el caso.
 - Filtra por tipo, severidad o estado.
 
 ### Reportes
+
 Reportes consolidados de consumo, costos y estado del parque.
 
 ### Administración
+
 Disponible **sólo para admin**.
 
 - Gestión de usuarios y asignación de roles.
@@ -177,7 +187,7 @@ Sí. La interfaz es responsiva. La barra lateral se colapsa automáticamente en 
 
 ## 📞 Soporte
 
-- 🐛 Reporte de incidencias: abre un *issue* en este repositorio.
+- 🐛 Reporte de incidencias: abre un _issue_ en este repositorio.
 - 💬 Soporte funcional: contacta al administrador de tu organización.
 
 ---
@@ -187,7 +197,6 @@ Sí. La interfaz es responsiva. La barra lateral se colapsa automáticamente en 
 Para detalles de arquitectura, modelo de datos, diagrama entidad-relación y estándares de desarrollo, consulta:
 
 - [`docs/DOCUMENTACION_TECNICA.md`](docs/DOCUMENTACION_TECNICA.md) — Documentación técnica completa (IEEE 1016).
-- [`docs/diagrama_er_fisico.mmd`](docs/diagrama_er_fisico.mmd) — Diagrama Entidad-Relación físico (Mermaid).
 
 ---
 
