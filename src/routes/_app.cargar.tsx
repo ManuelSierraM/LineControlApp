@@ -106,7 +106,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
   ],
   pops: [
     { columna: "IMEI", target: "codigo", required: true, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "Solo dígitos, 14–16 caracteres. No debe repetirse." },
-    { columna: "Numero_Telefono", target: "numero_telefono", required: true, type: "digits", minLen: 10, maxLen: 12, hint: "Solo dígitos, 10–12 caracteres." },
+    { columna: "Numero_Telefono", target: "numero_telefono", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
     { columna: "Centro", target: "centro_costo", required: true, type: "text", maxLen: 30, hint: "Texto corto, ej. CC-100 (máx. 30)." },
     { columna: "Delegación", target: "ubicacion", required: true, type: "text", maxLen: 80, hint: "Texto (máx. 80)." },
     { columna: "Fecha_Alta", target: "fecha_alta", type: "date", hint: "Fecha YYYY-MM-DD." },
