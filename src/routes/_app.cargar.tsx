@@ -31,7 +31,7 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     fields: [
       { columna: "OPERADOR", ejemplo: "CLARO", requerido: true, nota: "Nombre del operador", target: "operador" },
       { columna: "TIPO_DE_LINEA", ejemplo: "VOZ+DATOS", requerido: false, nota: "Tipo de servicio" },
-      { columna: "TELE_NUMB", ejemplo: "3001234567", requerido: true, nota: "Número de la línea (MSISDN)", target: "msisdn" },
+      { columna: "TELE_NUMB", ejemplo: "3001234567", requerido: false, nota: "Número de la línea (MSISDN). Texto libre, puede venir vacío.", target: "msisdn" },
       { columna: "NOMBRE_CLIENTE", ejemplo: "vigilancia", requerido: false, nota: "Nombre del usuario asignado", target: "nombre_cliente" },
       { columna: "Cod Empresa", ejemplo: "CO0070", requerido: false, nota: "Código de empresa", target: "cod_empresa" },
 
