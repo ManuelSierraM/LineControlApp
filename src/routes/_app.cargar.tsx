@@ -88,7 +88,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
   lineas: [
     { columna: "OPERADOR", target: "operador", required: true, type: "text", maxLen: 50, hint: "Texto, ej. CLARO / TIGO / MOVISTAR (máx. 50)." },
     { columna: "TIPO_DE_LINEA", type: "text", maxLen: 50, hint: "Texto, ej. VOZ+DATOS." },
-    { columna: "TELE_NUMB", target: "msisdn", required: true, type: "digits", minLen: 10, maxLen: 12, unique: true, hint: "Solo dígitos, 10–12 caracteres. Sin espacios, guiones ni '+'. No debe repetirse." },
+    { columna: "TELE_NUMB", target: "msisdn", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
     { columna: "NOMBRE_CLIENTE", target: "nombre_cliente", type: "text", maxLen: 100, hint: "Texto (máx. 100)." },
     { columna: "Cod Empresa", target: "cod_empresa", type: "text", maxLen: 30, hint: "Texto corto, ej. CO0070 (máx. 30)." },
     { columna: "ICCID", target: "iccid", required: true, type: "digits", minLen: 18, maxLen: 22, hint: "Solo dígitos, 18–22 caracteres." },
