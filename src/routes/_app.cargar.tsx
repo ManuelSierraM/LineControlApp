@@ -58,7 +58,7 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     archivo: "POPS_Inventory.xlsx",
     fields: [
       { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del equipo", target: "codigo" },
-      { columna: "Numero_Telefono", ejemplo: "3001234567", requerido: true, nota: "Línea asociada", target: "numero_telefono" },
+      { columna: "Numero_Telefono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Texto libre, puede venir vacío.", target: "numero_telefono" },
       { columna: "Centro", ejemplo: "CC-100", requerido: true, nota: "Centro de costo", target: "centro_costo" },
       { columna: "Delegación", ejemplo: "Bogotá Norte", requerido: true, nota: "Delegación o sede", target: "ubicacion" },
       { columna: "Fecha_Alta", ejemplo: "2024-01-15", requerido: false, nota: "Fecha de alta del equipo (YYYY-MM-DD)", target: "fecha_alta" },
