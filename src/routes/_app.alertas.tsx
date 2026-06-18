@@ -124,9 +124,10 @@ function AlertasPage() {
           <DataTable
             title="Equipos sin uso >30 días"
             rows={sinUso}
-            searchKeys={["imei", "modelo", "centro_costo"]}
+            searchKeys={["imei", "msisdn", "modelo", "centro_costo"]}
             columns={[
               { key: "imei", header: "IMEI" },
+              { key: "msisdn", header: "Número" },
               { key: "modelo", header: "Modelo" },
               { key: "dias", header: "Días sin uso", render: (r) => <span className="rounded-full bg-warning/20 px-2 py-0.5 text-xs text-warning-foreground">{r.dias ?? "—"} días</span> },
               { key: "cliente", header: "Cliente" },
