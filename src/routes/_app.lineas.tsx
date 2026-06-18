@@ -30,20 +30,21 @@ function LineasPage() {
   const { data } = useQuery({
     queryKey: ["lineas-maestro"],
     queryFn: async () => {
-      const [{ data: lineas }, { data: disp }, { data: pops }] = await Promise.all([
+      const [{ data: lineas }, { data: disp }] = await Promise.all([
         supabase.from("lineas").select("*").order("created_at", { ascending: false }).limit(5000),
-        supabase.from("dispositivos").select("imei,modelo,asignado_a").limit(10000),
-        supabase.from("pops").select("codigo,numero_telefono").limit(10000),
+        supabase.from("dispositivos").select("imei,modelo,asignado_a,numero_telefono").limit(10000),
       ]);
-      const byImei = new Map((disp ?? []).map((d) => [d.imei, d]));
-      const popsByPhone = new Map<string, string>();
-      for (const p of pops ?? []) {
-        const key = normPhone(p.numero_telefono);
-        if (key && p.codigo) popsByPhone.set(key, p.codigo);
+      type Disp = NonNullable<typeof disp>[number];
+      const byImei = new Map<string, Disp>((disp ?? []).map((d) => [d.imei, d]));
+      const dispByPhone = new Map<string, Disp>();
+      for (const d of disp ?? []) {
+        const key = normPhone(d.numero_telefono);
+        if (key && d.imei) dispByPhone.set(key, d);
       }
       return (lineas ?? []).map((l) => {
-        const imei = l.imei || popsByPhone.get(normPhone(l.msisdn)) || null;
-        const d = imei ? byImei.get(imei) : undefined;
+        const matched = dispByPhone.get(normPhone(l.msisdn));
+        const imei = l.imei || matched?.imei || null;
+        const d = (imei ? byImei.get(imei) : undefined) ?? matched;
         return {
           ...l,
           imei,
