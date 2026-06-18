@@ -85,13 +85,14 @@ function AlertasPage() {
   const sinUso = disp
     .map((d) => {
       const pop = d.imei ? popsByImei.get(String(d.imei)) : undefined;
-      const phone = normPhone(pop?.numero_telefono);
-      const linea = phone ? lineaByPhone.get(phone) : undefined;
+      const linea =
+        lineaByPhone.get(normPhone(pop?.numero_telefono)) ??
+        lineaByPhone.get(normPhone(d.numero_telefono));
       return {
         imei: d.imei,
         msisdn: pop?.numero_telefono ?? linea?.msisdn ?? d.numero_telefono ?? "—",
         modelo: d.modelo ?? pop?.modelo ?? "—",
-        cliente: linea?.nombre_cliente ?? d.asignado_a ?? "—",
+        cliente: linea?.nombre_cliente ?? "—",
         centro_costo: pop?.centro_costo ?? linea?.centro_costo ?? "—",
         dias: diffDays(d.ultimo_checkin),
       };
