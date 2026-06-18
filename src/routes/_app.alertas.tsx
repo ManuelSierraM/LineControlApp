@@ -167,7 +167,6 @@ function AlertasPage() {
               { key: "msisdn", header: "Número" },
               { key: "plan", header: "Plan" },
               { key: "costo", header: "Costo", render: (r) => fmtMoney(Number(r.costo_mensual ?? 0)) },
-              { key: "centro_costo", header: "Centro" },
               { key: "estado", header: "Estado" },
             ]}
           />
