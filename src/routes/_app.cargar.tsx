@@ -105,13 +105,13 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
     { columna: "Usuario", target: "asignado_a", type: "text", maxLen: 120, hint: "Texto / correo (máx. 120)." },
   ],
   pops: [
-    { columna: "IMEI", target: "codigo", required: false, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "Solo dígitos, 14–16 caracteres. Puede venir vacío." },
+    { columna: "IMEI", target: "codigo", required: false, type: "text", unique: true, hint: "Texto libre. Puede venir vacío." },
     { columna: "Numero_Telefono", target: "numero_telefono", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
-    { columna: "Centro", target: "centro_costo", required: false, type: "text", maxLen: 30, hint: "Texto corto, ej. CC-100 (máx. 30). Puede venir vacío." },
-    { columna: "Delegación", target: "ubicacion", required: false, type: "text", maxLen: 80, hint: "Texto (máx. 80). Puede venir vacío." },
+    { columna: "Centro", target: "centro_costo", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
+    { columna: "Delegación", target: "ubicacion", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
     { columna: "Fecha_Alta", target: "fecha_alta", type: "date", hint: "Fecha YYYY-MM-DD." },
     { columna: "Fecha_Baja", target: "fecha_baja", type: "date", hint: "Fecha YYYY-MM-DD." },
-    { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
+    { columna: "Modelo", target: "modelo", type: "text", hint: "Texto libre." },
   ],
 };
 
