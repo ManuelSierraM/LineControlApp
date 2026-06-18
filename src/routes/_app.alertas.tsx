@@ -89,7 +89,7 @@ function AlertasPage() {
       const linea = phone ? lineaByPhone.get(phone) : undefined;
       return {
         imei: d.imei,
-        msisdn: pop?.numero_telefono ?? linea?.msisdn ?? "—",
+        msisdn: pop?.numero_telefono ?? linea?.msisdn ?? d.numero_telefono ?? "—",
         modelo: d.modelo ?? pop?.modelo ?? "—",
         cliente: linea?.nombre_cliente ?? d.asignado_a ?? "—",
         centro_costo: pop?.centro_costo ?? linea?.centro_costo ?? "—",
