@@ -55,9 +55,16 @@ function AlertasPage() {
   // Lookups
   const dispByImei = new Map(disp.map((d) => [d.imei, d]));
   const popsByPhone = new Map<string, typeof pops[number]>();
+  const popsByImei = new Map<string, typeof pops[number]>();
   for (const p of pops) {
     const key = normPhone(p.numero_telefono);
     if (key) popsByPhone.set(key, p);
+    if (p.codigo) popsByImei.set(String(p.codigo), p);
+  }
+  const lineaByPhone = new Map<string, typeof lineas[number]>();
+  for (const l of lineas) {
+    const key = normPhone(l.msisdn);
+    if (key) lineaByPhone.set(key, l);
   }
 
   // Derive IMEI per línea: prefer línea.imei, fall back to POP código matched by teléfono
@@ -74,9 +81,23 @@ function AlertasPage() {
     };
   });
 
-  const sinUso = lineasEnriched
-    .map((l) => ({ ...l, dias: diffDays(l.ultimo_uso) }))
-    .filter((l) => l.dias == null || l.dias > 30);
+  // "Sin uso" se basa en el último check-in del dispositivo UEM (>30 días)
+  const sinUso = disp
+    .map((d) => {
+      const pop = d.imei ? popsByImei.get(String(d.imei)) : undefined;
+      const phone = normPhone(pop?.numero_telefono);
+      const linea = phone ? lineaByPhone.get(phone) : undefined;
+      return {
+        imei: d.imei,
+        msisdn: pop?.numero_telefono ?? linea?.msisdn ?? "—",
+        modelo: d.modelo ?? pop?.modelo ?? "—",
+        cliente: linea?.nombre_cliente ?? d.asignado_a ?? "—",
+        centro_costo: pop?.centro_costo ?? linea?.centro_costo ?? "—",
+        dias: diffDays(d.ultimo_checkin),
+      };
+    })
+    .filter((r) => r.dias != null && r.dias > 30)
+    .sort((a, b) => (b.dias ?? 0) - (a.dias ?? 0));
 
   const sinEquipo = lineasEnriched.filter((l) => !l.imei);
 
