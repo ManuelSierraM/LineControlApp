@@ -173,7 +173,10 @@ function AlertasPage() {
             columns={[
               { key: "msisdn", header: "Número" },
               { key: "plan", header: "Plan" },
-              { key: "costo", header: "Costo", render: (r) => fmtMoney(Number(r.costo_mensual ?? 0)) },
+              { key: "costo", header: "Costo", render: (r) => {
+                const match = lineaByPhone.get(normPhone(r.msisdn));
+                return fmtMoney(Number(match?.valor_plan ?? match?.costo_mensual ?? r.valor_plan ?? r.costo_mensual ?? 0));
+              } },
               { key: "estado", header: "Estado" },
             ]}
           />
