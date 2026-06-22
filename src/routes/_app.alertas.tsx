@@ -54,6 +54,11 @@ function AlertasPage() {
 
   // Lookups
   const dispByImei = new Map(disp.map((d) => [d.imei, d]));
+  const dispByPhone = new Map<string, typeof disp[number]>();
+  for (const d of disp) {
+    const key = normPhone(d.numero_telefono);
+    if (key && d.imei) dispByPhone.set(key, d);
+  }
   const popsByPhone = new Map<string, typeof pops[number]>();
   const popsByImei = new Map<string, typeof pops[number]>();
   for (const p of pops) {
@@ -67,11 +72,13 @@ function AlertasPage() {
     if (key) lineaByPhone.set(key, l);
   }
 
-  // Derive IMEI per línea: prefer línea.imei, fall back to POP código matched by teléfono
+  // Derive IMEI per línea: prefer línea.imei, fall back to UEM device por teléfono, luego POP código por teléfono
   const lineasEnriched = lineas.map((l) => {
-    const pop = popsByPhone.get(normPhone(l.msisdn));
-    const imei = l.imei || pop?.codigo || null;
-    const d = imei ? dispByImei.get(imei) : undefined;
+    const phone = normPhone(l.msisdn);
+    const dByPhone = dispByPhone.get(phone);
+    const pop = popsByPhone.get(phone);
+    const imei = l.imei || dByPhone?.imei || pop?.codigo || null;
+    const d = (imei ? dispByImei.get(imei) : undefined) ?? dByPhone;
     return {
       ...l,
       imei,
