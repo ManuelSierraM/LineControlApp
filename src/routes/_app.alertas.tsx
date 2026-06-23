@@ -13,7 +13,7 @@ type TabKey = "sin_uso" | "sin_equipo" | "sobredim" | "pops_sin_centro" | "incon
 const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: "sin_uso", label: "Sin uso", icon: AlertCircle },
   { key: "sin_equipo", label: "Sin equipo", icon: Wifi },
-  // { key: "sobredim", label: "Sobredimensionado", icon: AlertTriangle }, // OCULTO: descomentar para mostrar
+  // { key: "sobredim", label: "Sobredimensionado", icon: AlertTriangle }, -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
   { key: "pops_sin_centro", label: "POPS sin centro", icon: MapPin },
   { key: "inconsistencias", label: "Inconsistencias", icon: Info },
 ];
@@ -54,19 +54,19 @@ function AlertasPage() {
 
   // Lookups
   const dispByImei = new Map(disp.map((d) => [d.imei, d]));
-  const dispByPhone = new Map<string, typeof disp[number]>();
+  const dispByPhone = new Map<string, (typeof disp)[number]>();
   for (const d of disp) {
     const key = normPhone(d.numero_telefono);
     if (key && d.imei) dispByPhone.set(key, d);
   }
-  const popsByPhone = new Map<string, typeof pops[number]>();
-  const popsByImei = new Map<string, typeof pops[number]>();
+  const popsByPhone = new Map<string, (typeof pops)[number]>();
+  const popsByImei = new Map<string, (typeof pops)[number]>();
   for (const p of pops) {
     const key = normPhone(p.numero_telefono);
     if (key) popsByPhone.set(key, p);
     if (p.codigo) popsByImei.set(String(p.codigo), p);
   }
-  const lineaByPhone = new Map<string, typeof lineas[number]>();
+  const lineaByPhone = new Map<string, (typeof lineas)[number]>();
   for (const l of lineas) {
     const key = normPhone(l.msisdn);
     if (key) lineaByPhone.set(key, l);
@@ -126,11 +126,19 @@ function AlertasPage() {
     inconsistencias: inconsist.length,
   };
 
-  const total = counts.sin_uso + counts.sin_equipo + counts.sobredim + counts.pops_sin_centro + counts.inconsistencias;
+  const total =
+    counts.sin_uso +
+    counts.sin_equipo +
+    counts.sobredim +
+    counts.pops_sin_centro +
+    counts.inconsistencias;
 
   return (
     <div>
-      <PageHeader title="Alertas y Hallazgos" subtitle={`${total.toLocaleString("es-CO")} alertas detectadas en el análisis cruzado`} />
+      <PageHeader
+        title="Alertas y Hallazgos"
+        subtitle={`${total.toLocaleString("es-CO")} alertas detectadas en el análisis cruzado`}
+      />
       <div className="space-y-4 p-6">
         <div className="flex flex-wrap gap-2">
           {TABS.map((t) => {
@@ -158,7 +166,15 @@ function AlertasPage() {
               { key: "imei", header: "IMEI" },
               { key: "msisdn", header: "Número" },
               { key: "modelo", header: "Modelo" },
-              { key: "dias", header: "Días sin uso", render: (r) => <span className="rounded-full bg-warning/20 px-2 py-0.5 text-xs text-warning-foreground">{r.dias ?? "—"} días</span> },
+              {
+                key: "dias",
+                header: "Días sin uso",
+                render: (r) => (
+                  <span className="rounded-full bg-warning/20 px-2 py-0.5 text-xs text-warning-foreground">
+                    {r.dias ?? "—"} días
+                  </span>
+                ),
+              },
               { key: "cliente", header: "Cliente" },
               { key: "centro_costo", header: "Centro" },
             ]}
@@ -173,16 +189,29 @@ function AlertasPage() {
             columns={[
               { key: "msisdn", header: "Número" },
               { key: "plan", header: "Plan" },
-              { key: "costo", header: "Costo", render: (r) => {
-                const match = lineaByPhone.get(normPhone(r.msisdn));
-                return fmtMoney(Number(match?.valor_plan ?? match?.costo_mensual ?? r.valor_plan ?? r.costo_mensual ?? 0));
-              } },
+              {
+                key: "costo",
+                header: "Costo",
+                render: (r) => {
+                  const match = lineaByPhone.get(normPhone(r.msisdn));
+                  return fmtMoney(
+                    Number(
+                      match?.valor_plan ??
+                        match?.costo_mensual ??
+                        r.valor_plan ??
+                        r.costo_mensual ??
+                        0,
+                    ),
+                  );
+                },
+              },
               { key: "estado", header: "Estado" },
             ]}
           />
         )}
 
-        {tab === "sobredim" && (
+        {/* -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan */}
+        {/*{tab === "sobredim" && ( 
           <DataTable
             title="Planes sobredimensionados"
             rows={sobredim}
@@ -190,12 +219,21 @@ function AlertasPage() {
             columns={[
               { key: "msisdn", header: "Número" },
               { key: "plan", header: "Plan" },
-              { key: "costo", header: "Costo", render: (r) => fmtMoney(Number(r.costo_mensual ?? 0)) },
-              { key: "consumo", header: "Consumo (MB)", render: (r) => Number(r.consumo_mb ?? 0).toLocaleString("es-CO") },
+              {
+                key: "costo",
+                header: "Costo",
+                render: (r) => fmtMoney(Number(r.costo_mensual ?? 0)),
+              },
+              {
+                key: "consumo",
+                header: "Consumo (MB)",
+                render: (r) => Number(r.consumo_mb ?? 0).toLocaleString("es-CO"),
+              },
               { key: "centro_costo", header: "Centro" },
             ]}
           />
         )}
+        */}
 
         {tab === "pops_sin_centro" && (
           <DataTable
