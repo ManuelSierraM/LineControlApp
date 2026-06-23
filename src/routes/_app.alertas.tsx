@@ -237,7 +237,7 @@ function AlertasPage() {
 
         {tab === "pops_sin_centro" && (
           <DataTable
-            title="POPS sin centro de costo asignado"
+            title="Dispositivos sin centro asignado"
             rows={popsSC}
             searchKeys={["codigo", "ubicacion", "modelo"]}
             columns={[
