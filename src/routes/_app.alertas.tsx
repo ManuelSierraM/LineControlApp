@@ -13,7 +13,7 @@ type TabKey = "sin_uso" | "sin_equipo" | "sobredim" | "pops_sin_centro" | "incon
 const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: "sin_uso", label: "Sin uso", icon: AlertCircle },
   { key: "sin_equipo", label: "Sin equipo", icon: Wifi },
-  { key: "sobredim", label: "Sobredimensionado", icon: AlertTriangle },
+  // { key: "sobredim", label: "Sobredimensionado", icon: AlertTriangle }, // OCULTO: descomentar para mostrar
   { key: "pops_sin_centro", label: "POPS sin centro", icon: MapPin },
   { key: "inconsistencias", label: "Inconsistencias", icon: Info },
 ];
