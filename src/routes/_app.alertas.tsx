@@ -239,10 +239,9 @@ function AlertasPage() {
           <DataTable
             title="Dispositivos sin centro asignado"
             rows={popsSC}
-            searchKeys={["codigo", "ubicacion", "modelo"]}
+            searchKeys={["codigo", "modelo"]}
             columns={[
               { key: "codigo", header: "IMEI" },
-              { key: "ubicacion", header: "Delegación" },
               { key: "modelo", header: "Modelo" },
               { key: "estado", header: "Estado" },
             ]}
