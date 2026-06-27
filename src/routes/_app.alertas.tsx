@@ -116,7 +116,42 @@ function AlertasPage() {
   const popsSC = pops.filter((p) => !p.centro_costo);
 
   const imeisLineas = new Set(lineasEnriched.map((l) => l.imei).filter(Boolean));
-  const inconsist = disp.filter((d) => d.imei && !imeisLineas.has(d.imei));
+  const phonesLineas = new Set(
+    lineasEnriched.map((l) => normPhone(l.msisdn)).filter(Boolean),
+  );
+  const hasLinea = (imei?: string | null, phone?: string | null) => {
+    if (imei && imeisLineas.has(imei)) return true;
+    const p = normPhone(phone);
+    if (p && phonesLineas.has(p)) return true;
+    return false;
+  };
+  const inconsistUem = disp
+    .filter((d) => d.imei && !hasLinea(d.imei, d.numero_telefono))
+    .map((d) => ({
+      imei: d.imei,
+      modelo: d.modelo ?? "—",
+      estado: d.estado ?? "—",
+      asignado_a: d.asignado_a ?? "—",
+      ultimo_checkin: d.ultimo_checkin,
+      fuente: "UEM",
+    }));
+  const imeisUemInconsist = new Set(inconsistUem.map((d) => d.imei));
+  const inconsistPops = pops
+    .filter(
+      (p) =>
+        p.codigo &&
+        !imeisUemInconsist.has(p.codigo) &&
+        !hasLinea(p.codigo, p.numero_telefono),
+    )
+    .map((p) => ({
+      imei: p.codigo,
+      modelo: p.modelo ?? "—",
+      estado: p.estado ?? "—",
+      asignado_a: p.centro_costo ?? "—",
+      ultimo_checkin: p.fecha_alta ?? p.created_at,
+      fuente: "POPS",
+    }));
+  const inconsist = [...inconsistUem, ...inconsistPops];
 
   const counts: Record<TabKey, number> = {
     sin_uso: sinUso.length,
@@ -252,13 +287,14 @@ function AlertasPage() {
           <DataTable
             title="Dispositivos sin línea asociada"
             rows={inconsist}
-            searchKeys={["imei", "modelo", "asignado_a"]}
+            searchKeys={["imei", "modelo", "asignado_a", "fuente"]}
             columns={[
               { key: "imei", header: "IMEI" },
               { key: "modelo", header: "Modelo" },
               { key: "estado", header: "Estado" },
-              { key: "asignado_a", header: "Usuario" },
+              { key: "asignado_a", header: "Usuario / Centro" },
               { key: "ultimo_checkin", header: "Último check-in" },
+              { key: "fuente", header: "Fuente" },
             ]}
           />
         )}
