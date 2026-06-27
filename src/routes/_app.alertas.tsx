@@ -29,7 +29,11 @@ function diffDays(d?: string | null) {
 
 function normPhone(p?: string | null) {
   if (!p) return "";
-  let s = String(p).replace(/[^\d]/g, "");
+  const raw = String(p).trim();
+  if (!raw) return "";
+  if (/[a-zA-Z]/.test(raw)) return "";
+  let s = raw.replace(/[^\d]/g, "");
+  if (!s) return "";
   if (s.startsWith("57") && s.length > 10) s = s.slice(2);
   return s;
 }
