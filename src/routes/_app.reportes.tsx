@@ -14,10 +14,20 @@ function fmtMoney(n: number) {
 
 function normPhone(p?: string | null) {
   if (!p) return "";
-  let s = String(p).replace(/[^\d]/g, "");
+  const raw = String(p).trim();
+  if (!raw) return "";
+  if (/[a-zA-Z]/.test(raw)) return "";
+  let s = raw.replace(/[^\d]/g, "");
+  if (!s) return "";
   if (s.startsWith("57") && s.length > 10) s = s.slice(2);
   return s;
 }
+
+function diffDays(d?: string | null) {
+  if (!d) return null;
+  return Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+}
+
 
 
 function toCsv(rows: any[]): string {
@@ -58,33 +68,62 @@ function ReportesPage() {
   const pops = data?.pops ?? [];
   const alertas = data?.alertas ?? [];
 
-  // Derivar IMEI por cruce de teléfono con POPS (consistente con Alertas / Maestro de Líneas)
+  // Lookups consistentes con Alertas
+  const dispByPhone = new Map<string, (typeof disp)[number]>();
+  for (const d of disp) {
+    const key = normPhone(d.numero_telefono);
+    if (key && d.imei) dispByPhone.set(key, d);
+  }
   const popsByPhone = new Map<string, (typeof pops)[number]>();
+  const popsByImei = new Map<string, (typeof pops)[number]>();
   for (const p of pops) {
     const key = normPhone(p.numero_telefono);
     if (key) popsByPhone.set(key, p);
+    if (p.codigo) popsByImei.set(String(p.codigo), p);
   }
-  const lineas = lineasRaw.map((l) => {
-    const pop = popsByPhone.get(normPhone(l.msisdn));
-    return { ...l, imei: l.imei || pop?.codigo || null };
+
+  // Enriquecimiento de líneas con IMEI resuelto (línea > UEM por tel > POPS por tel)
+  const lineasEnriched = lineasRaw.map((l) => {
+    const phone = normPhone(l.msisdn);
+    const imei = l.imei || dispByPhone.get(phone)?.imei || popsByPhone.get(phone)?.codigo || null;
+    return { ...l, imei };
   });
+  const lineas = lineasEnriched;
 
-  const hoy = Date.now();
   const costoTotal = lineas.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
-  const sinUso = lineas.filter((l) => !l.ultimo_uso || (hoy - new Date(l.ultimo_uso).getTime()) / 86400000 > 30);
-  const sinEquipo = lineas.filter((l) => !l.imei);
-  // -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
-  // const sobredim = lineas.filter((l) => Number(l.costo_mensual ?? l.valor_plan ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100);
-  const popsSC = pops.filter((p) => !p.centro_costo);
-  const imeisLineas = new Set(lineas.map((l) => l.imei).filter(Boolean));
-  const inconsist = disp.filter((d) => d.imei && !imeisLineas.has(d.imei));
-  
 
-  const ahorroSinUso = sinUso.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
+  // Sin uso: dispositivos UEM con ultimo_checkin > 30 días (igual que Alertas)
+  const sinUso = disp
+    .map((d) => {
+      const dias = diffDays(d.ultimo_checkin);
+      return { imei: d.imei, msisdn: d.numero_telefono, modelo: d.modelo, dias };
+    })
+    .filter((r) => r.dias != null && r.dias > 30);
+
+  // Sin equipo: líneas sin IMEI tras enriquecimiento (igual que Alertas)
+  const sinEquipo = lineas.filter((l) => !l.imei);
+
+  // POPS sin centro (igual que Alertas)
+  const popsSC = pops.filter((p) => !p.centro_costo);
+
+  // Inconsistencias: dispositivos (UEM/POPS) con IMEI pero sin teléfono válido (igual que Alertas)
+  const inconsistUem = disp
+    .filter((d) => d.imei && !normPhone(d.numero_telefono))
+    .map((d) => ({ imei: d.imei, modelo: d.modelo, fuente: "UEM" }));
+  const imeisUemInconsist = new Set(inconsistUem.map((d) => d.imei));
+  const inconsistPops = pops
+    .filter((p) => p.codigo && !imeisUemInconsist.has(p.codigo) && !normPhone(p.numero_telefono))
+    .map((p) => ({ imei: p.codigo, modelo: p.modelo, fuente: "POPS" }));
+  const inconsist = [...inconsistUem, ...inconsistPops];
+
+  // Ahorros estimados sobre líneas con costo asociado
+  const ahorroSinUso = sinUso.reduce((s, r) => {
+    const ln = lineas.find((l) => normPhone(l.msisdn) === normPhone(r.msisdn));
+    return s + Number(ln?.costo_mensual ?? ln?.valor_plan ?? 0);
+  }, 0);
   const ahorroSinEq = sinEquipo.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
-  // -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
-  // const ahorroSobre = sobredim.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0) * 0.4, 0);
-  const ahorroTotal = ahorroSinUso + ahorroSinEq; // + ahorroSobre
+  const ahorroTotal = ahorroSinUso + ahorroSinEq;
+
 
 
   const reportes = [
