@@ -287,6 +287,16 @@ function AlertasPage() {
           <DataTable
             title="Dispositivos sin línea asociada"
             rows={inconsist}
+            searchKeys={["imei", "modelo", "asignado_a", "fuente"]}
+            columns={[
+              { key: "imei", header: "IMEI" },
+              { key: "modelo", header: "Modelo" },
+              { key: "estado", header: "Estado" },
+              { key: "asignado_a", header: "Usuario / Centro" },
+              { key: "ultimo_checkin", header: "Último check-in" },
+              { key: "fuente", header: "Fuente" },
+            ]}
+            rows={inconsist}
             searchKeys={["imei", "modelo", "asignado_a"]}
             columns={[
               { key: "imei", header: "IMEI" },
