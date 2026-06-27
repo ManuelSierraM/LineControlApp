@@ -133,14 +133,17 @@ function AlertasPage() {
       estado: d.estado ?? "—",
       asignado_a: d.asignado_a ?? "—",
       ultimo_checkin: d.ultimo_checkin,
+      phone: normPhone(d.numero_telefono),
       fuente: "UEM",
     }));
   const imeisUemInconsist = new Set(inconsistUem.map((d) => d.imei));
+  const phonesUemInconsist = new Set(inconsistUem.map((d) => d.phone).filter(Boolean));
   const inconsistPops = pops
     .filter(
       (p) =>
         p.codigo &&
         !imeisUemInconsist.has(p.codigo) &&
+        !phonesUemInconsist.has(normPhone(p.numero_telefono)) &&
         !hasLinea(p.codigo, p.numero_telefono),
     )
     .map((p) => ({
