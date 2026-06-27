@@ -73,7 +73,8 @@ function ReportesPage() {
   const costoTotal = lineas.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
   const sinUso = lineas.filter((l) => !l.ultimo_uso || (hoy - new Date(l.ultimo_uso).getTime()) / 86400000 > 30);
   const sinEquipo = lineas.filter((l) => !l.imei);
-  const sobredim = lineas.filter((l) => Number(l.costo_mensual ?? l.valor_plan ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100);
+  // -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
+  // const sobredim = lineas.filter((l) => Number(l.costo_mensual ?? l.valor_plan ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100);
   const popsSC = pops.filter((p) => !p.centro_costo);
   const imeisLineas = new Set(lineas.map((l) => l.imei).filter(Boolean));
   const inconsist = disp.filter((d) => d.imei && !imeisLineas.has(d.imei));
@@ -90,7 +91,8 @@ function ReportesPage() {
     { key: "sin_uso", icon: Smartphone, titulo: "Líneas sin uso (>30 días)", desc: `${sinUso.length.toLocaleString("es-CO")} equipos sin reporte`, ahorro: ahorroSinUso, rows: sinUso },
     { key: "sin_equipo", icon: Wifi, titulo: "Líneas sin equipo", desc: `${sinEquipo.length.toLocaleString("es-CO")} líneas activas sin dispositivo`, ahorro: ahorroSinEq, rows: sinEquipo },
     { key: "pops_sc", icon: MapPin, titulo: "POPS sin centro", desc: `${popsSC.length.toLocaleString("es-CO")} registros sin centro asignado`, ahorro: 0, rows: popsSC },
-    { key: "sobredim", icon: AlertTriangle, titulo: "Planes sobredimensionados", desc: `${sobredim.length.toLocaleString("es-CO")} planes innecesarios detectados`, ahorro: ahorroSobre, rows: sobredim },
+    // -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
+    // { key: "sobredim", icon: AlertTriangle, titulo: "Planes sobredimensionados", desc: `${sobredim.length.toLocaleString("es-CO")} planes innecesarios detectados`, ahorro: ahorroSobre, rows: sobredim },
     { key: "inconsist", icon: FileText, titulo: "Inconsistencias", desc: `${inconsist.length.toLocaleString("es-CO")} inconsistencias detectadas`, ahorro: 0, rows: inconsist },
     { key: "centros", icon: DollarSign, titulo: "Centros de Costo", desc: `${centros.size.toLocaleString("es-CO")} centros analizados`, ahorro: 0, rows: Array.from(centros).map((c) => ({ centro: c })) },
   ];
