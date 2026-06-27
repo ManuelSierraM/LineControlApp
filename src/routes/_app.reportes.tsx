@@ -78,7 +78,7 @@ function ReportesPage() {
   const popsSC = pops.filter((p) => !p.centro_costo);
   const imeisLineas = new Set(lineas.map((l) => l.imei).filter(Boolean));
   const inconsist = disp.filter((d) => d.imei && !imeisLineas.has(d.imei));
-  const centros = new Set(lineas.map((l) => l.centro_costo).filter(Boolean));
+  
 
   const ahorroSinUso = sinUso.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
   const ahorroSinEq = sinEquipo.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
