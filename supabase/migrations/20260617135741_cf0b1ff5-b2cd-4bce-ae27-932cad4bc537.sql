@@ -1,0 +1,1 @@
+ALTER TABLE public.pops ALTER COLUMN codigo DROP NOT NULL;

@@ -212,7 +212,7 @@ export type Database = {
       pops: {
         Row: {
           centro_costo: string | null
-          codigo: string
+          codigo: string | null
           created_at: string
           estado: string | null
           fecha_alta: string | null
@@ -225,7 +225,7 @@ export type Database = {
         }
         Insert: {
           centro_costo?: string | null
-          codigo: string
+          codigo?: string | null
           created_at?: string
           estado?: string | null
           fecha_alta?: string | null
@@ -238,7 +238,7 @@ export type Database = {
         }
         Update: {
           centro_costo?: string | null
-          codigo?: string
+          codigo?: string | null
           created_at?: string
           estado?: string | null
           fecha_alta?: string | null

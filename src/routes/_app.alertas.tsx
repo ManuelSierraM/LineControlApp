@@ -13,7 +13,7 @@ type TabKey = "sin_uso" | "sin_equipo" | "sobredim" | "pops_sin_centro" | "incon
 const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: "sin_uso", label: "Sin uso", icon: AlertCircle },
   { key: "sin_equipo", label: "Sin equipo", icon: Wifi },
-  { key: "sobredim", label: "Sobredimensionado", icon: AlertTriangle },
+  // { key: "sobredim", label: "Sobredimensionado", icon: AlertTriangle }, -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
   { key: "pops_sin_centro", label: "POPS sin centro", icon: MapPin },
   { key: "inconsistencias", label: "Inconsistencias", icon: Info },
 ];
@@ -29,7 +29,11 @@ function diffDays(d?: string | null) {
 
 function normPhone(p?: string | null) {
   if (!p) return "";
-  let s = String(p).replace(/[^\d]/g, "");
+  const raw = String(p).trim();
+  if (!raw) return "";
+  if (/[a-zA-Z]/.test(raw)) return "";
+  let s = raw.replace(/[^\d]/g, "");
+  if (!s) return "";
   if (s.startsWith("57") && s.length > 10) s = s.slice(2);
   return s;
 }
@@ -54,17 +58,31 @@ function AlertasPage() {
 
   // Lookups
   const dispByImei = new Map(disp.map((d) => [d.imei, d]));
-  const popsByPhone = new Map<string, typeof pops[number]>();
+  const dispByPhone = new Map<string, (typeof disp)[number]>();
+  for (const d of disp) {
+    const key = normPhone(d.numero_telefono);
+    if (key && d.imei) dispByPhone.set(key, d);
+  }
+  const popsByPhone = new Map<string, (typeof pops)[number]>();
+  const popsByImei = new Map<string, (typeof pops)[number]>();
   for (const p of pops) {
     const key = normPhone(p.numero_telefono);
     if (key) popsByPhone.set(key, p);
+    if (p.codigo) popsByImei.set(String(p.codigo), p);
+  }
+  const lineaByPhone = new Map<string, (typeof lineas)[number]>();
+  for (const l of lineas) {
+    const key = normPhone(l.msisdn);
+    if (key) lineaByPhone.set(key, l);
   }
 
-  // Derive IMEI per línea: prefer línea.imei, fall back to POP código matched by teléfono
+  // Derive IMEI per línea: prefer línea.imei, fall back to UEM device por teléfono, luego POP código por teléfono
   const lineasEnriched = lineas.map((l) => {
-    const pop = popsByPhone.get(normPhone(l.msisdn));
-    const imei = l.imei || pop?.codigo || null;
-    const d = imei ? dispByImei.get(imei) : undefined;
+    const phone = normPhone(l.msisdn);
+    const dByPhone = dispByPhone.get(phone);
+    const pop = popsByPhone.get(phone);
+    const imei = l.imei || dByPhone?.imei || pop?.codigo || null;
+    const d = (imei ? dispByImei.get(imei) : undefined) ?? dByPhone;
     return {
       ...l,
       imei,
@@ -74,9 +92,24 @@ function AlertasPage() {
     };
   });
 
-  const sinUso = lineasEnriched
-    .map((l) => ({ ...l, dias: diffDays(l.ultimo_uso) }))
-    .filter((l) => l.dias == null || l.dias > 30);
+  // "Sin uso" se basa en el último check-in del dispositivo UEM (>30 días)
+  const sinUso = disp
+    .map((d) => {
+      const pop = d.imei ? popsByImei.get(String(d.imei)) : undefined;
+      const linea =
+        lineaByPhone.get(normPhone(pop?.numero_telefono)) ??
+        lineaByPhone.get(normPhone(d.numero_telefono));
+      return {
+        imei: d.imei,
+        msisdn: pop?.numero_telefono ?? linea?.msisdn ?? d.numero_telefono ?? "—",
+        modelo: d.modelo ?? pop?.modelo ?? "—",
+        cliente: linea?.nombre_cliente ?? "—",
+        centro_costo: pop?.centro_costo ?? linea?.centro_costo ?? "—",
+        dias: diffDays(d.ultimo_checkin),
+      };
+    })
+    .filter((r) => r.dias != null && r.dias > 30)
+    .sort((a, b) => (b.dias ?? 0) - (a.dias ?? 0));
 
   const sinEquipo = lineasEnriched.filter((l) => !l.imei);
 
@@ -86,8 +119,35 @@ function AlertasPage() {
 
   const popsSC = pops.filter((p) => !p.centro_costo);
 
-  const imeisLineas = new Set(lineasEnriched.map((l) => l.imei).filter(Boolean));
-  const inconsist = disp.filter((d) => d.imei && !imeisLineas.has(d.imei));
+  // "Inconsistencias": dispositivos (UEM/POPS) con IMEI pero sin número de línea válido
+  const inconsistUem = disp
+    .filter((d) => d.imei && !normPhone(d.numero_telefono))
+    .map((d) => ({
+      imei: d.imei,
+      modelo: d.modelo ?? "—",
+      estado: d.estado ?? "—",
+      asignado_a: d.asignado_a ?? "—",
+      ultimo_checkin: d.ultimo_checkin,
+      fuente: "UEM",
+    }));
+  const imeisUemInconsist = new Set(inconsistUem.map((d) => d.imei));
+  const inconsistPops = pops
+    .filter(
+      (p) =>
+        p.codigo &&
+        !imeisUemInconsist.has(p.codigo) &&
+        !normPhone(p.numero_telefono),
+    )
+    .map((p) => ({
+      imei: p.codigo,
+      modelo: p.modelo ?? "—",
+      estado: p.estado ?? "—",
+      asignado_a: p.centro_costo ?? "—",
+      ultimo_checkin: p.fecha_alta ?? p.created_at,
+      fuente: "POPS",
+    }));
+  const inconsist = [...inconsistUem, ...inconsistPops];
+
 
   const counts: Record<TabKey, number> = {
     sin_uso: sinUso.length,
@@ -97,11 +157,19 @@ function AlertasPage() {
     inconsistencias: inconsist.length,
   };
 
-  const total = counts.sin_uso + counts.sin_equipo + counts.sobredim + counts.pops_sin_centro + counts.inconsistencias;
+  const total =
+    counts.sin_uso +
+    counts.sin_equipo +
+    counts.sobredim +
+    counts.pops_sin_centro +
+    counts.inconsistencias;
 
   return (
     <div>
-      <PageHeader title="Alertas y Hallazgos" subtitle={`${total.toLocaleString("es-CO")} alertas detectadas en el análisis cruzado`} />
+      <PageHeader
+        title="Alertas y Hallazgos"
+        subtitle={`${total.toLocaleString("es-CO")} alertas detectadas en el análisis cruzado`}
+      />
       <div className="space-y-4 p-6">
         <div className="flex flex-wrap gap-2">
           {TABS.map((t) => {
@@ -124,13 +192,20 @@ function AlertasPage() {
           <DataTable
             title="Equipos sin uso >30 días"
             rows={sinUso}
-            searchKeys={["msisdn", "imei", "modelo", "centro_costo"]}
+            searchKeys={["imei", "msisdn", "modelo", "centro_costo"]}
             columns={[
-              { key: "msisdn", header: "Número" },
               { key: "imei", header: "IMEI" },
+              { key: "msisdn", header: "Número" },
               { key: "modelo", header: "Modelo" },
-              { key: "dias", header: "Días sin uso", render: (r) => <span className="rounded-full bg-warning/20 px-2 py-0.5 text-xs text-warning-foreground">{r.dias ?? "—"} días</span> },
-              { key: "costo", header: "Costo", render: (r) => fmtMoney(Number(r.costo_mensual ?? 0)) },
+              {
+                key: "dias",
+                header: "Días sin uso",
+                render: (r) => (
+                  <span className="rounded-full bg-warning/20 px-2 py-0.5 text-xs text-warning-foreground">
+                    {r.dias ?? "—"} días
+                  </span>
+                ),
+              },
               { key: "cliente", header: "Cliente" },
               { key: "centro_costo", header: "Centro" },
             ]}
@@ -145,14 +220,29 @@ function AlertasPage() {
             columns={[
               { key: "msisdn", header: "Número" },
               { key: "plan", header: "Plan" },
-              { key: "costo", header: "Costo", render: (r) => fmtMoney(Number(r.costo_mensual ?? 0)) },
-              { key: "centro_costo", header: "Centro" },
+              {
+                key: "costo",
+                header: "Costo",
+                render: (r) => {
+                  const match = lineaByPhone.get(normPhone(r.msisdn));
+                  return fmtMoney(
+                    Number(
+                      match?.valor_plan ??
+                        match?.costo_mensual ??
+                        r.valor_plan ??
+                        r.costo_mensual ??
+                        0,
+                    ),
+                  );
+                },
+              },
               { key: "estado", header: "Estado" },
             ]}
           />
         )}
 
-        {tab === "sobredim" && (
+        {/* -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan */}
+        {/*{tab === "sobredim" && ( 
           <DataTable
             title="Planes sobredimensionados"
             rows={sobredim}
@@ -160,21 +250,29 @@ function AlertasPage() {
             columns={[
               { key: "msisdn", header: "Número" },
               { key: "plan", header: "Plan" },
-              { key: "costo", header: "Costo", render: (r) => fmtMoney(Number(r.costo_mensual ?? 0)) },
-              { key: "consumo", header: "Consumo (MB)", render: (r) => Number(r.consumo_mb ?? 0).toLocaleString("es-CO") },
+              {
+                key: "costo",
+                header: "Costo",
+                render: (r) => fmtMoney(Number(r.costo_mensual ?? 0)),
+              },
+              {
+                key: "consumo",
+                header: "Consumo (MB)",
+                render: (r) => Number(r.consumo_mb ?? 0).toLocaleString("es-CO"),
+              },
               { key: "centro_costo", header: "Centro" },
             ]}
           />
         )}
+        */}
 
         {tab === "pops_sin_centro" && (
           <DataTable
-            title="POPS sin centro de costo asignado"
+            title="Dispositivos sin centro asignado"
             rows={popsSC}
-            searchKeys={["codigo", "ubicacion", "modelo"]}
+            searchKeys={["codigo", "modelo"]}
             columns={[
               { key: "codigo", header: "IMEI" },
-              { key: "ubicacion", header: "Delegación" },
               { key: "modelo", header: "Modelo" },
               { key: "estado", header: "Estado" },
             ]}
@@ -185,13 +283,14 @@ function AlertasPage() {
           <DataTable
             title="Dispositivos sin línea asociada"
             rows={inconsist}
-            searchKeys={["imei", "modelo", "asignado_a"]}
+            searchKeys={["imei", "modelo", "asignado_a", "fuente"]}
             columns={[
               { key: "imei", header: "IMEI" },
               { key: "modelo", header: "Modelo" },
               { key: "estado", header: "Estado" },
-              { key: "asignado_a", header: "Usuario" },
+              { key: "asignado_a", header: "Usuario / Centro" },
               { key: "ultimo_checkin", header: "Último check-in" },
+              { key: "fuente", header: "Fuente" },
             ]}
           />
         )}

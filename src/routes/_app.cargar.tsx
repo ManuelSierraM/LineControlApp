@@ -31,7 +31,7 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     fields: [
       { columna: "OPERADOR", ejemplo: "CLARO", requerido: true, nota: "Nombre del operador", target: "operador" },
       { columna: "TIPO_DE_LINEA", ejemplo: "VOZ+DATOS", requerido: false, nota: "Tipo de servicio" },
-      { columna: "TELE_NUMB", ejemplo: "3001234567", requerido: true, nota: "Número de la línea (MSISDN)", target: "msisdn" },
+      { columna: "TELE_NUMB", ejemplo: "3001234567", requerido: false, nota: "Número de la línea (MSISDN). Texto libre, puede venir vacío.", target: "msisdn" },
       { columna: "NOMBRE_CLIENTE", ejemplo: "vigilancia", requerido: false, nota: "Nombre del usuario asignado", target: "nombre_cliente" },
       { columna: "Cod Empresa", ejemplo: "CO0070", requerido: false, nota: "Código de empresa", target: "cod_empresa" },
 
@@ -46,7 +46,7 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     fields: [
       { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del dispositivo", target: "imei" },
       { columna: "Modelo", ejemplo: "Galaxy S22", requerido: false, nota: "Modelo del equipo", target: "modelo" },
-      { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: true, nota: "Línea asociada", target: "numero_telefono" },
+      { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Texto libre, puede venir vacío.", target: "numero_telefono" },
       { columna: "Last_CheckIn", ejemplo: "2025-04-12", requerido: true, nota: "Último reporte UEM (YYYY-MM-DD)", target: "ultimo_checkin" },
       { columna: "Estado_UEM", ejemplo: "ACTIVO", requerido: true, nota: "Estado en plataforma UEM", target: "estado" },
       { columna: "País", ejemplo: "Colombia", requerido: false, nota: "País de operación" },
@@ -57,10 +57,10 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     titulo: "Inventario POPS",
     archivo: "POPS_Inventory.xlsx",
     fields: [
-      { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del equipo", target: "codigo" },
-      { columna: "Numero_Telefono", ejemplo: "3001234567", requerido: true, nota: "Línea asociada", target: "numero_telefono" },
-      { columna: "Centro", ejemplo: "CC-100", requerido: true, nota: "Centro de costo", target: "centro_costo" },
-      { columna: "Delegación", ejemplo: "Bogotá Norte", requerido: true, nota: "Delegación o sede", target: "ubicacion" },
+      { columna: "IMEI", ejemplo: "356938035643809", requerido: false, nota: "IMEI del equipo. Puede venir vacío.", target: "codigo" },
+      { columna: "Numero_Telefono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Texto libre, puede venir vacío.", target: "numero_telefono" },
+      { columna: "Centro", ejemplo: "CC-100", requerido: false, nota: "Centro de costo. Puede venir vacío.", target: "centro_costo" },
+      { columna: "Delegación", ejemplo: "Bogotá Norte", requerido: false, nota: "Delegación o sede. Puede venir vacío.", target: "ubicacion" },
       { columna: "Fecha_Alta", ejemplo: "2024-01-15", requerido: false, nota: "Fecha de alta del equipo (YYYY-MM-DD)", target: "fecha_alta" },
       { columna: "Fecha_Baja", ejemplo: "2025-03-30", requerido: false, nota: "Fecha de baja si aplica (YYYY-MM-DD)", target: "fecha_baja" },
       { columna: "Modelo", ejemplo: "iPhone 13", requerido: false, nota: "Modelo del equipo", target: "modelo" },
@@ -88,7 +88,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
   lineas: [
     { columna: "OPERADOR", target: "operador", required: true, type: "text", maxLen: 50, hint: "Texto, ej. CLARO / TIGO / MOVISTAR (máx. 50)." },
     { columna: "TIPO_DE_LINEA", type: "text", maxLen: 50, hint: "Texto, ej. VOZ+DATOS." },
-    { columna: "TELE_NUMB", target: "msisdn", required: true, type: "digits", minLen: 10, maxLen: 12, unique: true, hint: "Solo dígitos, 10–12 caracteres. Sin espacios, guiones ni '+'. No debe repetirse." },
+    { columna: "TELE_NUMB", target: "msisdn", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
     { columna: "NOMBRE_CLIENTE", target: "nombre_cliente", type: "text", maxLen: 100, hint: "Texto (máx. 100)." },
     { columna: "Cod Empresa", target: "cod_empresa", type: "text", maxLen: 30, hint: "Texto corto, ej. CO0070 (máx. 30)." },
     { columna: "ICCID", target: "iccid", required: true, type: "digits", minLen: 18, maxLen: 22, hint: "Solo dígitos, 18–22 caracteres." },
@@ -98,20 +98,20 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
   dispositivos: [
     { columna: "IMEI", target: "imei", required: true, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "Solo dígitos, 14–16 caracteres. No debe repetirse." },
     { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
-    { columna: "Número_Teléfono", target: "numero_telefono", required: true, type: "digits", minLen: 10, maxLen: 12, hint: "Solo dígitos, 10–12 caracteres." },
+    { columna: "Número_Teléfono", target: "numero_telefono", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
     { columna: "Last_CheckIn", target: "ultimo_checkin", required: true, type: "date", hint: "Fecha YYYY-MM-DD (ej. 2025-04-12)." },
     { columna: "Estado_UEM", target: "estado", required: true, type: "text", maxLen: 30, enum: ["ACTIVO","INACTIVO","SUSPENDIDO","BAJA","ENROLADO"], hint: "Valores recomendados: ACTIVO, INACTIVO, SUSPENDIDO, BAJA, ENROLADO." },
     { columna: "País", type: "text", maxLen: 40, hint: "Texto (máx. 40)." },
     { columna: "Usuario", target: "asignado_a", type: "text", maxLen: 120, hint: "Texto / correo (máx. 120)." },
   ],
   pops: [
-    { columna: "IMEI", target: "codigo", required: true, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "Solo dígitos, 14–16 caracteres. No debe repetirse." },
-    { columna: "Numero_Telefono", target: "numero_telefono", required: true, type: "digits", minLen: 10, maxLen: 12, hint: "Solo dígitos, 10–12 caracteres." },
-    { columna: "Centro", target: "centro_costo", required: true, type: "text", maxLen: 30, hint: "Texto corto, ej. CC-100 (máx. 30)." },
-    { columna: "Delegación", target: "ubicacion", required: true, type: "text", maxLen: 80, hint: "Texto (máx. 80)." },
+    { columna: "IMEI", target: "codigo", required: false, type: "text", unique: true, hint: "Texto libre. Puede venir vacío." },
+    { columna: "Numero_Telefono", target: "numero_telefono", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
+    { columna: "Centro", target: "centro_costo", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
+    { columna: "Delegación", target: "ubicacion", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
     { columna: "Fecha_Alta", target: "fecha_alta", type: "date", hint: "Fecha YYYY-MM-DD." },
     { columna: "Fecha_Baja", target: "fecha_baja", type: "date", hint: "Fecha YYYY-MM-DD." },
-    { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
+    { columna: "Modelo", target: "modelo", type: "text", hint: "Texto libre." },
   ],
 };
 
