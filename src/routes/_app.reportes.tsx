@@ -94,7 +94,6 @@ function ReportesPage() {
     // -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
     // { key: "sobredim", icon: AlertTriangle, titulo: "Planes sobredimensionados", desc: `${sobredim.length.toLocaleString("es-CO")} planes innecesarios detectados`, ahorro: ahorroSobre, rows: sobredim },
     { key: "inconsist", icon: FileText, titulo: "Inconsistencias", desc: `${inconsist.length.toLocaleString("es-CO")} inconsistencias detectadas`, ahorro: 0, rows: inconsist },
-    { key: "centros", icon: DollarSign, titulo: "Centros de Costo", desc: `${centros.size.toLocaleString("es-CO")} centros analizados`, ahorro: 0, rows: Array.from(centros).map((c) => ({ centro: c })) },
   ];
 
   const exportar = (titulo: string, rows: any[]) => {
