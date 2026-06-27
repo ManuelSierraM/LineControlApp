@@ -81,8 +81,9 @@ function ReportesPage() {
 
   const ahorroSinUso = sinUso.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
   const ahorroSinEq = sinEquipo.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
-  const ahorroSobre = sobredim.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0) * 0.4, 0);
-  const ahorroTotal = ahorroSinUso + ahorroSinEq + ahorroSobre;
+  // -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
+  // const ahorroSobre = sobredim.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0) * 0.4, 0);
+  const ahorroTotal = ahorroSinUso + ahorroSinEq; // + ahorroSobre
 
 
   const reportes = [
