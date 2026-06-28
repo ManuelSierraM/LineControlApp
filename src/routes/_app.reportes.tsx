@@ -119,7 +119,7 @@ function ReportesPage() {
   });
   const lineas = lineasEnriched;
 
-  const costoTotal = lineas.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
+  const costoTotal = lineas.reduce((s, l) => s + (Number(l.valor_plan ?? 0) || Number(l.costo_mensual ?? 0)), 0);
 
   // Sin uso: dispositivos UEM con ultimo_checkin > 30 días (igual que Alertas)
   const buildSinUso = (src: typeof disp) =>
