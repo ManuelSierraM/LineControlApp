@@ -119,7 +119,7 @@ function ReportesPage() {
   });
   const lineas = lineasEnriched;
 
-  const costoTotal = lineas.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
+  const costoTotal = lineas.reduce((s, l) => s + (Number(l.valor_plan ?? 0) || Number(l.costo_mensual ?? 0)), 0);
 
   // Sin uso: dispositivos UEM con ultimo_checkin > 30 días (igual que Alertas)
   const buildSinUso = (src: typeof disp) =>
@@ -160,9 +160,9 @@ function ReportesPage() {
   // Ahorros estimados sobre líneas con costo asociado
   const ahorroSinUso = sinUso.reduce((s, r) => {
     const ln = lineas.find((l) => normPhone(l.msisdn) === normPhone(r.msisdn));
-    return s + Number(ln?.costo_mensual ?? ln?.valor_plan ?? 0);
+    return s + (Number(ln?.valor_plan ?? 0) || Number(ln?.costo_mensual ?? 0));
   }, 0);
-  const ahorroSinEq = sinEquipo.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
+  const ahorroSinEq = sinEquipo.reduce((s, l) => s + (Number(l.valor_plan ?? 0) || Number(l.costo_mensual ?? 0)), 0);
   const ahorroTotal = ahorroSinUso + ahorroSinEq;
 
 
@@ -220,7 +220,7 @@ function ReportesPage() {
       />
       <div className="space-y-6 p-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <KpiTop label="Costo Mensual" value={fmtMoney(costoTotal)} icon={DollarSign} />
+          <KpiTop label="Costo Mensual Líneas" value={fmtMoney(costoTotal)} icon={DollarSign} />
           <KpiTop label="Ahorro Total" value={fmtMoney(ahorroTotal)} icon={DollarSign} tone="success" />
           <KpiTop label="ALERTAS ACTUALES" value={alertasRecientes.length.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
         </div>
