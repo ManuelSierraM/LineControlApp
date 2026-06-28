@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertCircle, Wifi, AlertTriangle, MapPin, Info, Save, Loader2 } from "lucide-react";
+import { AlertCircle, Wifi, AlertTriangle, MapPin, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/alertas")({ component: AlertasPage });
 
