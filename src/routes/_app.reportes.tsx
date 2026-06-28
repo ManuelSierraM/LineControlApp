@@ -53,13 +53,14 @@ function ReportesPage() {
   const { data } = useQuery({
     queryKey: ["reportes-data"],
     queryFn: async () => {
-      const [{ data: lineas }, { data: disp }, { data: pops }, { data: alertas }] = await Promise.all([
+      const [{ data: lineas }, { data: disp }, { data: pops }, { data: alertas }, { data: cargas }] = await Promise.all([
         supabase.from("lineas").select("*").limit(10000),
         supabase.from("dispositivos").select("*").limit(10000),
         supabase.from("pops").select("*").limit(10000),
         supabase.from("alertas").select("*").limit(10000),
+        supabase.from("archivos_carga").select("tipo, created_at").order("created_at", { ascending: false }).limit(500),
       ]);
-      return { lineas: lineas ?? [], disp: disp ?? [], pops: pops ?? [], alertas: alertas ?? [] };
+      return { lineas: lineas ?? [], disp: disp ?? [], pops: pops ?? [], alertas: alertas ?? [], cargas: cargas ?? [] };
     },
   });
 
