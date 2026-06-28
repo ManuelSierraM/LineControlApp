@@ -178,7 +178,7 @@ function ReportesPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <KpiTop label="Costo Mensual" value={fmtMoney(costoTotal)} icon={DollarSign} />
           <KpiTop label="Ahorro Total" value={fmtMoney(ahorroTotal)} icon={DollarSign} tone="success" />
-          <KpiTop label="Total Alertas" value={alertas.length.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
+          <KpiTop label="Total Alertas" value={alertasRecientes.length.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
