@@ -247,8 +247,10 @@ function ReportesPage() {
                   <h3 className="font-semibold">{r.titulo}</h3>
                 </div>
                 <p className="mt-4 text-sm text-muted-foreground">{r.desc}</p>
-                {r.ahorro > 0 && (
-                  <p className="mt-1 text-sm font-medium text-success">Ahorro potencial: {fmtMoney(r.ahorro)}</p>
+                {(r.showAhorro || r.ahorro > 0) && (
+                  <p className={`mt-1 text-sm font-medium ${r.ahorro > 0 ? "text-success" : "text-muted-foreground"}`}>
+                    Ahorro potencial: {fmtMoney(r.ahorro)}
+                  </p>
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
