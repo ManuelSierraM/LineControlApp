@@ -174,8 +174,8 @@ function ReportesPage() {
 
 
   const reportes = [
-    { key: "sin_uso", icon: Smartphone, titulo: "Líneas sin uso (>30 días)", desc: `${sinUso.length.toLocaleString("es-CO")} equipos sin reporte`, ahorro: ahorroSinUso, rows: sinUso, rowsMes: sinUsoMes },
-    { key: "sin_equipo", icon: Wifi, titulo: "Líneas sin equipo", desc: `${sinEquipo.length.toLocaleString("es-CO")} líneas activas sin dispositivo`, ahorro: ahorroSinEq, rows: sinEquipo, rowsMes: sinEquipoMes },
+    { key: "sin_uso", icon: Smartphone, titulo: "Líneas sin uso (>30 días)", desc: `${sinUso.length.toLocaleString("es-CO")} equipos sin reporte`, ahorro: ahorroSinUso, rows: sinUso, rowsMes: sinUsoMes, showAhorro: true },
+    { key: "sin_equipo", icon: Wifi, titulo: "Líneas sin equipo", desc: `${sinEquipo.length.toLocaleString("es-CO")} líneas activas sin dispositivo`, ahorro: ahorroSinEq, rows: sinEquipo, rowsMes: sinEquipoMes, showAhorro: true },
     { key: "pops_sc", icon: MapPin, titulo: "POPS sin centro", desc: `${popsSC.length.toLocaleString("es-CO")} registros sin centro asignado`, ahorro: 0, rows: popsSC, rowsMes: popsSCMes },
     // -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
     // { key: "sobredim", icon: AlertTriangle, titulo: "Planes sobredimensionados", desc: `${sobredim.length.toLocaleString("es-CO")} planes innecesarios detectados`, ahorro: ahorroSobre, rows: sobredim },
@@ -247,8 +247,10 @@ function ReportesPage() {
                   <h3 className="font-semibold">{r.titulo}</h3>
                 </div>
                 <p className="mt-4 text-sm text-muted-foreground">{r.desc}</p>
-                {r.ahorro > 0 && (
-                  <p className="mt-1 text-sm font-medium text-success">Ahorro potencial: {fmtMoney(r.ahorro)}</p>
+                {(r.showAhorro || r.ahorro > 0) && (
+                  <p className={`mt-1 text-sm font-medium ${r.ahorro > 0 ? "text-success" : "text-muted-foreground"}`}>
+                    Ahorro potencial: {fmtMoney(r.ahorro)}
+                  </p>
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
