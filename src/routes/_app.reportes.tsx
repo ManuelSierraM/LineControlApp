@@ -1,12 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Smartphone, Wifi, MapPin, AlertTriangle, FileText, DollarSign, AlertCircle } from "lucide-react";
+import { Download, Smartphone, Wifi, MapPin, AlertTriangle, FileText, DollarSign, AlertCircle, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/reportes")({ component: ReportesPage });
+
+function isCurrentMonth(d?: string | null) {
+  if (!d) return false;
+  const dt = new Date(d);
+  const now = new Date();
+  return dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth();
+}
 
 function fmtMoney(n: number) {
   return `$ ${Number(n ?? 0).toLocaleString("es-CO")}`;
