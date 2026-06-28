@@ -42,6 +42,8 @@ function normPhone(p?: string | null) {
 
 function AlertasPage() {
   const [tab, setTab] = useState<TabKey>("sin_uso");
+  const [saving, setSaving] = useState(false);
+
   const { data } = useQuery({
     queryKey: ["alertas-cruzado"],
     queryFn: async () => {
