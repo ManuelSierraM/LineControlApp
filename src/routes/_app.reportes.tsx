@@ -53,13 +53,14 @@ function ReportesPage() {
   const { data } = useQuery({
     queryKey: ["reportes-data"],
     queryFn: async () => {
-      const [{ data: lineas }, { data: disp }, { data: pops }, { data: alertas }] = await Promise.all([
+      const [{ data: lineas }, { data: disp }, { data: pops }, { data: alertas }, { data: cargas }] = await Promise.all([
         supabase.from("lineas").select("*").limit(10000),
         supabase.from("dispositivos").select("*").limit(10000),
         supabase.from("pops").select("*").limit(10000),
         supabase.from("alertas").select("*").limit(10000),
+        supabase.from("archivos_carga").select("tipo, created_at").order("created_at", { ascending: false }).limit(500),
       ]);
-      return { lineas: lineas ?? [], disp: disp ?? [], pops: pops ?? [], alertas: alertas ?? [] };
+      return { lineas: lineas ?? [], disp: disp ?? [], pops: pops ?? [], alertas: alertas ?? [], cargas: cargas ?? [] };
     },
   });
 
@@ -67,6 +68,21 @@ function ReportesPage() {
   const disp = data?.disp ?? [];
   const pops = data?.pops ?? [];
   const alertas = data?.alertas ?? [];
+  const cargas = data?.cargas ?? [];
+
+  // Cutoff = última carga por tipo; tomamos el mínimo entre los tipos presentes
+  // para incluir alertas que dependen de los datasets más recientes de cada módulo.
+  const lastByTipo = new Map<string, number>();
+  for (const c of cargas) {
+    const t = String(c.tipo ?? "");
+    const ts = c.created_at ? new Date(c.created_at).getTime() : 0;
+    if (!lastByTipo.has(t) || ts > (lastByTipo.get(t) ?? 0)) lastByTipo.set(t, ts);
+  }
+  const latestTs = Array.from(lastByTipo.values());
+  const cutoff = latestTs.length ? Math.min(...latestTs) : 0;
+  const alertasRecientes = cutoff
+    ? alertas.filter((a) => a.created_at && new Date(a.created_at).getTime() >= cutoff)
+    : alertas;
 
   // Lookups consistentes con Alertas
   const dispByPhone = new Map<string, (typeof disp)[number]>();
@@ -162,7 +178,7 @@ function ReportesPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <KpiTop label="Costo Mensual" value={fmtMoney(costoTotal)} icon={DollarSign} />
           <KpiTop label="Ahorro Total" value={fmtMoney(ahorroTotal)} icon={DollarSign} tone="success" />
-          <KpiTop label="Total Alertas" value={alertas.length.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
+          <KpiTop label="Total Alertas" value={alertasRecientes.length.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
