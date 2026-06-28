@@ -181,6 +181,10 @@ function ReportesPage() {
           <KpiTop label="ALERTAS ACTUALES" value={alertasRecientes.length.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
         </div>
 
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <KpiTop label="HISTORICO ALERTAS" value={alertas.length.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {reportes.map((r) => {
             const Icon = r.icon;
