@@ -175,8 +175,13 @@ function ReportesPage() {
         actions={<Button onClick={descargarTodo}><Download className="mr-2 h-4 w-4" /> Descargar Todo</Button>}
       />
       <div className="space-y-6 p-6">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <KpiTop label="Costo Mensual" value={fmtMoney(costoTotal)} icon={DollarSign} />
+          <KpiTop label="Ahorro Total" value={fmtMoney(ahorroTotal)} icon={DollarSign} tone="success" />
           <KpiTop label="ALERTAS ACTUALES" value={alertasRecientes.length.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <KpiTop label="HISTORICO ALERTAS" value={alertas.length.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
         </div>
 
