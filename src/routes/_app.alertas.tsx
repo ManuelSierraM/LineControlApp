@@ -167,91 +167,13 @@ function AlertasPage() {
     counts.pops_sin_centro +
     counts.inconsistencias;
 
-  async function registrarAlertas() {
-    setSaving(true);
-    try {
-      const { data: u } = await supabase.auth.getUser();
-      const uid = u.user?.id;
-      if (!uid) throw new Error("Sesión no válida");
-      const rows: Array<{ user_id: string; tipo: string; severidad: string; entidad: string | null; referencia: string | null; mensaje: string; detalle: string | null }> = [];
-      for (const r of sinUso) {
-        rows.push({
-          user_id: uid,
-          tipo: "sin_uso",
-          severidad: "media",
-          entidad: "dispositivo",
-          referencia: r.imei ?? r.msisdn ?? null,
-          mensaje: `Equipo sin uso ${r.dias ?? "?"} días`,
-          detalle: `IMEI ${r.imei ?? "—"} · ${r.msisdn ?? "—"} · ${r.modelo ?? "—"} · ${r.centro_costo ?? "—"}`,
-        });
-      }
-      for (const r of sinEquipo) {
-        const costo = Number(r.valor_plan ?? r.costo_mensual ?? 0);
-        rows.push({
-          user_id: uid,
-          tipo: "sin_equipo",
-          severidad: "alta",
-          entidad: "linea",
-          referencia: r.msisdn ?? null,
-          mensaje: "Línea activa sin dispositivo asociado",
-          detalle: `Plan ${r.plan ?? "—"} · ${fmtMoney(costo)} · ${r.estado ?? "—"}`,
-        });
-      }
-      for (const r of popsSC) {
-        rows.push({
-          user_id: uid,
-          tipo: "pops_sin_centro",
-          severidad: "media",
-          entidad: "pops",
-          referencia: r.codigo ?? null,
-          mensaje: "Dispositivo sin centro asignado",
-          detalle: `${r.modelo ?? "—"} · ${r.estado ?? "—"}`,
-        });
-      }
-      for (const r of inconsist) {
-        rows.push({
-          user_id: uid,
-          tipo: "inconsistencias",
-          severidad: "alta",
-          entidad: r.fuente.toLowerCase(),
-          referencia: r.imei ?? null,
-          mensaje: "IMEI sin línea válida",
-          detalle: `${r.modelo ?? "—"} · ${r.estado ?? "—"} · ${r.asignado_a ?? "—"} · Fuente ${r.fuente}`,
-        });
-      }
-      if (rows.length === 0) {
-        toast.info("No hay alertas para registrar");
-        return;
-      }
-      const CHUNK = 500;
-      for (let i = 0; i < rows.length; i += CHUNK) {
-        const { error } = await supabase.from("alertas").insert(rows.slice(i, i + CHUNK));
-        if (error) throw error;
-      }
-      toast.success(`Se registraron ${rows.length} alertas en el histórico`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Error al registrar alertas");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
     <div>
       <PageHeader
         title="Alertas y Hallazgos"
         subtitle={`${total.toLocaleString("es-CO")} alertas detectadas en el análisis cruzado`}
-        actions={
-          <button
-            onClick={registrarAlertas}
-            disabled={saving || total === 0}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Registrar en histórico
-          </button>
-        }
       />
+
       <div className="space-y-4 p-6">
 
         <div className="flex flex-wrap gap-2">
