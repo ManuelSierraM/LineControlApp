@@ -68,6 +68,21 @@ function ReportesPage() {
   const disp = data?.disp ?? [];
   const pops = data?.pops ?? [];
   const alertas = data?.alertas ?? [];
+  const cargas = data?.cargas ?? [];
+
+  // Cutoff = última carga por tipo; tomamos el mínimo entre los tipos presentes
+  // para incluir alertas que dependen de los datasets más recientes de cada módulo.
+  const lastByTipo = new Map<string, number>();
+  for (const c of cargas) {
+    const t = String(c.tipo ?? "");
+    const ts = c.created_at ? new Date(c.created_at).getTime() : 0;
+    if (!lastByTipo.has(t) || ts > (lastByTipo.get(t) ?? 0)) lastByTipo.set(t, ts);
+  }
+  const latestTs = Array.from(lastByTipo.values());
+  const cutoff = latestTs.length ? Math.min(...latestTs) : 0;
+  const alertasRecientes = cutoff
+    ? alertas.filter((a) => a.created_at && new Date(a.created_at).getTime() >= cutoff)
+    : alertas;
 
   // Lookups consistentes con Alertas
   const dispByPhone = new Map<string, (typeof disp)[number]>();
