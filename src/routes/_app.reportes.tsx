@@ -244,14 +244,21 @@ function ReportesPage() {
                 {r.ahorro > 0 && (
                   <p className="mt-1 text-sm font-medium text-success">Ahorro potencial: {fmtMoney(r.ahorro)}</p>
                 )}
-                <Button
-                  variant="outline"
-                  className="mt-4 w-full"
-                  disabled={r.rows.length === 0}
-                  onClick={() => exportar(r.titulo, r.rows)}
-                >
-                  <Download className="mr-2 h-4 w-4" /> Descargar CSV
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="mt-4 w-full" disabled={r.rows.length === 0}>
+                      <Download className="mr-2 h-4 w-4" /> Descargar CSV <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={() => exportar(r.titulo, r.rowsMes, "mes_actual")}>
+                      Mes actual ({r.rowsMes.length.toLocaleString("es-CO")})
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportar(r.titulo, r.rows, "historico")}>
+                      Histórico ({r.rows.length.toLocaleString("es-CO")})
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             );
           })}
