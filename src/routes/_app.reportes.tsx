@@ -1,12 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Smartphone, Wifi, MapPin, AlertTriangle, FileText, DollarSign, AlertCircle } from "lucide-react";
+import { Download, Smartphone, Wifi, MapPin, AlertTriangle, FileText, DollarSign, AlertCircle, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/reportes")({ component: ReportesPage });
+
+function isCurrentMonth(d?: string | null) {
+  if (!d) return false;
+  const dt = new Date(d);
+  const now = new Date();
+  return dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth();
+}
 
 function fmtMoney(n: number) {
   return `$ ${Number(n ?? 0).toLocaleString("es-CO")}`;
@@ -109,28 +122,40 @@ function ReportesPage() {
   const costoTotal = lineas.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
 
   // Sin uso: dispositivos UEM con ultimo_checkin > 30 días (igual que Alertas)
-  const sinUso = disp
-    .map((d) => {
-      const dias = diffDays(d.ultimo_checkin);
-      return { imei: d.imei, msisdn: d.numero_telefono, modelo: d.modelo, dias };
-    })
-    .filter((r) => r.dias != null && r.dias > 30);
+  const buildSinUso = (src: typeof disp) =>
+    src
+      .map((d) => {
+        const dias = diffDays(d.ultimo_checkin);
+        return { imei: d.imei, msisdn: d.numero_telefono, modelo: d.modelo, dias, created_at: d.created_at };
+      })
+      .filter((r) => r.dias != null && r.dias > 30);
+  const sinUso = buildSinUso(disp);
+  const sinUsoMes = buildSinUso(disp.filter((d) => isCurrentMonth(d.created_at)));
 
   // Sin equipo: líneas sin IMEI tras enriquecimiento (igual que Alertas)
   const sinEquipo = lineas.filter((l) => !l.imei);
+  const sinEquipoMes = sinEquipo.filter((l) => isCurrentMonth(l.created_at));
 
   // POPS sin centro (igual que Alertas)
   const popsSC = pops.filter((p) => !p.centro_costo);
+  const popsSCMes = popsSC.filter((p) => isCurrentMonth(p.created_at));
 
   // Inconsistencias: dispositivos (UEM/POPS) con IMEI pero sin teléfono válido (igual que Alertas)
-  const inconsistUem = disp
-    .filter((d) => d.imei && !normPhone(d.numero_telefono))
-    .map((d) => ({ imei: d.imei, modelo: d.modelo, fuente: "UEM" }));
-  const imeisUemInconsist = new Set(inconsistUem.map((d) => d.imei));
-  const inconsistPops = pops
-    .filter((p) => p.codigo && !imeisUemInconsist.has(p.codigo) && !normPhone(p.numero_telefono))
-    .map((p) => ({ imei: p.codigo, modelo: p.modelo, fuente: "POPS" }));
-  const inconsist = [...inconsistUem, ...inconsistPops];
+  const buildInconsist = (srcDisp: typeof disp, srcPops: typeof pops) => {
+    const ui = srcDisp
+      .filter((d) => d.imei && !normPhone(d.numero_telefono))
+      .map((d) => ({ imei: d.imei, modelo: d.modelo, fuente: "UEM", created_at: d.created_at }));
+    const ids = new Set(ui.map((d) => d.imei));
+    const pi = srcPops
+      .filter((p) => p.codigo && !ids.has(p.codigo) && !normPhone(p.numero_telefono))
+      .map((p) => ({ imei: p.codigo, modelo: p.modelo, fuente: "POPS", created_at: p.created_at }));
+    return [...ui, ...pi];
+  };
+  const inconsist = buildInconsist(disp, pops);
+  const inconsistMes = buildInconsist(
+    disp.filter((d) => isCurrentMonth(d.created_at)),
+    pops.filter((p) => isCurrentMonth(p.created_at)),
+  );
 
   // Ahorros estimados sobre líneas con costo asociado
   const ahorroSinUso = sinUso.reduce((s, r) => {
@@ -143,28 +168,37 @@ function ReportesPage() {
 
 
   const reportes = [
-    { key: "sin_uso", icon: Smartphone, titulo: "Líneas sin uso (>30 días)", desc: `${sinUso.length.toLocaleString("es-CO")} equipos sin reporte`, ahorro: ahorroSinUso, rows: sinUso },
-    { key: "sin_equipo", icon: Wifi, titulo: "Líneas sin equipo", desc: `${sinEquipo.length.toLocaleString("es-CO")} líneas activas sin dispositivo`, ahorro: ahorroSinEq, rows: sinEquipo },
-    { key: "pops_sc", icon: MapPin, titulo: "POPS sin centro", desc: `${popsSC.length.toLocaleString("es-CO")} registros sin centro asignado`, ahorro: 0, rows: popsSC },
+    { key: "sin_uso", icon: Smartphone, titulo: "Líneas sin uso (>30 días)", desc: `${sinUso.length.toLocaleString("es-CO")} equipos sin reporte`, ahorro: ahorroSinUso, rows: sinUso, rowsMes: sinUsoMes },
+    { key: "sin_equipo", icon: Wifi, titulo: "Líneas sin equipo", desc: `${sinEquipo.length.toLocaleString("es-CO")} líneas activas sin dispositivo`, ahorro: ahorroSinEq, rows: sinEquipo, rowsMes: sinEquipoMes },
+    { key: "pops_sc", icon: MapPin, titulo: "POPS sin centro", desc: `${popsSC.length.toLocaleString("es-CO")} registros sin centro asignado`, ahorro: 0, rows: popsSC, rowsMes: popsSCMes },
     // -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
     // { key: "sobredim", icon: AlertTriangle, titulo: "Planes sobredimensionados", desc: `${sobredim.length.toLocaleString("es-CO")} planes innecesarios detectados`, ahorro: ahorroSobre, rows: sobredim },
-    { key: "inconsist", icon: FileText, titulo: "Inconsistencias", desc: `${inconsist.length.toLocaleString("es-CO")} inconsistencias detectadas`, ahorro: 0, rows: inconsist },
+    { key: "inconsist", icon: FileText, titulo: "Inconsistencias", desc: `${inconsist.length.toLocaleString("es-CO")} inconsistencias detectadas`, ahorro: 0, rows: inconsist, rowsMes: inconsistMes },
   ];
 
-  const exportar = (titulo: string, rows: any[]) => {
+  const exportar = (titulo: string, rows: any[], suffix: string) => {
     if (!rows.length) return toast.error("Sin datos para exportar");
-    download(`${titulo.toLowerCase().replace(/\s+/g, "_")}.csv`, toCsv(rows));
-    toast.success(`Exportado: ${titulo}`);
+    const base = titulo.toLowerCase().replace(/\s+/g, "_");
+    download(`${base}_${suffix}.csv`, toCsv(rows));
+    toast.success(`Exportado: ${titulo} (${suffix === "mes_actual" ? "mes actual" : "histórico"})`);
   };
 
-  const descargarTodo = () => {
+  const descargarTodo = (modo: "mes" | "historico") => {
+    const filt = <T extends { created_at?: string | null }>(rows: T[]) =>
+      modo === "mes" ? rows.filter((r) => isCurrentMonth(r.created_at)) : rows;
     const all = [
-      ["lineas", lineas], ["dispositivos", disp], ["pops", pops], ["alertas", alertas],
+      ["lineas", filt(lineas)],
+      ["dispositivos", filt(disp)],
+      ["pops", filt(pops)],
+      ["alertas", filt(alertas)],
     ] as const;
+    let any = false;
+    const suffix = modo === "mes" ? "mes_actual" : "historico";
     for (const [name, rows] of all) {
-      if (rows.length) download(`${name}.csv`, toCsv(rows));
+      if (rows.length) { download(`${name}_${suffix}.csv`, toCsv(rows as any[])); any = true; }
     }
-    toast.success("Reportes descargados");
+    if (!any) toast.error("Sin datos para exportar");
+    else toast.success(`Reportes descargados (${modo === "mes" ? "mes actual" : "histórico"})`);
   };
 
   return (
@@ -172,7 +206,17 @@ function ReportesPage() {
       <PageHeader
         title="Reportes"
         subtitle="Descarga reportes individuales o el consolidado completo"
-        actions={<Button onClick={descargarTodo}><Download className="mr-2 h-4 w-4" /> Descargar Todo</Button>}
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button><Download className="mr-2 h-4 w-4" /> Descargar Todo <ChevronDown className="ml-2 h-4 w-4" /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => descargarTodo("mes")}>Mes actual</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => descargarTodo("historico")}>Histórico</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
       />
       <div className="space-y-6 p-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -200,14 +244,21 @@ function ReportesPage() {
                 {r.ahorro > 0 && (
                   <p className="mt-1 text-sm font-medium text-success">Ahorro potencial: {fmtMoney(r.ahorro)}</p>
                 )}
-                <Button
-                  variant="outline"
-                  className="mt-4 w-full"
-                  disabled={r.rows.length === 0}
-                  onClick={() => exportar(r.titulo, r.rows)}
-                >
-                  <Download className="mr-2 h-4 w-4" /> Descargar CSV
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="mt-4 w-full" disabled={r.rows.length === 0}>
+                      <Download className="mr-2 h-4 w-4" /> Descargar CSV <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={() => exportar(r.titulo, r.rowsMes, "mes_actual")}>
+                      Mes actual ({r.rowsMes.length.toLocaleString("es-CO")})
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportar(r.titulo, r.rows, "historico")}>
+                      Histórico ({r.rows.length.toLocaleString("es-CO")})
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             );
           })}
