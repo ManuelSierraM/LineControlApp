@@ -126,7 +126,16 @@ function ReportesPage() {
     src
       .map((d) => {
         const dias = diffDays(d.ultimo_checkin);
-        return { imei: d.imei, msisdn: d.numero_telefono, modelo: d.modelo, dias, created_at: d.created_at };
+        const ln = lineas.find((l) => normPhone(l.msisdn) === normPhone(d.numero_telefono));
+        const costo = Number(ln?.valor_plan ?? 0) || Number(ln?.costo_mensual ?? 0);
+        return {
+          imei: d.imei,
+          msisdn: d.numero_telefono,
+          modelo: d.modelo,
+          dias,
+          costo,
+          created_at: d.created_at,
+        };
       })
       .filter((r) => r.dias != null && r.dias > 30);
   const sinUso = buildSinUso(disp);
@@ -158,10 +167,7 @@ function ReportesPage() {
   );
 
   // Ahorros estimados sobre líneas con costo asociado
-  const ahorroSinUso = sinUso.reduce((s, r) => {
-    const ln = lineas.find((l) => normPhone(l.msisdn) === normPhone(r.msisdn));
-    return s + (Number(ln?.valor_plan ?? 0) || Number(ln?.costo_mensual ?? 0));
-  }, 0);
+  const ahorroSinUso = sinUso.reduce((s, r) => s + r.costo, 0);
   const ahorroSinEq = sinEquipo.reduce((s, l) => s + (Number(l.valor_plan ?? 0) || Number(l.costo_mensual ?? 0)), 0);
   const ahorroTotal = ahorroSinUso + ahorroSinEq;
 
