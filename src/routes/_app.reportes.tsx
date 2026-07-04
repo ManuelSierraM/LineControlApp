@@ -42,6 +42,23 @@ function diffDays(d?: string | null) {
 }
 
 
+// Deduplica registros por una clave estable, conservando el más reciente por created_at.
+// Los cargues repetidos suelen traer los mismos datos; nos quedamos con la versión más nueva.
+function dedupeBy<T extends { created_at?: string | null }>(rows: T[], keyFn: (r: T) => string | null | undefined): T[] {
+  const map = new Map<string, T>();
+  for (const r of rows) {
+    const k = keyFn(r);
+    if (!k) continue;
+    const prev = map.get(k);
+    if (!prev) { map.set(k, r); continue; }
+    const a = prev.created_at ? new Date(prev.created_at).getTime() : 0;
+    const b = r.created_at ? new Date(r.created_at).getTime() : 0;
+    if (b >= a) map.set(k, r);
+  }
+  return Array.from(map.values());
+}
+
+
 
 function toCsv(rows: any[]): string {
   if (!rows.length) return "";
@@ -77,10 +94,10 @@ function ReportesPage() {
     },
   });
 
-  const lineasRaw = data?.lineas ?? [];
-  const disp = data?.disp ?? [];
-  const pops = data?.pops ?? [];
-  const alertas = data?.alertas ?? [];
+  const lineasRaw = dedupeBy(data?.lineas ?? [], (l: any) => normPhone(l.msisdn) || (l.iccid ? String(l.iccid) : null) || (l.id ? String(l.id) : null));
+  const disp = dedupeBy(data?.disp ?? [], (d: any) => (d.imei ? String(d.imei) : null) || normPhone(d.numero_telefono) || (d.id ? String(d.id) : null));
+  const pops = dedupeBy(data?.pops ?? [], (p: any) => (p.codigo ? String(p.codigo) : null) || normPhone(p.numero_telefono) || (p.id ? String(p.id) : null));
+  const alertas = dedupeBy(data?.alertas ?? [], (a: any) => [a.tipo, a.entidad ?? "", a.referencia ?? "", a.mensaje ?? ""].join("|"));
   const cargas = data?.cargas ?? [];
 
   // Cutoff = última carga por tipo; tomamos el mínimo entre los tipos presentes
