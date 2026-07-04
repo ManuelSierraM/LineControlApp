@@ -126,7 +126,10 @@ function ReportesPage() {
     src
       .map((d) => {
         const dias = diffDays(d.ultimo_checkin);
-        const ln = lineas.find((l) => normPhone(l.msisdn) === normPhone(d.numero_telefono));
+        const raw = String(d.numero_telefono ?? "").trim();
+        const soloNumerico = raw !== "" && /^\d+$/.test(raw);
+        const phone = normPhone(d.numero_telefono);
+        const ln = lineas.find((l) => normPhone(l.msisdn) === phone);
         const costo = Number(ln?.valor_plan ?? 0) || Number(ln?.costo_mensual ?? 0);
         return {
           imei: d.imei,
@@ -134,10 +137,13 @@ function ReportesPage() {
           modelo: d.modelo,
           dias,
           costo,
+          soloNumerico,
           created_at: d.created_at,
         };
       })
-      .filter((r) => r.dias != null && r.dias > 30);
+      .filter((r) => r.dias != null && r.dias > 30 && r.soloNumerico)
+      .map(({ soloNumerico: _s, ...rest }) => rest);
+
   const sinUso = buildSinUso(disp);
   const sinUsoMes = buildSinUso(disp.filter((d) => isCurrentMonth(d.created_at)));
 
@@ -174,7 +180,7 @@ function ReportesPage() {
 
 
   const reportes = [
-    { key: "sin_uso", icon: Smartphone, titulo: "Líneas sin uso (>30 días)", desc: `${sinUso.length.toLocaleString("es-CO")} equipos sin reporte`, ahorro: ahorroSinUso, rows: sinUso, rowsMes: sinUsoMes, showAhorro: true },
+    { key: "sin_uso", icon: Smartphone, titulo: "Líneas sin uso (>30 días)", desc: `${sinUso.length.toLocaleString("es-CO")} líneas sin reporte`, ahorro: ahorroSinUso, rows: sinUso, rowsMes: sinUsoMes, showAhorro: true },
     { key: "sin_equipo", icon: Wifi, titulo: "Líneas sin equipo", desc: `${sinEquipo.length.toLocaleString("es-CO")} líneas activas sin dispositivo`, ahorro: ahorroSinEq, rows: sinEquipo, rowsMes: sinEquipoMes, showAhorro: true },
     { key: "pops_sc", icon: MapPin, titulo: "POPS sin centro", desc: `${popsSC.length.toLocaleString("es-CO")} registros sin centro asignado`, ahorro: 0, rows: popsSC, rowsMes: popsSCMes },
     // -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
