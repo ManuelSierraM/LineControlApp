@@ -94,10 +94,10 @@ function ReportesPage() {
     },
   });
 
-  const lineasRaw = data?.lineas ?? [];
-  const disp = data?.disp ?? [];
-  const pops = data?.pops ?? [];
-  const alertas = data?.alertas ?? [];
+  const lineasRaw = dedupeBy(data?.lineas ?? [], (l: any) => normPhone(l.msisdn) || (l.iccid ? String(l.iccid) : null) || (l.id ? String(l.id) : null));
+  const disp = dedupeBy(data?.disp ?? [], (d: any) => (d.imei ? String(d.imei) : null) || normPhone(d.numero_telefono) || (d.id ? String(d.id) : null));
+  const pops = dedupeBy(data?.pops ?? [], (p: any) => (p.codigo ? String(p.codigo) : null) || normPhone(p.numero_telefono) || (p.id ? String(p.id) : null));
+  const alertas = dedupeBy(data?.alertas ?? [], (a: any) => [a.tipo, a.entidad ?? "", a.referencia ?? "", a.mensaje ?? ""].join("|"));
   const cargas = data?.cargas ?? [];
 
   // Cutoff = última carga por tipo; tomamos el mínimo entre los tipos presentes
