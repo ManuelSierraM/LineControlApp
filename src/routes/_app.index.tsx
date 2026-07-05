@@ -108,19 +108,17 @@ function Dashboard() {
   const costoLinea = (l: any) => Number(l.valor_plan ?? 0) || Number(l.costo_mensual ?? 0);
   const costoTotal = lineas.reduce((s, l) => s + costoLinea(l), 0);
 
-  // Sin uso (>30d): dispositivos UEM con ultimo_checkin > 30 días y teléfono numérico
+  // Sin uso (>30d): dispositivos UEM con ultimo_checkin > 30 días (mismo criterio que Alertas)
   const sinUsoRows = disp
     .map((d) => {
       const dias = diffDays(d.ultimo_checkin);
-      const raw = String(d.numero_telefono ?? "").trim();
-      const soloNumerico = raw !== "" && /^\d+$/.test(raw);
       const phone = normPhone(d.numero_telefono);
-      const ln = lineas.find((l) => normPhone(l.msisdn) === phone);
-      return { dias, soloNumerico, phone, costo: ln ? costoLinea(ln) : 0 };
+      const ln = phone ? lineas.find((l) => normPhone(l.msisdn) === phone) : undefined;
+      return { dias, phone, costo: ln ? costoLinea(ln) : 0 };
     })
-    .filter((r) => r.dias != null && r.dias > 30 && r.soloNumerico);
+    .filter((r) => r.dias != null && r.dias > 30);
   const sinUso30 = sinUsoRows.length;
-  const sinUsoPhones = new Set(sinUsoRows.map((r) => r.phone));
+  const sinUsoPhones = new Set(sinUsoRows.map((r) => r.phone).filter(Boolean));
 
   // Sin equipo: líneas sin IMEI tras enriquecimiento
   const sinEquipoRows = lineas.filter((l) => !l.imei);
