@@ -128,17 +128,61 @@ function Dashboard() {
     { name: "Sin equipo", valor: ahorroSinEquipo },
   ];
 
-  // Top centros de costo (líneas sin uso = líneas cuyo teléfono aparece en sinUsoRows)
-  const ccMap = new Map<string, { centro: string; lineas: number; costo: number; sinUso: number }>();
-  for (const l of lineas) {
-    const k = l.centro_costo || "(Sin centro)";
-    const e = ccMap.get(k) ?? { centro: k, lineas: 0, costo: 0, sinUso: 0 };
-    e.lineas += 1;
-    e.costo += costoLinea(l);
-    if (sinUsoPhones.has(normPhone(l.msisdn))) e.sinUso += 1;
-    ccMap.set(k, e);
+  // Top líneas con mayor impacto económico (a partir de alertas: sin uso + sin equipo)
+  // Se toma la línea asociada por teléfono normalizado y se calcula su costo mensual.
+  const impactoMap = new Map<string, {
+    msisdn: string;
+    imei: string | null;
+    modelo: string;
+    categoria: string;
+    dias: number | null;
+    centro_costo: string;
+    costo: number;
+    costoAnual: number;
+  }>();
+
+  // Sin uso: dispositivos UEM >30d sin check-in
+  for (const r of sinUsoRows) {
+    const ln = lineas.find((l) => normPhone(l.msisdn) === r.phone);
+    const d = disp.find((x) => normPhone(x.numero_telefono) === r.phone);
+    const pop = pops.find((p) => normPhone(p.numero_telefono) === r.phone);
+    const key = r.phone || d?.imei || `sinuso-${impactoMap.size}`;
+    if (impactoMap.has(key)) continue;
+    const costo = r.costo;
+    impactoMap.set(key, {
+      msisdn: ln?.msisdn ?? d?.numero_telefono ?? pop?.numero_telefono ?? "—",
+      imei: d?.imei ?? pop?.codigo ?? ln?.imei ?? null,
+      modelo: d?.modelo ?? pop?.modelo ?? "—",
+      categoria: "Sin uso",
+      dias: r.dias,
+      centro_costo: ln?.centro_costo ?? pop?.centro_costo ?? "—",
+      costo,
+      costoAnual: costo * 12,
+    });
   }
-  const topCC = Array.from(ccMap.values()).sort((a, b) => b.costo - a.costo).slice(0, 10);
+
+  // Sin equipo: líneas sin IMEI resuelto
+  for (const l of sinEquipoRows) {
+    const phone = normPhone(l.msisdn);
+    const key = phone || `sinequipo-${impactoMap.size}`;
+    if (impactoMap.has(key)) continue;
+    const costo = costoLinea(l);
+    impactoMap.set(key, {
+      msisdn: l.msisdn ?? "—",
+      imei: null,
+      modelo: "—",
+      categoria: "Sin equipo",
+      dias: null,
+      centro_costo: l.centro_costo ?? "—",
+      costo,
+      costoAnual: costo * 12,
+    });
+  }
+
+  const topImpacto = Array.from(impactoMap.values())
+    .filter((r) => r.costo > 0)
+    .sort((a, b) => b.costo - a.costo)
+    .slice(0, 10);
 
   return (
     <div>
