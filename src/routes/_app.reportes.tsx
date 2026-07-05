@@ -189,6 +189,7 @@ function ReportesPage() {
   const ahorroSinUso = sinUso.reduce((s, r) => s + r.costo, 0);
   const ahorroSinEq = sinEquipo.reduce((s, l) => s + (Number(l.valor_plan ?? 0) || Number(l.costo_mensual ?? 0)), 0);
   const ahorroTotal = ahorroSinUso + ahorroSinEq;
+  const alertasActuales = sinUso.length + sinEquipo.length + popsSC.length + inconsist.length;
 
 
 
@@ -247,7 +248,7 @@ function ReportesPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <KpiTop label="Costo Mensual Líneas" value={fmtMoney(costoTotal)} icon={DollarSign} />
           <KpiTop label="Ahorro Total" value={fmtMoney(ahorroTotal)} icon={DollarSign} tone="success" />
-          <KpiTop label="ALERTAS ACTUALES" value={alertasRecientes.length.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
+          <KpiTop label="ALERTAS ACTUALES" value={alertasActuales.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
