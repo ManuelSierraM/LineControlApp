@@ -43,6 +43,15 @@ function dedupeBy<T extends { created_at?: string | null }>(rows: T[], keyFn: (r
   return Array.from(map.values());
 }
 
+// Prioridad de alertas: líneas primero, dispositivos después; luego severidad y recencia.
+function alertPriority(a: any) {
+  const entityRank = a.entidad === "linea" ? 0 : a.entidad === "dispositivo" ? 1 : 2;
+  const severityRank = a.severidad === "alta" ? 0 : a.severidad === "media" ? 1 : 2;
+  const time = a.created_at ? new Date(a.created_at).getTime() : 0;
+  return { entityRank, severityRank, time };
+}
+
+
 function Dashboard() {
   const { data } = useQuery({
     queryKey: ["dashboard"],
