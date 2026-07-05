@@ -189,6 +189,7 @@ function ReportesPage() {
   const ahorroSinUso = sinUso.reduce((s, r) => s + r.costo, 0);
   const ahorroSinEq = sinEquipo.reduce((s, l) => s + (Number(l.valor_plan ?? 0) || Number(l.costo_mensual ?? 0)), 0);
   const ahorroTotal = ahorroSinUso + ahorroSinEq;
+  const alertasActuales = sinUso.length + sinEquipo.length + popsSC.length + inconsist.length;
 
 
 
