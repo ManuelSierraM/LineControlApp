@@ -30,22 +30,38 @@ function normPhone(p?: string | null) {
   return s;
 }
 
+function dedupeBy<T extends { created_at?: string | null }>(rows: T[], keyFn: (r: T) => string | null | undefined): T[] {
+  const map = new Map<string, T>();
+  for (const r of rows) {
+    const k = keyFn(r);
+    if (!k) continue;
+    const prev = map.get(k);
+    if (!prev) { map.set(k, r); continue; }
+    const a = prev.created_at ? new Date(prev.created_at).getTime() : 0;
+    const b = r.created_at ? new Date(r.created_at).getTime() : 0;
+    if (b >= a) map.set(k, r);
+  }
+  return Array.from(map.values());
+}
+
 function LineasPage() {
   const { data } = useQuery({
     queryKey: ["lineas-maestro"],
     queryFn: async () => {
       const [{ data: lineas }, { data: disp }] = await Promise.all([
         supabase.from("lineas").select("*").order("created_at", { ascending: false }).limit(5000),
-        supabase.from("dispositivos").select("imei,modelo,asignado_a,numero_telefono").limit(10000),
+        supabase.from("dispositivos").select("imei,modelo,asignado_a,numero_telefono,created_at").limit(10000),
       ]);
       type Disp = NonNullable<typeof disp>[number];
-      const byImei = new Map<string, Disp>((disp ?? []).map((d) => [d.imei, d]));
+      const dispDedup = dedupeBy(disp ?? [], (d: any) => (d.imei ? String(d.imei) : null) || normPhone(d.numero_telefono) || null);
+      const lineasDedup = dedupeBy(lineas ?? [], (l: any) => normPhone(l.msisdn) || (l.iccid ? String(l.iccid) : null) || (l.id ? String(l.id) : null));
+      const byImei = new Map<string, Disp>(dispDedup.filter((d) => d.imei).map((d) => [d.imei as string, d]));
       const dispByPhone = new Map<string, Disp>();
-      for (const d of disp ?? []) {
+      for (const d of dispDedup) {
         const key = normPhone(d.numero_telefono);
         if (key && d.imei) dispByPhone.set(key, d);
       }
-      return (lineas ?? []).map((l) => {
+      return lineasDedup.map((l) => {
         const matched = dispByPhone.get(normPhone(l.msisdn));
         const imei = l.imei || matched?.imei || null;
         const d = (imei ? byImei.get(imei) : undefined) ?? matched;
