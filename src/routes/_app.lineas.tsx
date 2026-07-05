@@ -76,7 +76,7 @@ function LineasPage() {
             { key: "imei", header: "IMEI", render: (r) => r.imei ?? "—" },
             { key: "iccid", header: "ICCID", render: (r) => r.iccid ?? "—" },
             { key: "plan", header: "PLAN_DESC", render: (r) => r.plan ?? "—" },
-            { key: "valor_cfm", header: "VALOR_CFM", render: (r) => fmtMoney(Number(r.valor_plan ?? r.costo_mensual ?? 0)) },
+            { key: "valor_cfm", header: "VALOR_CFM", accessor: (r) => Number(r.valor_plan ?? r.costo_mensual ?? 0), render: (r) => fmtMoney(Number(r.valor_plan ?? r.costo_mensual ?? 0)) },
           ]}
         />
       </div>
