@@ -17,6 +17,28 @@ function fmtDate(d?: string | null) {
   return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}/${dt.getFullYear()}`;
 }
 
+function normPhone(p?: string | null) {
+  if (!p) return "";
+  let s = String(p).replace(/[^\d]/g, "");
+  if (!s) return "";
+  if (s.startsWith("57") && s.length > 10) s = s.slice(2);
+  return s;
+}
+
+function dedupeBy<T extends { created_at?: string | null }>(rows: T[], keyFn: (r: T) => string | null | undefined): T[] {
+  const map = new Map<string, T>();
+  for (const r of rows) {
+    const k = keyFn(r);
+    if (!k) continue;
+    const prev = map.get(k);
+    if (!prev) { map.set(k, r); continue; }
+    const a = prev.created_at ? new Date(prev.created_at).getTime() : 0;
+    const b = r.created_at ? new Date(r.created_at).getTime() : 0;
+    if (b >= a) map.set(k, r);
+  }
+  return Array.from(map.values());
+}
+
 function DispPage() {
   const { data } = useQuery({
     queryKey: ["dispositivos-maestro"],
@@ -25,8 +47,9 @@ function DispPage() {
         supabase.from("dispositivos").select("*").order("created_at", { ascending: false }).limit(5000),
         supabase.from("lineas").select("imei,msisdn").limit(10000),
       ]);
+      const dispDedup = dedupeBy(disp ?? [], (d: any) => (d.imei ? String(d.imei) : null) || normPhone(d.numero_telefono) || (d.id ? String(d.id) : null));
       const byImei = new Map((lineas ?? []).map((l) => [l.imei, l.msisdn]));
-      return (disp ?? []).map((d) => ({ ...d, telefono: byImei.get(d.imei) ?? d.numero_telefono ?? "—" }));
+      return dispDedup.map((d) => ({ ...d, telefono: byImei.get(d.imei) ?? d.numero_telefono ?? "—" }));
     },
   });
   const rows = data ?? [];
