@@ -84,10 +84,10 @@ function ReportesPage() {
     queryKey: ["reportes-data"],
     queryFn: async () => {
       const [{ data: lineas }, { data: disp }, { data: pops }, { data: alertas }, { data: cargas }] = await Promise.all([
-        supabase.from("lineas").select("*").limit(10000),
-        supabase.from("dispositivos").select("*").limit(10000),
-        supabase.from("pops").select("*").limit(10000),
-        supabase.from("alertas").select("*").limit(10000),
+        supabase.from("lineas").select("*").order("created_at", { ascending: false }).limit(10000),
+        supabase.from("dispositivos").select("*").order("created_at", { ascending: false }).limit(10000),
+        supabase.from("pops").select("*").order("created_at", { ascending: false }).limit(10000),
+        supabase.from("alertas").select("*").order("created_at", { ascending: false }).limit(10000),
         supabase.from("archivos_carga").select("tipo, created_at").order("created_at", { ascending: false }).limit(500),
       ]);
       return { lineas: lineas ?? [], disp: disp ?? [], pops: pops ?? [], alertas: alertas ?? [], cargas: cargas ?? [] };
@@ -143,8 +143,6 @@ function ReportesPage() {
     src
       .map((d) => {
         const dias = diffDays(d.ultimo_checkin);
-        const raw = String(d.numero_telefono ?? "").trim();
-        const soloNumerico = raw !== "" && /^\d+$/.test(raw);
         const phone = normPhone(d.numero_telefono);
         const ln = lineas.find((l) => normPhone(l.msisdn) === phone);
         const costo = Number(ln?.valor_plan ?? 0) || Number(ln?.costo_mensual ?? 0);
@@ -154,12 +152,10 @@ function ReportesPage() {
           modelo: d.modelo,
           dias,
           costo,
-          soloNumerico,
           created_at: d.created_at,
         };
       })
-      .filter((r) => r.dias != null && r.dias > 30 && r.soloNumerico)
-      .map(({ soloNumerico: _s, ...rest }) => rest);
+      .filter((r) => r.dias != null && r.dias > 30);
 
   const sinUso = buildSinUso(disp);
   const sinUsoMes = buildSinUso(disp.filter((d) => isCurrentMonth(d.created_at)));
