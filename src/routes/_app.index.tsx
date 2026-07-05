@@ -9,14 +9,38 @@ import { DataTable } from "@/components/DataTable";
 export const Route = createFileRoute("/_app/")({ component: Dashboard });
 
 function fmtMoney(n: number) {
-  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+  return `$ ${Number(n ?? 0).toLocaleString("es-CO")}`;
 }
 
 function normPhone(p?: string | null) {
   if (!p) return "";
-  let s = String(p).replace(/[^\d]/g, "");
+  const raw = String(p).trim();
+  if (!raw) return "";
+  if (/[a-zA-Z]/.test(raw)) return "";
+  let s = raw.replace(/[^\d]/g, "");
+  if (!s) return "";
   if (s.startsWith("57") && s.length > 10) s = s.slice(2);
   return s;
+}
+
+function diffDays(d?: string | null) {
+  if (!d) return null;
+  return Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+}
+
+// Dedupe consistente con Reportes/Alertas: conserva el registro más nuevo por clave estable.
+function dedupeBy<T extends { created_at?: string | null }>(rows: T[], keyFn: (r: T) => string | null | undefined): T[] {
+  const map = new Map<string, T>();
+  for (const r of rows) {
+    const k = keyFn(r);
+    if (!k) continue;
+    const prev = map.get(k);
+    if (!prev) { map.set(k, r); continue; }
+    const a = prev.created_at ? new Date(prev.created_at).getTime() : 0;
+    const b = r.created_at ? new Date(r.created_at).getTime() : 0;
+    if (b >= a) map.set(k, r);
+  }
+  return Array.from(map.values());
 }
 
 function Dashboard() {
@@ -24,10 +48,10 @@ function Dashboard() {
     queryKey: ["dashboard"],
     queryFn: async () => {
       const [lineas, dispositivos, pops, alertas] = await Promise.all([
-        supabase.from("lineas").select("*"),
-        supabase.from("dispositivos").select("*"),
-        supabase.from("pops").select("*"),
-        supabase.from("alertas").select("*").order("created_at", { ascending: false }).limit(8),
+        supabase.from("lineas").select("*").limit(10000),
+        supabase.from("dispositivos").select("*").limit(10000),
+        supabase.from("pops").select("*").limit(10000),
+        supabase.from("alertas").select("*").order("created_at", { ascending: false }).limit(500),
       ]);
       return {
         lineas: lineas.data ?? [],
@@ -38,56 +62,80 @@ function Dashboard() {
     },
   });
 
-  const lineasRaw = data?.lineas ?? [];
-  const dispositivos = data?.dispositivos ?? [];
-  const pops = data?.pops ?? [];
-  const alertas = data?.alertas ?? [];
+  // Dedupe (mismos criterios que Reportes)
+  const lineasRaw = dedupeBy(data?.lineas ?? [], (l: any) => normPhone(l.msisdn) || (l.iccid ? String(l.iccid) : null) || (l.id ? String(l.id) : null));
+  const disp = dedupeBy(data?.dispositivos ?? [], (d: any) => (d.imei ? String(d.imei) : null) || normPhone(d.numero_telefono) || (d.id ? String(d.id) : null));
+  const pops = dedupeBy(data?.pops ?? [], (p: any) => (p.codigo ? String(p.codigo) : null) || normPhone(p.numero_telefono) || (p.id ? String(p.id) : null));
+  const alertas = dedupeBy(data?.alertas ?? [], (a: any) => [a.tipo, a.entidad ?? "", a.referencia ?? "", a.mensaje ?? ""].join("|")).slice(0, 8);
 
-  // Derive IMEI per línea cruzando POPS por número de teléfono (igual que Alertas / Maestro de Líneas)
+  // Lookups por teléfono para resolver IMEI (UEM > POPS)
+  const dispByPhone = new Map<string, (typeof disp)[number]>();
+  for (const d of disp) {
+    const key = normPhone(d.numero_telefono);
+    if (key && d.imei) dispByPhone.set(key, d);
+  }
   const popsByPhone = new Map<string, (typeof pops)[number]>();
   for (const p of pops) {
     const key = normPhone(p.numero_telefono);
     if (key) popsByPhone.set(key, p);
   }
+
+  // Enriquecimiento de líneas con IMEI resuelto
   const lineas = lineasRaw.map((l) => {
-    const pop = popsByPhone.get(normPhone(l.msisdn));
-    return { ...l, imei: l.imei || pop?.codigo || null };
+    const phone = normPhone(l.msisdn);
+    const imei = l.imei || dispByPhone.get(phone)?.imei || popsByPhone.get(phone)?.codigo || null;
+    return { ...l, imei };
   });
 
-  const costoTotal = lineas.reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
-  const hoy = Date.now();
-  const sinUso30 = lineas.filter((l) => {
-    if (!l.ultimo_uso) return true;
-    return (hoy - new Date(l.ultimo_uso).getTime()) / (1000 * 60 * 60 * 24) > 30;
-  }).length;
-  const sinEquipo = lineas.filter((l) => !l.imei).length;
-  const planSobre = lineas.filter((l) => Number(l.costo_mensual ?? l.valor_plan ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100).length;
-  const imeisLineas = new Set(lineas.map((l) => l.imei).filter(Boolean));
-  const inconsistencias = dispositivos.filter((d) => d.imei && !imeisLineas.has(d.imei)).length;
-  const popsSinCC = pops.filter((p) => !p.centro_costo).length;
-  const ahorroSinUso = lineas
-    .filter((l) => !l.ultimo_uso || (hoy - new Date(l.ultimo_uso).getTime()) / 86400000 > 30)
-    .reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
-  const ahorroSinEquipo = lineas.filter((l) => !l.imei).reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0), 0);
-  const ahorroPlan = lineas
-    .filter((l) => Number(l.costo_mensual ?? l.valor_plan ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100)
-    .reduce((s, l) => s + Number(l.costo_mensual ?? l.valor_plan ?? 0) * 0.4, 0);
-  const ahorroTotal = ahorroSinUso + ahorroSinEquipo + ahorroPlan;
+  // Costos: usar VALOR_CFM (valor_plan) con fallback a costo_mensual, igual que Reportes/Maestro de líneas
+  const costoLinea = (l: any) => Number(l.valor_plan ?? 0) || Number(l.costo_mensual ?? 0);
+  const costoTotal = lineas.reduce((s, l) => s + costoLinea(l), 0);
 
+  // Sin uso (>30d): dispositivos UEM con ultimo_checkin > 30 días y teléfono numérico
+  const sinUsoRows = disp
+    .map((d) => {
+      const dias = diffDays(d.ultimo_checkin);
+      const raw = String(d.numero_telefono ?? "").trim();
+      const soloNumerico = raw !== "" && /^\d+$/.test(raw);
+      const phone = normPhone(d.numero_telefono);
+      const ln = lineas.find((l) => normPhone(l.msisdn) === phone);
+      return { dias, soloNumerico, phone, costo: ln ? costoLinea(ln) : 0 };
+    })
+    .filter((r) => r.dias != null && r.dias > 30 && r.soloNumerico);
+  const sinUso30 = sinUsoRows.length;
+  const sinUsoPhones = new Set(sinUsoRows.map((r) => r.phone));
+
+  // Sin equipo: líneas sin IMEI tras enriquecimiento
+  const sinEquipoRows = lineas.filter((l) => !l.imei);
+  const sinEquipo = sinEquipoRows.length;
+
+  // POPS sin centro
+  const popsSinCC = pops.filter((p) => !p.centro_costo).length;
+
+  // Inconsistencias: dispositivos (UEM+POPS) con IMEI pero sin teléfono válido
+  const uemIncon = disp.filter((d) => d.imei && !normPhone(d.numero_telefono));
+  const uemIds = new Set(uemIncon.map((d) => d.imei));
+  const popsIncon = pops.filter((p) => p.codigo && !uemIds.has(p.codigo) && !normPhone(p.numero_telefono));
+  const inconsistencias = uemIncon.length + popsIncon.length;
+
+  // Ahorros (mismos que Reportes)
+  const ahorroSinUso = sinUsoRows.reduce((s, r) => s + r.costo, 0);
+  const ahorroSinEquipo = sinEquipoRows.reduce((s, l) => s + costoLinea(l), 0);
+  const ahorroTotal = ahorroSinUso + ahorroSinEquipo;
 
   const chartData = [
     { name: "Sin uso", valor: ahorroSinUso },
     { name: "Sin equipo", valor: ahorroSinEquipo },
-    { name: "Plan sobredim.", valor: ahorroPlan },
   ];
 
+  // Top centros de costo (líneas sin uso = líneas cuyo teléfono aparece en sinUsoRows)
   const ccMap = new Map<string, { centro: string; lineas: number; costo: number; sinUso: number }>();
   for (const l of lineas) {
     const k = l.centro_costo || "(Sin centro)";
     const e = ccMap.get(k) ?? { centro: k, lineas: 0, costo: 0, sinUso: 0 };
     e.lineas += 1;
-    e.costo += Number(l.costo_mensual ?? 0);
-    if (!l.ultimo_uso || (hoy - new Date(l.ultimo_uso).getTime()) / 86400000 > 30) e.sinUso += 1;
+    e.costo += costoLinea(l);
+    if (sinUsoPhones.has(normPhone(l.msisdn))) e.sinUso += 1;
     ccMap.set(k, e);
   }
   const topCC = Array.from(ccMap.values()).sort((a, b) => b.costo - a.costo).slice(0, 10);
@@ -100,13 +148,12 @@ function Dashboard() {
           <KpiCard label="Costo Mensual Total" value={fmtMoney(costoTotal)} icon={DollarSign} />
           <KpiCard label="Ahorro Potencial" value={fmtMoney(ahorroTotal)} hint="Ahorro identificado" icon={TrendingDown} accent="success" />
           <KpiCard label="Total Líneas" value={lineas.length.toLocaleString("es-CO")} icon={Wifi} accent="info" />
-          <KpiCard label="Total Dispositivos" value={dispositivos.length.toLocaleString("es-CO")} icon={Smartphone} accent="info" />
+          <KpiCard label="Total Dispositivos" value={disp.length.toLocaleString("es-CO")} icon={Smartphone} accent="info" />
         </div>
 
         <div className="flex flex-wrap gap-3">
           <BadgeStat tone="red" count={sinUso30} label="Sin uso >30d" />
           <BadgeStat tone="red" count={sinEquipo} label="Sin equipo" />
-          <BadgeStat tone="amber" count={planSobre} label="Plan sobredim." />
           <BadgeStat tone="blue" count={popsSinCC} label="POPS sin centro" />
           <BadgeStat tone="amber" count={inconsistencias} label="Inconsistencias" />
         </div>
