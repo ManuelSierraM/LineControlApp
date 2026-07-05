@@ -43,6 +43,15 @@ function dedupeBy<T extends { created_at?: string | null }>(rows: T[], keyFn: (r
   return Array.from(map.values());
 }
 
+// Prioridad de alertas: líneas primero, dispositivos después; luego severidad y recencia.
+function alertPriority(a: any) {
+  const entityRank = a.entidad === "linea" ? 0 : a.entidad === "dispositivo" ? 1 : 2;
+  const severityRank = a.severidad === "alta" ? 0 : a.severidad === "media" ? 1 : 2;
+  const time = a.created_at ? new Date(a.created_at).getTime() : 0;
+  return { entityRank, severityRank, time };
+}
+
+
 function Dashboard() {
   const { data } = useQuery({
     queryKey: ["dashboard"],
@@ -66,7 +75,15 @@ function Dashboard() {
   const lineasRaw = dedupeBy(data?.lineas ?? [], (l: any) => normPhone(l.msisdn) || (l.iccid ? String(l.iccid) : null) || (l.id ? String(l.id) : null));
   const disp = dedupeBy(data?.dispositivos ?? [], (d: any) => (d.imei ? String(d.imei) : null) || normPhone(d.numero_telefono) || (d.id ? String(d.id) : null));
   const pops = dedupeBy(data?.pops ?? [], (p: any) => (p.codigo ? String(p.codigo) : null) || normPhone(p.numero_telefono) || (p.id ? String(p.id) : null));
-  const alertas = dedupeBy(data?.alertas ?? [], (a: any) => [a.tipo, a.entidad ?? "", a.referencia ?? "", a.mensaje ?? ""].join("|")).slice(0, 8);
+  const alertas = dedupeBy(data?.alertas ?? [], (a: any) => [a.tipo, a.entidad ?? "", a.referencia ?? "", a.mensaje ?? ""].join("|"))
+    .sort((a, b) => {
+      const pa = alertPriority(a);
+      const pb = alertPriority(b);
+      if (pa.entityRank !== pb.entityRank) return pa.entityRank - pb.entityRank;
+      if (pa.severityRank !== pb.severityRank) return pa.severityRank - pb.severityRank;
+      return pb.time - pa.time;
+    })
+    .slice(0, 8);
 
   // Lookups por teléfono para resolver IMEI (UEM > POPS)
   const dispByPhone = new Map<string, (typeof disp)[number]>();
