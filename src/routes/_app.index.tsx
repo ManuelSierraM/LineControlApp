@@ -245,16 +245,27 @@ function Dashboard() {
         </div>
 
         <DataTable
-          title="Top Centros de Costo Más Costosos"
-          rows={topCC}
+          title="Top Líneas con Mayor Impacto Económico"
+          rows={topImpacto}
           columns={[
-            { key: "centro", header: "Centro de Costo" },
-            { key: "lineas", header: "Total Líneas" },
-            { key: "costo", header: "Total Costo", render: (r) => fmtMoney(r.costo) },
-            { key: "sinUso", header: "Líneas sin Uso" },
-            { key: "pct", header: "% Sin Uso", render: (r) => r.lineas ? `${((r.sinUso / r.lineas) * 100).toFixed(1)}%` : "—" },
+            { key: "msisdn", header: "Número" },
+            { key: "imei", header: "IMEI", render: (r) => r.imei ?? "—" },
+            { key: "modelo", header: "Modelo" },
+            {
+              key: "categoria",
+              header: "Categoría",
+              render: (r) => (
+                <span className={`rounded-full px-2 py-0.5 text-xs ${r.categoria === "Sin uso" ? "bg-warning/20 text-warning-foreground" : "bg-destructive/15 text-destructive"}`}>
+                  {r.categoria}
+                </span>
+              ),
+            },
+            { key: "dias", header: "Días sin uso", render: (r) => r.dias != null ? `${r.dias} días` : "—" },
+            { key: "centro_costo", header: "Centro" },
+            { key: "costo", header: "Costo mensual", render: (r) => fmtMoney(r.costo) },
+            { key: "costoAnual", header: "Costo anualizado", render: (r) => fmtMoney(r.costoAnual) },
           ]}
-          searchKeys={["centro"]}
+          searchKeys={["msisdn", "imei", "modelo", "categoria", "centro_costo"]}
         />
       </div>
     </div>
