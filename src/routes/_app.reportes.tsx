@@ -143,8 +143,6 @@ function ReportesPage() {
     src
       .map((d) => {
         const dias = diffDays(d.ultimo_checkin);
-        const raw = String(d.numero_telefono ?? "").trim();
-        const soloNumerico = raw !== "" && /^\d+$/.test(raw);
         const phone = normPhone(d.numero_telefono);
         const ln = lineas.find((l) => normPhone(l.msisdn) === phone);
         const costo = Number(ln?.valor_plan ?? 0) || Number(ln?.costo_mensual ?? 0);
@@ -154,12 +152,10 @@ function ReportesPage() {
           modelo: d.modelo,
           dias,
           costo,
-          soloNumerico,
           created_at: d.created_at,
         };
       })
-      .filter((r) => r.dias != null && r.dias > 30 && r.soloNumerico)
-      .map(({ soloNumerico: _s, ...rest }) => rest);
+      .filter((r) => r.dias != null && r.dias > 30);
 
   const sinUso = buildSinUso(disp);
   const sinUsoMes = buildSinUso(disp.filter((d) => isCurrentMonth(d.created_at)));
