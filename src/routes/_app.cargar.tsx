@@ -976,4 +976,4 @@ async function regenerateAlerts(userId: string) {
   }
 }
 
-}
+
