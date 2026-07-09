@@ -297,8 +297,10 @@ function CargarPage() {
         for (const t of tipos) {
           await supabase.from(t).delete().eq("user_id", user.id);
         }
-        await regenerateAlerts(user.id);
+        // NOTA: no tocamos la tabla "alertas" — se preserva el histórico para auditoría
+        // y para la tarjeta "HISTORICO ALERTAS" en Reportes.
       }
+
 
       toast.success(`Se eliminaron ${afectados.length} registros del historial${purgarDatos ? " y los datos cargados" : ""}`);
       setConfirmOpen(false);
