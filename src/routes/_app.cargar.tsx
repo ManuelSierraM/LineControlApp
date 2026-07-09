@@ -942,25 +942,31 @@ function UploadCard({
 }
 
 async function regenerateAlerts(userId: string) {
-  await supabase.from("alertas").delete().eq("user_id", userId);
-  const [{ data: lineas }, { data: disp }] = await Promise.all([
+  // Append-only: NUNCA borramos la tabla "alertas" — es histórico de auditoría.
+  // Deduplicamos contra lo ya existente por fingerprint (tipo|entidad|referencia|mensaje).
+  const [{ data: existentes }, { data: lineas }, { data: disp }] = await Promise.all([
+    supabase.from("alertas").select("tipo,entidad,referencia,mensaje").eq("user_id", userId),
     supabase.from("lineas").select("*"),
     supabase.from("dispositivos").select("*"),
   ]);
   if (!lineas || !disp) return;
+  const fp = (a: { tipo: string; entidad: string | null; referencia: string | null; mensaje: string | null }) =>
+    `${a.tipo}|${a.entidad ?? ""}|${a.referencia ?? ""}|${a.mensaje ?? ""}`;
+  const seen = new Set((existentes ?? []).map(fp));
   const hoy = Date.now();
   const alerts: any[] = [];
+  const pushIfNew = (a: any) => { const k = fp(a); if (!seen.has(k)) { seen.add(k); alerts.push(a); } };
   for (const l of lineas) {
     if (l.ultimo_uso) {
       const days = Math.floor((hoy - new Date(l.ultimo_uso).getTime()) / 86400000);
-      if (days > 30) alerts.push({ user_id: userId, tipo: "sin_uso", severidad: "alta", entidad: "linea", referencia: l.msisdn, mensaje: `${l.msisdn} — ${days} días sin uso`, detalle: l.plan ?? "" });
+      if (days > 30) pushIfNew({ user_id: userId, tipo: "sin_uso", severidad: "alta", entidad: "linea", referencia: l.msisdn, mensaje: `${l.msisdn} — ${days} días sin uso`, detalle: l.plan ?? "" });
     }
-    if (!l.imei) alerts.push({ user_id: userId, tipo: "sin_equipo", severidad: "media", entidad: "linea", referencia: l.msisdn, mensaje: `${l.msisdn} — Línea sin equipo asociado`, detalle: l.plan ?? "" });
+    if (!l.imei) pushIfNew({ user_id: userId, tipo: "sin_equipo", severidad: "media", entidad: "linea", referencia: l.msisdn, mensaje: `${l.msisdn} — Línea sin equipo asociado`, detalle: l.plan ?? "" });
   }
   const imeisLineas = new Set(lineas.map((l) => l.imei).filter(Boolean));
   for (const d of disp) {
     if (d.imei && !imeisLineas.has(d.imei)) {
-      alerts.push({ user_id: userId, tipo: "inconsistencia", severidad: "media", entidad: "dispositivo", referencia: d.imei, mensaje: "IMEI en Devices no existe en Maestro de Líneas", detalle: d.imei });
+      pushIfNew({ user_id: userId, tipo: "inconsistencia", severidad: "media", entidad: "dispositivo", referencia: d.imei, mensaje: "IMEI en Devices no existe en Maestro de Líneas", detalle: d.imei });
     }
   }
   if (alerts.length > 0) {
@@ -968,4 +974,6 @@ async function regenerateAlerts(userId: string) {
       await supabase.from("alertas").insert(alerts.slice(i, i + 500));
     }
   }
+}
+
 }
