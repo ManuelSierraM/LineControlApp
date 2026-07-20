@@ -1,7 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Upload, Wifi, Smartphone, MapPin, AlertTriangle, FileBarChart, LogOut, BarChart3, Shield,
-  Moon, Sun,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -25,7 +24,6 @@ export function AppSidebar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { signOut, user } = useAuth();
   const { isAdmin, roles } = useRoles();
-  const { resolved, toggle } = useTheme();
   const navItems = isAdmin ? [...items, { title: "Administración", url: "/admin", icon: Shield }] : items;
 
   return (
@@ -69,12 +67,6 @@ export function AppSidebar() {
           <span className="text-[10px] text-sidebar-foreground/40">v1.0.0 — Control de Líneas</span>
         </div>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={toggle} tooltip={resolved === "dark" ? "Modo claro" : "Modo oscuro"}>
-              {resolved === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              <span>{resolved === "dark" ? "Modo claro" : "Modo oscuro"}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={signOut} tooltip="Cerrar sesión">
               <LogOut className="h-4 w-4" />
