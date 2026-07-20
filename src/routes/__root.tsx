@@ -68,7 +68,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <head><HeadContent /></head>
+      <head>
+        <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  const key = 'linecontrol-theme';
+                  let theme = localStorage.getItem(key);
+                  if (!theme || (theme !== 'light' && theme !== 'dark')) {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  }
+                  if (theme === 'dark') document.documentElement.classList.add('dark');
+                  else document.documentElement.classList.remove('dark');
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body>{children}<Scripts /></body>
     </html>
   );
