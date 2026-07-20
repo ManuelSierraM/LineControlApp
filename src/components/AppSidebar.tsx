@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
 import { useRoles } from "@/lib/roles";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
