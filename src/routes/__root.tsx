@@ -5,7 +5,6 @@ import {
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { RolesProvider } from "@/lib/roles";
-import { ThemeProvider } from "@/lib/theme";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -68,26 +67,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <head>
-        <HeadContent />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function () {
-                try {
-                  const key = 'linecontrol-theme';
-                  let theme = localStorage.getItem(key);
-                  if (!theme || (theme !== 'light' && theme !== 'dark')) {
-                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                  }
-                  if (theme === 'dark') document.documentElement.classList.add('dark');
-                  else document.documentElement.classList.remove('dark');
-                } catch (e) {}
-              })();
-            `,
-          }}
-        />
-      </head>
+      <head><HeadContent /></head>
       <body>{children}<Scripts /></body>
     </html>
   );
@@ -97,14 +77,12 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <RolesProvider>
-            <Outlet />
-            <Toaster richColors position="top-right" />
-          </RolesProvider>
-        </AuthProvider>
-      </ThemeProvider>
+      <AuthProvider>
+        <RolesProvider>
+          <Outlet />
+          <Toaster richColors position="top-right" />
+        </RolesProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

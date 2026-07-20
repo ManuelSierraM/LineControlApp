@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
 import { useRoles } from "@/lib/roles";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -29,18 +28,13 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground shadow-md">
-              <BarChart3 className="h-5 w-5" />
-            </div>
-            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-              <span className="text-base font-semibold text-sidebar-foreground">LineControl</span>
-              <span className="text-xs text-sidebar-foreground/60">Gestión Corporativa</span>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground shadow-md">
+            <BarChart3 className="h-5 w-5" />
           </div>
-          <div className="group-data-[collapsible=icon]:hidden">
-            <ThemeToggle />
+          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+            <span className="text-base font-semibold text-sidebar-foreground">LineControl</span>
+            <span className="text-xs text-sidebar-foreground/60">Gestión Corporativa</span>
           </div>
         </div>
       </SidebarHeader>
