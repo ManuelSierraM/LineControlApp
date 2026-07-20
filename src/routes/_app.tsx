@@ -8,6 +8,26 @@ import { useTheme } from "@/lib/theme";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
+function AppHeader() {
+  const { resolved, toggle } = useTheme();
+  return (
+    <header className="flex h-12 items-center justify-between border-b border-border bg-card px-3">
+      <SidebarTrigger />
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggle}
+          aria-label={resolved === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+          title={resolved === "dark" ? "Modo claro" : "Modo oscuro"}
+        >
+          {resolved === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
+      </div>
+    </header>
+  );
+}
+
 function AppLayout() {
   const { user, loading } = useAuth();
   if (loading) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
