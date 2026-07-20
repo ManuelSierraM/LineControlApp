@@ -5,6 +5,7 @@ import {
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { RolesProvider } from "@/lib/roles";
+import { ThemeProvider } from "@/lib/theme";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -66,8 +67,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
-      <head><HeadContent /></head>
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const theme = localStorage.getItem('linecontrol-theme') || 'light';
+                  const resolved = theme === 'system'
+                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    : theme;
+                  document.documentElement.classList.add(resolved);
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body>{children}<Scripts /></body>
     </html>
   );
@@ -79,8 +97,10 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <RolesProvider>
-          <Outlet />
-          <Toaster richColors position="top-right" />
+          <ThemeProvider>
+            <Outlet />
+            <Toaster richColors position="top-right" />
+          </ThemeProvider>
         </RolesProvider>
       </AuthProvider>
     </QueryClientProvider>
