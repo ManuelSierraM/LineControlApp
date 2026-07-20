@@ -260,8 +260,22 @@ function CargarPage() {
   const { data: historial } = useQuery({
     queryKey: ["archivos_carga"],
     queryFn: async () => {
-      const { data } = await supabase.from("archivos_carga").select("*").order("created_at", { ascending: false }).limit(20);
-      return data ?? [];
+      const { data: archivos } = await supabase
+        .from("archivos_carga")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (!archivos?.length) return [];
+      const userIds = [...new Set(archivos.map((a) => a.user_id))];
+      const { data: perfiles } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .in("id", userIds);
+      const emailMap = new Map((perfiles ?? []).map((p) => [p.id, p.email]));
+      return archivos.map((a) => ({
+        ...a,
+        profiles: { email: emailMap.get(a.user_id) ?? null },
+      }));
     },
   });
 
@@ -585,7 +599,9 @@ function CargarPage() {
                   <CheckCircle2 className="h-5 w-5 text-success" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{h.nombre}</p>
-                    <p className="text-xs text-muted-foreground">{h.tipo} · {h.registros} registros · {new Date(h.created_at).toLocaleString("es-CO")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(h.profiles as { email?: string } | null)?.email ?? "Usuario desconocido"} · {h.tipo} · {h.registros} registros · {new Date(h.created_at).toLocaleString("es-CO")}
+                    </p>
                   </div>
                   <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-medium text-success">{h.estado}</span>
                   {isAdmin && (
