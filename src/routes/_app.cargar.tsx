@@ -260,12 +260,22 @@ function CargarPage() {
   const { data: historial } = useQuery({
     queryKey: ["archivos_carga"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: archivos } = await supabase
         .from("archivos_carga")
-        .select("*, profiles(email)")
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(20);
-      return data ?? [];
+      if (!archivos?.length) return [];
+      const userIds = [...new Set(archivos.map((a) => a.user_id))];
+      const { data: perfiles } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .in("id", userIds);
+      const emailMap = new Map((perfiles ?? []).map((p) => [p.id, p.email]));
+      return archivos.map((a) => ({
+        ...a,
+        profiles: { email: emailMap.get(a.user_id) ?? null },
+      }));
     },
   });
 
