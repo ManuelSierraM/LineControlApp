@@ -70,6 +70,12 @@ export function AppSidebar() {
         </div>
         <SidebarMenu>
           <SidebarMenuItem>
+            <SidebarMenuButton onClick={toggle} tooltip={resolved === "dark" ? "Modo claro" : "Modo oscuro"}>
+              {resolved === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              <span>{resolved === "dark" ? "Modo claro" : "Modo oscuro"}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
             <SidebarMenuButton onClick={signOut} tooltip="Cerrar sesión">
               <LogOut className="h-4 w-4" />
               <span>Cerrar sesión</span>
