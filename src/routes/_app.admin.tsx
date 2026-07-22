@@ -1,19 +1,32 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, Shield, ShieldCheck, User as UserIcon, KeyRound } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Loader2, Shield, ShieldCheck, User as UserIcon, KeyRound, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useRoles, type AppRole } from "@/lib/roles";
+import { setUserActive } from "@/lib/user-admin.functions";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 
 export const Route = createFileRoute("/_app/admin")({ component: AdminPage });
 
-type Profile = { id: string; email: string | null; full_name: string | null; created_at: string };
+type Profile = { id: string; email: string | null; full_name: string | null; created_at: string; active: boolean };
 type RoleRow = { user_id: string; role: AppRole };
 
 const ALL_ROLES: AppRole[] = ["admin", "supervisor", "operador"];
