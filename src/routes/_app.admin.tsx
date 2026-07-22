@@ -96,6 +96,21 @@ function AdminPage() {
     toast.success(`Enlace de recuperación enviado a ${email}`);
   };
 
+  const applyActive = async (p: Profile, next: boolean) => {
+    setSavingId(p.id + "active");
+    try {
+      await setActive({ data: { userId: p.id, active: next } });
+      toast.success(next ? "Usuario activado" : "Usuario desactivado y deslogueado");
+      await load();
+    } catch (e: any) {
+      toast.error(e.message ?? "Error al cambiar estado");
+    } finally {
+      setSavingId(null);
+      setConfirmTarget(null);
+    }
+  };
+
+
   return (
     <>
       <PageHeader title="Administración de Usuarios" subtitle="Asigna roles a los usuarios del sistema" />
@@ -114,6 +129,7 @@ function AdminPage() {
                     <TableRow>
                       <TableHead>Usuario</TableHead>
                       <TableHead>Email</TableHead>
+                      <TableHead>Estado</TableHead>
                       <TableHead>Roles actuales</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -121,14 +137,20 @@ function AdminPage() {
                   <TableBody>
                     {profiles.map((p) => {
                       const userRoles = rolesMap[p.id] ?? [];
+                      const isActive = p.active !== false;
                       return (
-                        <TableRow key={p.id}>
+                        <TableRow key={p.id} className={!isActive ? "opacity-60" : undefined}>
                           <TableCell className="flex items-center gap-2">
                             <UserIcon className="h-4 w-4 text-muted-foreground" />
                             {p.full_name || "—"}
                             {p.id === user?.id && <Badge variant="outline" className="ml-2 text-[10px]">tú</Badge>}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">{p.email}</TableCell>
+                          <TableCell>
+                            <Badge variant={isActive ? "default" : "destructive"}>
+                              {isActive ? "Activo" : "Inactivo"}
+                            </Badge>
+                          </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
                               {userRoles.length === 0 && <span className="text-xs text-muted-foreground">sin roles</span>}
@@ -150,7 +172,7 @@ function AdminPage() {
                                     key={r}
                                     size="sm"
                                     variant={has ? "default" : "outline"}
-                                    disabled={busy}
+                                    disabled={busy || !isActive}
                                     onClick={() => toggleRole(p.id, r, has)}
                                   >
                                     {busy && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
@@ -158,6 +180,7 @@ function AdminPage() {
                                   </Button>
                                 );
                               })}
+
                               <Button size="sm" variant="secondary" onClick={() => sendRecovery(p.email)}>
                                 <KeyRound className="mr-1 h-3 w-3" /> Enviar recuperación
                               </Button>
