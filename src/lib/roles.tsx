@@ -22,11 +22,21 @@ export function RolesProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * Carga los roles del usuario autenticado.
+   *
+   * Cuando `initial === true` se muestra el spinner de carga inicial; en los
+   * refreshes de fondo (polling / realtime) NO se activa `loading` para evitar
+   * remontar la UI y producir saltos de scroll, especialmente en listados con
+   * muchas filas (p. ej. Administración de Usuarios).
+   */
   const load = async (initial = false) => {
     if (!user) { setRoles([]); setLoading(false); return; }
     if (initial) setLoading(true);
     const { data } = await (supabase as any).from("user_roles").select("role").eq("user_id", user.id);
     const next = (data ?? []).map((r: any) => r.role as AppRole);
+    // Mantiene la referencia anterior si los roles no cambiaron, evitando
+    // re-renderizados innecesarios en componentes que dependen de este estado.
     setRoles((prev) => {
       if (prev.length === next.length && prev.every((r) => next.includes(r))) return prev;
       return next;
