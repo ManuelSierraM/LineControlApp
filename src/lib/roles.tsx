@@ -30,7 +30,24 @@ export function RolesProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => {
+    load();
+    if (!user?.id) return;
+    const iv = setInterval(load, 15000);
+    const channel = (supabase as any)
+      .channel(`user-roles-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${user.id}` },
+        () => { load(); }
+      )
+      .subscribe();
+    return () => {
+      clearInterval(iv);
+      (supabase as any).removeChannel(channel);
+    };
+    // eslint-disable-next-line
+  }, [user?.id]);
 
   const isAdmin = roles.includes("admin");
   const isSupervisor = roles.includes("supervisor");
