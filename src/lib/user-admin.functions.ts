@@ -30,10 +30,9 @@ export const setUserActive = createServerFn({ method: "POST" })
 
     // Ban / unban in auth to block new logins and refresh
     const banDuration = data.active ? "none" : "876000h";
-    // @ts-expect-error - ban_duration is a valid admin API field
     const { error: banErr } = await supabaseAdmin.auth.admin.updateUserById(
       data.userId,
-      { ban_duration: banDuration }
+      { ban_duration: banDuration } as { ban_duration: string }
     );
     if (banErr) throw new Error(banErr.message);
 
