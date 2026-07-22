@@ -47,7 +47,24 @@ export function RolesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     load(true);
     if (!user?.id) return;
+
+    // ------------------------------------------------------------------
+    // Polling de roles: ¿por qué existe este subproceso?
+    // ------------------------------------------------------------------
+    // El canal realtime de Supabase debería notificar cada cambio en la tabla
+    // `user_roles`, pero en la práctica puede perder eventos por:
+    //   • Reconexiones de red o cambios de pestaña (tab inactiva).
+    //   • Límites de conexiones simultáneas de realtime.
+    //   • Eventos que ocurren justo antes de que la suscripción se confirme.
+    // Por eso usamos un polling de 15 segundos como salvaguarda: garantiza que,
+    // si un administrador quita todos los roles a un usuario conectado, la
+    // pantalla de "Sin permisos activos" se active incluso cuando realtime falle.
+    // Es complementario, no sustituto, del canal realtime que se suscribe abajo.
+    // ------------------------------------------------------------------
     const iv = setInterval(() => load(false), 15000);
+
+    // Canal realtime: intenta reflejar los cambios de roles en tiempo real.
+    // Actúa como primera línea de detección; el polling cubre los huecos.
     const channel = (supabase as any)
       .channel(`user-roles-${user.id}`)
       .on(
