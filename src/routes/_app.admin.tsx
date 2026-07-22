@@ -184,6 +184,36 @@ function AdminPage() {
                               <Button size="sm" variant="secondary" onClick={() => sendRecovery(p.email)}>
                                 <KeyRound className="mr-1 h-3 w-3" /> Enviar recuperación
                               </Button>
+                              {isActive ? (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  disabled={p.id === user?.id || savingId === p.id + "active"}
+                                  onClick={() => setConfirmTarget(p)}
+                                >
+                                  {savingId === p.id + "active" ? (
+                                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <PowerOff className="mr-1 h-3 w-3" />
+                                  )}
+                                  Desactivar
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  disabled={savingId === p.id + "active"}
+                                  onClick={() => applyActive(p, true)}
+                                >
+                                  {savingId === p.id + "active" ? (
+                                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Power className="mr-1 h-3 w-3" />
+                                  )}
+                                  Activar
+                                </Button>
+                              )}
+
                             </div>
                           </TableCell>
                         </TableRow>
@@ -196,6 +226,27 @@ function AdminPage() {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog open={!!confirmTarget} onOpenChange={(o) => !o && setConfirmTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desactivar usuario</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmTarget?.email
+                ? `Se desactivará a ${confirmTarget.email}. Si tiene una sesión activa, será deslogueado de inmediato y no podrá iniciar sesión hasta que sea reactivado.`
+                : "Se desactivará al usuario seleccionado."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmTarget && applyActive(confirmTarget, false)}>
+              Desactivar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
+}
+
 }
