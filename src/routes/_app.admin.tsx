@@ -38,11 +38,13 @@ function AdminPage() {
   const [rolesMap, setRolesMap] = useState<Record<string, AppRole[]>>({});
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<Profile | null>(null);
+  const setActive = useServerFn(setUserActive);
 
   const load = async () => {
     setLoading(true);
     const [{ data: profs }, { data: roles }] = await Promise.all([
-      supabase.from("profiles").select("id,email,full_name,created_at").order("created_at"),
+      (supabase as any).from("profiles").select("id,email,full_name,created_at,active").order("created_at"),
       (supabase as any).from("user_roles").select("user_id,role"),
     ]);
     setProfiles((profs ?? []) as Profile[]);
@@ -53,6 +55,7 @@ function AdminPage() {
     setRolesMap(m);
     setLoading(false);
   };
+
 
   useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
 
