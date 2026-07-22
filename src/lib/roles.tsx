@@ -22,15 +22,63 @@ export function RolesProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = async () => {
+  /**
+   * Carga los roles del usuario autenticado.
+   *
+   * Cuando `initial === true` se muestra el spinner de carga inicial; en los
+   * refreshes de fondo (polling / realtime) NO se activa `loading` para evitar
+   * remontar la UI y producir saltos de scroll, especialmente en listados con
+   * muchas filas (p. ej. Administración de Usuarios).
+   */
+  const load = async (initial = false) => {
     if (!user) { setRoles([]); setLoading(false); return; }
-    setLoading(true);
+    if (initial) setLoading(true);
     const { data } = await (supabase as any).from("user_roles").select("role").eq("user_id", user.id);
-    setRoles((data ?? []).map((r: any) => r.role as AppRole));
-    setLoading(false);
+    const next = (data ?? []).map((r: any) => r.role as AppRole);
+    // Mantiene la referencia anterior si los roles no cambiaron, evitando
+    // re-renderizados innecesarios en componentes que dependen de este estado.
+    setRoles((prev) => {
+      if (prev.length === next.length && prev.every((r) => next.includes(r))) return prev;
+      return next;
+    });
+    if (initial) setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => {
+    load(true);
+    if (!user?.id) return;
+
+    // ------------------------------------------------------------------
+    // Polling de roles: ¿por qué existe este subproceso?
+    // ------------------------------------------------------------------
+    // El canal realtime de Supabase debería notificar cada cambio en la tabla
+    // `user_roles`, pero en la práctica puede perder eventos por:
+    //   • Reconexiones de red o cambios de pestaña (tab inactiva).
+    //   • Límites de conexiones simultáneas de realtime.
+    //   • Eventos que ocurren justo antes de que la suscripción se confirme.
+    // Por eso usamos un polling de 15 segundos como salvaguarda: garantiza que,
+    // si un administrador quita todos los roles a un usuario conectado, la
+    // pantalla de "Sin permisos activos" se active incluso cuando realtime falle.
+    // Es complementario, no sustituto, del canal realtime que se suscribe abajo.
+    // ------------------------------------------------------------------
+    const iv = setInterval(() => load(false), 15000);
+
+    // Canal realtime: intenta reflejar los cambios de roles en tiempo real.
+    // Actúa como primera línea de detección; el polling cubre los huecos.
+    const channel = (supabase as any)
+      .channel(`user-roles-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${user.id}` },
+        () => { load(false); }
+      )
+      .subscribe();
+    return () => {
+      clearInterval(iv);
+      (supabase as any).removeChannel(channel);
+    };
+    // eslint-disable-next-line
+  }, [user?.id]);
 
   const isAdmin = roles.includes("admin");
   const isSupervisor = roles.includes("supervisor");
