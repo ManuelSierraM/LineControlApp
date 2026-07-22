@@ -1,10 +1,11 @@
 import { createFileRoute, Outlet, Navigate } from "@tanstack/react-router";
-import { Loader2, Moon, Sun } from "lucide-react";
+import { Loader2, Moon, Sun, ShieldAlert } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
+import { useRoles } from "@/lib/roles";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
