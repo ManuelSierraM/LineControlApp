@@ -35,15 +35,15 @@ export function RolesProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    load();
+    load(true);
     if (!user?.id) return;
-    const iv = setInterval(load, 15000);
+    const iv = setInterval(() => load(false), 15000);
     const channel = (supabase as any)
       .channel(`user-roles-${user.id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${user.id}` },
-        () => { load(); }
+        () => { load(false); }
       )
       .subscribe();
     return () => {
