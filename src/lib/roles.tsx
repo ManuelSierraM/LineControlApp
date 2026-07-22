@@ -22,24 +22,28 @@ export function RolesProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = async () => {
+  const load = async (initial = false) => {
     if (!user) { setRoles([]); setLoading(false); return; }
-    setLoading(true);
+    if (initial) setLoading(true);
     const { data } = await (supabase as any).from("user_roles").select("role").eq("user_id", user.id);
-    setRoles((data ?? []).map((r: any) => r.role as AppRole));
-    setLoading(false);
+    const next = (data ?? []).map((r: any) => r.role as AppRole);
+    setRoles((prev) => {
+      if (prev.length === next.length && prev.every((r) => next.includes(r))) return prev;
+      return next;
+    });
+    if (initial) setLoading(false);
   };
 
   useEffect(() => {
-    load();
+    load(true);
     if (!user?.id) return;
-    const iv = setInterval(load, 15000);
+    const iv = setInterval(() => load(false), 15000);
     const channel = (supabase as any)
       .channel(`user-roles-${user.id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${user.id}` },
-        () => { load(); }
+        () => { load(false); }
       )
       .subscribe();
     return () => {
