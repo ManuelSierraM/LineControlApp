@@ -23,6 +23,10 @@ export async function fetchAll<T = any>(
     const to = Math.min(from + pageSize - 1, maxRows - 1);
     let q = (supabase.from(table as any) as any).select(columns);
     if (opts.orderBy) q = q.order(opts.orderBy.column, { ascending: opts.orderBy.ascending ?? false });
+    // Desempate estable por id para evitar que range() repita/omita filas
+    // cuando la columna de orden tiene valores duplicados (cargas masivas
+    // suelen compartir created_at exacto).
+    q = q.order("id", { ascending: true });
     q = q.range(from, to);
     const { data, error } = await q;
     if (error) throw error;
