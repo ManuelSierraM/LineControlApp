@@ -38,7 +38,7 @@ function PopsPage() {
   const { data } = useQuery({
     queryKey: ["pops-maestro"],
     queryFn: async () => {
-      const { data } = await supabase.from("pops").select("*").order("created_at", { ascending: false }).limit(5000);
+      const data = await fetchAll<any>("pops", { orderBy: { column: "created_at", ascending: false } });
       return dedupeBy(data ?? [], (p: any) => (p.codigo ? String(p.codigo) : null) || normPhone(p.numero_telefono) || (p.id ? String(p.id) : null));
     },
   });
