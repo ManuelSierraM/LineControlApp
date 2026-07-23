@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { AlertCircle, Wifi, AlertTriangle, MapPin, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 
@@ -60,10 +61,10 @@ function AlertasPage() {
   const { data } = useQuery({
     queryKey: ["alertas-cruzado"],
     queryFn: async () => {
-      const [{ data: lineas }, { data: disp }, { data: pops }] = await Promise.all([
-        supabase.from("lineas").select("*").order("created_at", { ascending: false }).limit(10000),
-        supabase.from("dispositivos").select("*").order("created_at", { ascending: false }).limit(10000),
-        supabase.from("pops").select("*").order("created_at", { ascending: false }).limit(10000),
+      const [lineas, disp, pops] = await Promise.all([
+        fetchAll<any>("lineas", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("dispositivos", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("pops", { orderBy: { column: "created_at", ascending: false } }),
       ]);
       return { lineas: lineas ?? [], disp: disp ?? [], pops: pops ?? [] };
     },

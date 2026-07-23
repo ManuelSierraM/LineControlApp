@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { DollarSign, TrendingDown, Wifi, Smartphone, AlertCircle, AlertTriangle, Info } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 
@@ -57,16 +57,16 @@ function Dashboard() {
     queryKey: ["dashboard"],
     queryFn: async () => {
       const [lineas, dispositivos, pops, alertas] = await Promise.all([
-        supabase.from("lineas").select("*").limit(10000),
-        supabase.from("dispositivos").select("*").limit(10000),
-        supabase.from("pops").select("*").limit(10000),
-        supabase.from("alertas").select("*").order("created_at", { ascending: false }).limit(500),
+        fetchAll<any>("lineas"),
+        fetchAll<any>("dispositivos"),
+        fetchAll<any>("pops"),
+        fetchAll<any>("alertas", { orderBy: { column: "created_at", ascending: false } }),
       ]);
       return {
-        lineas: lineas.data ?? [],
-        dispositivos: dispositivos.data ?? [],
-        pops: pops.data ?? [],
-        alertas: alertas.data ?? [],
+        lineas: lineas ?? [],
+        dispositivos: dispositivos ?? [],
+        pops: pops ?? [],
+        alertas: alertas ?? [],
       };
     },
   });

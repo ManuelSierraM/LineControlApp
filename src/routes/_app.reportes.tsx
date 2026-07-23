@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
@@ -83,12 +84,12 @@ function ReportesPage() {
   const { data } = useQuery({
     queryKey: ["reportes-data"],
     queryFn: async () => {
-      const [{ data: lineas }, { data: disp }, { data: pops }, { data: alertas }, { data: cargas }] = await Promise.all([
-        supabase.from("lineas").select("*").order("created_at", { ascending: false }).limit(10000),
-        supabase.from("dispositivos").select("*").order("created_at", { ascending: false }).limit(10000),
-        supabase.from("pops").select("*").order("created_at", { ascending: false }).limit(10000),
-        supabase.from("alertas").select("*").order("created_at", { ascending: false }).limit(10000),
-        supabase.from("archivos_carga").select("tipo, created_at").order("created_at", { ascending: false }).limit(500),
+      const [lineas, disp, pops, alertas, cargas] = await Promise.all([
+        fetchAll<any>("lineas", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("dispositivos", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("pops", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("alertas", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("archivos_carga", { columns: "tipo, created_at", orderBy: { column: "created_at", ascending: false } }),
       ]);
       return { lineas: lineas ?? [], disp: disp ?? [], pops: pops ?? [], alertas: alertas ?? [], cargas: cargas ?? [] };
     },
