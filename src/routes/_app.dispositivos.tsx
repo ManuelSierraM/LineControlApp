@@ -47,7 +47,8 @@ function DispPage() {
         fetchAll<any>("dispositivos", { orderBy: { column: "created_at", ascending: false } }),
         fetchAll<any>("lineas", { columns: "imei,msisdn" }),
       ]);
-      const dispDedup = dedupeBy(disp ?? [], (d: any) => (d.imei ? String(d.imei) : null) || normPhone(d.numero_telefono) || (d.id ? String(d.id) : null));
+      // Maestro: preservar totalidad; dedupe por id (único).
+      const dispDedup = dedupeBy(disp ?? [], (d: any) => (d.id ? String(d.id) : null));
       const byImei = new Map((lineas ?? []).map((l: any) => [l.imei, l.msisdn]));
       return dispDedup.map((d) => ({ ...d, telefono: byImei.get(d.imei) ?? d.numero_telefono ?? "—" }));
     },
