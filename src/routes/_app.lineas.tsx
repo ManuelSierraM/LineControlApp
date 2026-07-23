@@ -54,8 +54,8 @@ function LineasPage() {
       ]);
       const dispDedup = dedupeBy(disp ?? [], (d: any) => (d.imei ? String(d.imei) : null) || normPhone(d.numero_telefono) || null);
       const lineasDedup = dedupeBy(lineas ?? [], (l: any) => normPhone(l.msisdn) || (l.iccid ? String(l.iccid) : null) || (l.id ? String(l.id) : null));
-      const byImei = new Map<string, Disp>(dispDedup.filter((d) => d.imei).map((d) => [d.imei as string, d]));
-      const dispByPhone = new Map<string, Disp>();
+      const byImei = new Map<string, any>(dispDedup.filter((d) => d.imei).map((d) => [d.imei as string, d]));
+      const dispByPhone = new Map<string, any>();
       for (const d of dispDedup) {
         const key = normPhone(d.numero_telefono);
         if (key && d.imei) dispByPhone.set(key, d);
