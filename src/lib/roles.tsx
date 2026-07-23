@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
@@ -21,6 +22,12 @@ export function RolesProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+  // Marca si al menos una carga tuvo éxito. Evita mostrar la pantalla
+  // "Sin permisos activos" cuando en realidad la primera petición falló
+  // por problemas de red (roles=[] por error, no por revocación real).
+  const hasLoadedOnce = useRef(false);
+  // Evita spamear el toast de "sin conexión" en cada ciclo de polling.
+  const offlineNotified = useRef(false);
 
   /**
    * Carga los roles del usuario autenticado.
@@ -29,12 +36,34 @@ export function RolesProvider({ children }: { children: ReactNode }) {
    * refreshes de fondo (polling / realtime) NO se activa `loading` para evitar
    * remontar la UI y producir saltos de scroll, especialmente en listados con
    * muchas filas (p. ej. Administración de Usuarios).
+   *
+   * Manejo de errores de red: si la petición falla (offline, timeout, etc.)
+   * NO se sobreescribe `roles` con `[]` — mantener el último estado válido
+   * evita que la pantalla bloqueante de "Sin permisos activos" se dispare
+   * por una simple caída de internet. Se muestra un toast breve de aviso.
    */
   const load = async (initial = false) => {
-    if (!user) { setRoles([]); setLoading(false); return; }
+    if (!user) { setRoles([]); setLoading(false); hasLoadedOnce.current = false; return; }
     if (initial) setLoading(true);
-    const { data } = await (supabase as any).from("user_roles").select("role").eq("user_id", user.id);
+    const { data, error } = await (supabase as any).from("user_roles").select("role").eq("user_id", user.id);
+    if (error) {
+      if (!offlineNotified.current) {
+        offlineNotified.current = true;
+        toast.error("Sin conexión", {
+          description: "No se pudieron verificar los permisos. Reintentando…",
+          duration: 3000,
+        });
+        // Permite volver a notificar si el problema persiste tras un rato.
+        setTimeout(() => { offlineNotified.current = false; }, 20000);
+      }
+      // Solo apagamos el loading inicial si ya hubo alguna carga previa exitosa;
+      // en el primer intento fallido mantenemos el spinner hasta obtener datos.
+      if (initial && hasLoadedOnce.current) setLoading(false);
+      return;
+    }
     const next = (data ?? []).map((r: any) => r.role as AppRole);
+    hasLoadedOnce.current = true;
+    offlineNotified.current = false;
     // Mantiene la referencia anterior si los roles no cambiaron, evitando
     // re-renderizados innecesarios en componentes que dependen de este estado.
     setRoles((prev) => {
