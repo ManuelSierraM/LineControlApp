@@ -43,12 +43,12 @@ function DispPage() {
   const { data } = useQuery({
     queryKey: ["dispositivos-maestro"],
     queryFn: async () => {
-      const [{ data: disp }, { data: lineas }] = await Promise.all([
-        supabase.from("dispositivos").select("*").order("created_at", { ascending: false }).limit(5000),
-        supabase.from("lineas").select("imei,msisdn").limit(10000),
+      const [disp, lineas] = await Promise.all([
+        fetchAll<any>("dispositivos", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("lineas", { columns: "imei,msisdn" }),
       ]);
       const dispDedup = dedupeBy(disp ?? [], (d: any) => (d.imei ? String(d.imei) : null) || normPhone(d.numero_telefono) || (d.id ? String(d.id) : null));
-      const byImei = new Map((lineas ?? []).map((l) => [l.imei, l.msisdn]));
+      const byImei = new Map((lineas ?? []).map((l: any) => [l.imei, l.msisdn]));
       return dispDedup.map((d) => ({ ...d, telefono: byImei.get(d.imei) ?? d.numero_telefono ?? "—" }));
     },
   });
