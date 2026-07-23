@@ -39,7 +39,8 @@ function PopsPage() {
     queryKey: ["pops-maestro"],
     queryFn: async () => {
       const data = await fetchAll<any>("pops", { orderBy: { column: "created_at", ascending: false } });
-      return dedupeBy(data ?? [], (p: any) => (p.codigo ? String(p.codigo) : null) || normPhone(p.numero_telefono) || (p.id ? String(p.id) : null));
+      // Maestro: preservar totalidad; dedupe por id (único).
+      return dedupeBy(data ?? [], (p: any) => (p.id ? String(p.id) : null));
     },
   });
   const rows = data ?? [];
