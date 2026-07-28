@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/fetch-all";
 import { useAuth } from "@/lib/auth";
 import { useRoles } from "@/lib/roles";
 import { PageHeader } from "@/components/PageHeader";
@@ -982,7 +983,7 @@ async function regenerateAlerts(userId: string) {
     }
     if (!l.imei) pushIfNew({ user_id: userId, tipo: "sin_equipo", severidad: "media", entidad: "linea", referencia: l.msisdn, mensaje: `${l.msisdn} — Línea sin equipo asociado`, detalle: l.plan ?? "" });
   }
-  const imeisLineas = new Set(lineas.map((l) => l.imei).filter(Boolean));
+  const imeisLineas = new Set(lineas.map((l: any) => l.imei).filter(Boolean));
   for (const d of disp) {
     if (d.imei && !imeisLineas.has(d.imei)) {
       pushIfNew({ user_id: userId, tipo: "inconsistencia", severidad: "media", entidad: "dispositivo", referencia: d.imei, mensaje: "IMEI en Devices no existe en Maestro de Líneas", detalle: d.imei });
