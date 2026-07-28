@@ -270,7 +270,7 @@ function ReportesPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <KpiTop label="HISTORICO ALERTAS" value={(data?.alertas?.length ?? 0).toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
+          <KpiTop label="HISTORICO ALERTAS" value={historicoAlertas.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
