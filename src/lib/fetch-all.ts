@@ -24,6 +24,7 @@ export async function fetchAll<T = any>(
   while (from < maxRows) {
     const to = Math.min(from + pageSize - 1, maxRows - 1);
     let q = (supabase.from(table as any) as any).select(columns);
+    if (opts.eq) for (const [k, v] of Object.entries(opts.eq)) q = q.eq(k, v);
     if (opts.orderBy) q = q.order(opts.orderBy.column, { ascending: opts.orderBy.ascending ?? false });
     // Desempate estable por id para evitar que range() repita/omita filas
     // cuando la columna de orden tiene valores duplicados (cargas masivas
