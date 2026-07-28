@@ -960,10 +960,13 @@ function UploadCard({
 async function regenerateAlerts(userId: string) {
   // Append-only: NUNCA borramos la tabla "alertas" — es histórico de auditoría.
   // Deduplicamos contra lo ya existente por fingerprint (tipo|entidad|referencia|mensaje).
-  const [{ data: existentes }, { data: lineas }, { data: disp }] = await Promise.all([
-    supabase.from("alertas").select("tipo,entidad,referencia,mensaje").eq("user_id", userId),
-    supabase.from("lineas").select("*"),
-    supabase.from("dispositivos").select("*"),
+  // IMPORTANTE: usamos fetchAll (paginado) porque PostgREST devuelve solo 1000
+  // filas por defecto; de lo contrario las alertas se generarían con una muestra
+  // parcial de los maestros y la deduplicación compararía contra un histórico incompleto.
+  const [existentes, lineas, disp] = await Promise.all([
+    fetchAll<any>("alertas", { columns: "tipo,entidad,referencia,mensaje", eq: { user_id: userId } }),
+    fetchAll<any>("lineas"),
+    fetchAll<any>("dispositivos"),
   ]);
   if (!lineas || !disp) return;
   const fp = (a: { tipo: string; entidad: string | null; referencia: string | null; mensaje: string | null }) =>
