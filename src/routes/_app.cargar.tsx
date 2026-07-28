@@ -256,6 +256,7 @@ function CargarPage() {
   };
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [inserting, setInserting] = useState(false);
+  const [regenerando, setRegenerando] = useState(false);
 
 
   const { data: historial } = useQuery({
