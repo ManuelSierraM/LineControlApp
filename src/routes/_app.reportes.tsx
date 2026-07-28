@@ -192,6 +192,23 @@ function ReportesPage() {
   const ahorroTotal = ahorroSinUso + ahorroSinEq;
   const alertasActuales = sinUso.length + sinEquipo.length + popsSC.length + inconsist.length;
 
+  // HISTORICO ALERTAS = alertas guardadas en cargues ANTERIORES al último.
+  // El último lote se detecta agrupando las alertas cuyo created_at cae dentro
+  // de una ventana de 10 minutos respecto a la alerta más reciente (una
+  // regeneración inserta todas sus filas casi simultáneamente).
+  const allAlertas = data?.alertas ?? [];
+  const alertTs = allAlertas
+    .map((a: any) => (a.created_at ? new Date(a.created_at).getTime() : 0))
+    .filter((t: number) => t > 0);
+  const maxAlertTs = alertTs.length ? Math.max(...alertTs) : 0;
+  const LOTE_MS = 10 * 60 * 1000;
+  const historicoAlertas = maxAlertTs
+    ? allAlertas.filter((a: any) => {
+        const t = a.created_at ? new Date(a.created_at).getTime() : 0;
+        return t > 0 && t < maxAlertTs - LOTE_MS;
+      }).length
+    : 0;
+
 
 
   const reportes = [
@@ -253,7 +270,7 @@ function ReportesPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <KpiTop label="HISTORICO ALERTAS" value={(data?.alertas?.length ?? 0).toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
+          <KpiTop label="HISTORICO ALERTAS" value={historicoAlertas.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
