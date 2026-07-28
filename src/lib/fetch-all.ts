@@ -12,6 +12,8 @@ export async function fetchAll<T = any>(
     orderBy?: { column: string; ascending?: boolean };
     pageSize?: number;
     maxRows?: number;
+    /** Filtros de igualdad opcionales, p. ej. { user_id: "..." } */
+    eq?: Record<string, any>;
   } = {},
 ): Promise<T[]> {
   const columns = opts.columns ?? "*";
