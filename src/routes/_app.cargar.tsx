@@ -590,26 +590,6 @@ function CargarPage() {
             <div className="flex items-center justify-between border-b border-border p-4">
               <h3 className="font-semibold">Historial de cargas</h3>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={regenerando || !user}
-                  onClick={async () => {
-                    if (!user) return;
-                    setRegenerando(true);
-                    try {
-                      await regenerateAlerts(user.id);
-                      toast.success("Alertas regeneradas con los datos actuales");
-                      qc.invalidateQueries();
-                    } catch (e: any) {
-                      toast.error(`Error: ${e.message ?? "no se pudieron regenerar"}`);
-                    } finally {
-                      setRegenerando(false);
-                    }
-                  }}
-                >
-                  {regenerando ? "Regenerando..." : "Regenerar alertas"}
-                </Button>
                 {isAdmin && (
                   <Button variant="outline" size="sm" onClick={() => setBorrarOpen(true)}>
                     <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Borrar registros
