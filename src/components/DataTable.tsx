@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
-import { Search, Download } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Search, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export interface Column<T> {
