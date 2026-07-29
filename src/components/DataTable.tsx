@@ -18,12 +18,18 @@ interface Props<T> {
   columns: Column<T>[];
   searchKeys?: (keyof T)[];
   emptyText?: string;
+  /** Tamaños de página disponibles. El primero es el valor inicial. */
+  pageSizeOptions?: number[];
 }
 
 export function DataTable<T extends Record<string, any>>({
   title, rows, columns, searchKeys, emptyText = "No se encontraron registros",
+  pageSizeOptions = [50, 100, 250, 500],
 }: Props<T>) {
   const [q, setQ] = useState("");
+  const [pageSize, setPageSize] = useState(pageSizeOptions[0]);
+  const [page, setPage] = useState(1);
+
   const filtered = useMemo(() => {
     if (!q) return rows;
     const ql = q.toLowerCase();
@@ -32,6 +38,19 @@ export function DataTable<T extends Record<string, any>>({
       return fields.some((k) => String(r[k] ?? "").toLowerCase().includes(ql));
     });
   }, [q, rows, searchKeys]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+
+  // Al cambiar búsqueda/tamaño/dataset, la página actual puede quedar fuera de rango.
+  useEffect(() => {
+    setPage((p) => Math.min(Math.max(1, p), totalPages));
+  }, [totalPages]);
+  useEffect(() => { setPage(1); }, [q, pageSize]);
+
+  const start = (page - 1) * pageSize;
+  // Solo se renderizan las filas de la página actual (evita montar miles de <tr>).
+  const paged = useMemo(() => filtered.slice(start, start + pageSize), [filtered, start, pageSize]);
+
 
   const exportCsv = () => {
     const header = columns.map((c) => `"${c.header}"`).join(",");
