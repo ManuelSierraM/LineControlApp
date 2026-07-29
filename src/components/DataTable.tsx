@@ -101,15 +101,15 @@ export function DataTable<T extends Record<string, any>>({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {paged.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="py-12 text-center text-muted-foreground">
                   {emptyText}
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((r, i) => (
-                <TableRow key={(r as any).id ?? i}>
+              paged.map((r, i) => (
+                <TableRow key={(r as any).id ?? start + i}>
                   {columns.map((c) => (
                     <TableCell key={c.key}>
                       {c.render ? c.render(r) : (c.accessor ? c.accessor(r) : (r as any)[c.key]) ?? "—"}
@@ -121,6 +121,52 @@ export function DataTable<T extends Record<string, any>>({
           </TableBody>
         </Table>
       </div>
+
+      <nav
+        aria-label="Paginación de la tabla"
+        className="flex flex-wrap items-center justify-between gap-3 border-t border-border p-4"
+      >
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>Filas por página</span>
+          <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+            <SelectTrigger className="h-8 w-[84px]" aria-label="Filas por página">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {pageSizeOptions.map((n) => (
+                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <p className="text-xs text-muted-foreground" aria-live="polite">
+          {filtered.length === 0
+            ? "0 de 0"
+            : `${(start + 1).toLocaleString("es-CO")}–${Math.min(start + pageSize, filtered.length).toLocaleString("es-CO")} de ${filtered.length.toLocaleString("es-CO")}`}
+          {" · "}Página {page.toLocaleString("es-CO")} de {totalPages.toLocaleString("es-CO")}
+        </p>
+
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Primera página"
+            onClick={() => setPage(1)} disabled={page <= 1}>
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Página anterior"
+            onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Página siguiente"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Última página"
+            onClick={() => setPage(totalPages)} disabled={page >= totalPages}>
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </nav>
     </div>
+
   );
 }
