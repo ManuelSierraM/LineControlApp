@@ -143,6 +143,24 @@ function Dashboard() {
     { name: "Sin equipo", valor: ahorroSinEquipo },
   ];
 
+  // Alertas de dispositivos agrupadas por tipo (gráfico vertical)
+  const tipoLabel: Record<string, string> = {
+    sin_uso: "Sin uso",
+    sin_equipo: "Sin equipo",
+    inconsistencia: "Inconsistencia",
+    sin_centro_costo: "Sin centro",
+  };
+  const dispAlertMap = new Map<string, number>();
+  for (const a of alertasAll) {
+    if (a.entidad !== "dispositivo") continue;
+    const key = tipoLabel[a.tipo as string] ?? String(a.tipo ?? "Otras");
+    dispAlertMap.set(key, (dispAlertMap.get(key) ?? 0) + 1);
+  }
+  const dispAlertData = Array.from(dispAlertMap, ([name, cantidad]) => ({ name, cantidad })).sort(
+    (a, b) => b.cantidad - a.cantidad,
+  );
+
+
   // Top líneas con mayor impacto económico (a partir de alertas: sin uso + sin equipo)
   // Se toma la línea asociada por teléfono normalizado y se calcula su costo mensual.
   const impactoMap = new Map<string, {
