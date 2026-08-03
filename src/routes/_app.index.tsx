@@ -235,7 +235,7 @@ function Dashboard() {
           <BadgeStat tone="red" count={sinUso30} label="Sin uso >30d" />
           <BadgeStat tone="red" count={sinEquipo} label="Sin equipo" />
           <BadgeStat tone="blue" count={popsSinCC} label="POPS sin centro" />
-          <BadgeStat tone="amber" count={inconsistencias} label="Inconsistencias" />
+          <BadgeStat tone="amber" count={inconsistencias} label="Sin línea asociada" />
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
