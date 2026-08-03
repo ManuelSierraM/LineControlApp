@@ -143,22 +143,14 @@ function Dashboard() {
     { name: "Sin equipo", valor: ahorroSinEquipo },
   ];
 
-  // Alertas de dispositivos agrupadas por tipo (gráfico vertical)
-  const tipoLabel: Record<string, string> = {
-    sin_uso: "Sin uso",
-    sin_equipo: "Sin equipo",
-    inconsistencia: "Inconsistencia",
-    sin_centro_costo: "Sin centro",
-  };
-  const dispAlertMap = new Map<string, number>();
-  for (const a of alertasAll) {
-    if (a.entidad !== "dispositivo") continue;
-    const key = tipoLabel[a.tipo as string] ?? String(a.tipo ?? "Otras");
-    dispAlertMap.set(key, (dispAlertMap.get(key) ?? 0) + 1);
-  }
-  const dispAlertData = Array.from(dispAlertMap, ([name, cantidad]) => ({ name, cantidad })).sort(
-    (a, b) => b.cantidad - a.cantidad,
-  );
+  // Alertas de dispositivos (gráfico vertical): mismos criterios que la sección Alertas.
+  // Cubre "Sin uso" (UEM >30d), "POPS sin centro" e "Inconsistencias" (UEM+POPS sin teléfono válido).
+  const dispAlertData = [
+    { name: "Sin uso", cantidad: sinUso30 },
+    { name: "POPS sin centro", cantidad: popsSinCC },
+    { name: "Inconsistencias", cantidad: inconsistencias },
+  ].sort((a, b) => b.cantidad - a.cantidad);
+
 
 
   // Top líneas con mayor impacto económico (a partir de alertas: sin uso + sin equipo)
