@@ -217,7 +217,7 @@ function ReportesPage() {
     { key: "pops_sc", icon: MapPin, titulo: "POPS sin centro", desc: `${popsSC.length.toLocaleString("es-CO")} registros sin centro asignado`, ahorro: 0, rows: popsSC, rowsMes: popsSCMes },
     // -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
     // { key: "sobredim", icon: AlertTriangle, titulo: "Planes sobredimensionados", desc: `${sobredim.length.toLocaleString("es-CO")} planes innecesarios detectados`, ahorro: ahorroSobre, rows: sobredim },
-    { key: "inconsist", icon: FileText, titulo: "Inconsistencias", desc: `${inconsist.length.toLocaleString("es-CO")} inconsistencias detectadas`, ahorro: 0, rows: inconsist, rowsMes: inconsistMes },
+    { key: "inconsist", icon: FileText, titulo: "Sin línea asociada", desc: `${inconsist.length.toLocaleString("es-CO")} dispositivos sin línea asociada`, ahorro: 0, rows: inconsist, rowsMes: inconsistMes },
   ];
 
   const exportar = (titulo: string, rows: any[], suffix: string) => {
