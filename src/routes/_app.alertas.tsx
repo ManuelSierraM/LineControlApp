@@ -167,6 +167,27 @@ function AlertasPage() {
     }));
   const inconsist = [...inconsistUem, ...inconsistPops];
 
+  // "IMEI duplicado": el cargue de Dispositivos UEM puede traer el mismo IMEI
+  // en varias filas. Se calcula sobre los datos crudos (antes del dedupe).
+  const dupMap = new Map<string, any[]>();
+  for (const d of data?.disp ?? []) {
+    const imei = d.imei ? String(d.imei).trim() : "";
+    if (!imei) continue;
+    const arr = dupMap.get(imei);
+    if (arr) arr.push(d);
+    else dupMap.set(imei, [d]);
+  }
+  const imeiDup = Array.from(dupMap.entries())
+    .filter(([, rows]) => rows.length > 1)
+    .map(([imei, rows]) => ({
+      imei,
+      repeticiones: rows.length,
+      modelo: rows[0].modelo ?? "—",
+      numero_telefono: rows.find((r) => normPhone(r.numero_telefono))?.numero_telefono ?? "—",
+      asignado_a: rows[0].asignado_a ?? "—",
+      estado: rows[0].estado ?? "—",
+    }))
+    .sort((a, b) => b.repeticiones - a.repeticiones);
 
   const counts: Record<TabKey, number> = {
     sin_uso: sinUso.length,
@@ -174,6 +195,7 @@ function AlertasPage() {
     sobredim: sobredim.length,
     pops_sin_centro: popsSC.length,
     inconsistencias: inconsist.length,
+    imei_duplicado: imeiDup.length,
   };
 
   const total =
@@ -181,7 +203,8 @@ function AlertasPage() {
     counts.sin_equipo +
     counts.sobredim +
     counts.pops_sin_centro +
-    counts.inconsistencias;
+    counts.inconsistencias +
+    counts.imei_duplicado;
 
   return (
     <div>
