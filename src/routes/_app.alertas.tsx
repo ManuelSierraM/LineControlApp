@@ -10,14 +10,15 @@ import { DataTable } from "@/components/DataTable";
 export const Route = createFileRoute("/_app/alertas")({ component: AlertasPage });
 
 
-type TabKey = "sin_uso" | "sin_equipo" | "sobredim" | "pops_sin_centro" | "inconsistencias";
+type TabKey = "sin_uso" | "sin_equipo" | "sobredim" | "pops_sin_centro" | "inconsistencias" | "imei_duplicado";
 
 const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: "sin_uso", label: "Sin uso", icon: AlertCircle },
   { key: "sin_equipo", label: "Sin equipo", icon: Wifi },
   // { key: "sobredim", label: "Sobredimensionado", icon: AlertTriangle }, -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
   { key: "pops_sin_centro", label: "POPS sin centro", icon: MapPin },
-  { key: "inconsistencias", label: "Inconsistencias", icon: Info },
+  { key: "inconsistencias", label: "Sin línea asociada", icon: Info },
+  { key: "imei_duplicado", label: "IMEI duplicado", icon: Copy },
 ];
 
 function fmtMoney(n: number) {
