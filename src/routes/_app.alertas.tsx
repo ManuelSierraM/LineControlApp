@@ -338,6 +338,30 @@ function AlertasPage() {
             ]}
           />
         )}
+
+        {tab === "imei_duplicado" && (
+          <DataTable
+            title="IMEI duplicados en Dispositivos UEM"
+            rows={imeiDup}
+            searchKeys={["imei", "modelo", "asignado_a", "numero_telefono"]}
+            columns={[
+              { key: "imei", header: "IMEI" },
+              {
+                key: "repeticiones",
+                header: "Repeticiones",
+                render: (r) => (
+                  <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
+                    {r.repeticiones} registros
+                  </span>
+                ),
+              },
+              { key: "modelo", header: "Modelo" },
+              { key: "numero_telefono", header: "Número" },
+              { key: "estado", header: "Estado" },
+              { key: "asignado_a", header: "Usuario" },
+            ]}
+          />
+        )}
       </div>
     </div>
   );
