@@ -149,7 +149,8 @@ function Dashboard() {
     { name: "Sin uso", cantidad: sinUso30 },
     { name: "POPS sin centro", cantidad: popsSinCC },
     { name: "Inconsistencias", cantidad: inconsistencias },
-  ].sort((a, b) => b.cantidad - a.cantidad);
+  ].filter((d) => d.cantidad > 0)
+    .sort((a, b) => b.cantidad - a.cantidad);
 
 
 
