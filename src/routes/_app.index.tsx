@@ -127,11 +127,20 @@ function Dashboard() {
   // POPS sin centro
   const popsSinCC = pops.filter((p) => !p.centro_costo).length;
 
-  // Inconsistencias: dispositivos (UEM+POPS) con IMEI pero sin teléfono válido
+  // Sin línea asociada: dispositivos (UEM+POPS) con IMEI pero sin teléfono válido
   const uemIncon = disp.filter((d) => d.imei && !normPhone(d.numero_telefono));
   const uemIds = new Set(uemIncon.map((d) => d.imei));
   const popsIncon = pops.filter((p) => p.codigo && !uemIds.has(p.codigo) && !normPhone(p.numero_telefono));
   const inconsistencias = uemIncon.length + popsIncon.length;
+
+  // IMEI duplicado: mismo IMEI repetido en el cargue de Dispositivos UEM (datos crudos)
+  const imeiCount = new Map<string, number>();
+  for (const d of data?.dispositivos ?? []) {
+    const imei = d.imei ? String(d.imei).trim() : "";
+    if (!imei) continue;
+    imeiCount.set(imei, (imeiCount.get(imei) ?? 0) + 1);
+  }
+  const imeiDuplicados = Array.from(imeiCount.values()).filter((n) => n > 1).length;
 
   // Ahorros (mismos que Reportes)
   const ahorroSinUso = sinUsoRows.reduce((s, r) => s + r.costo, 0);
