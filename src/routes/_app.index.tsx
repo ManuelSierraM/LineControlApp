@@ -75,15 +75,15 @@ function Dashboard() {
   const lineasRaw = dedupeBy(data?.lineas ?? [], (l: any) => normPhone(l.msisdn) || (l.iccid ? String(l.iccid) : null) || (l.id ? String(l.id) : null));
   const disp = dedupeBy(data?.dispositivos ?? [], (d: any) => (d.imei ? String(d.imei) : null) || normPhone(d.numero_telefono) || (d.id ? String(d.id) : null));
   const pops = dedupeBy(data?.pops ?? [], (p: any) => (p.codigo ? String(p.codigo) : null) || normPhone(p.numero_telefono) || (p.id ? String(p.id) : null));
-  const alertas = dedupeBy(data?.alertas ?? [], (a: any) => [a.tipo, a.entidad ?? "", a.referencia ?? "", a.mensaje ?? ""].join("|"))
+  const alertasAll = dedupeBy(data?.alertas ?? [], (a: any) => [a.tipo, a.entidad ?? "", a.referencia ?? "", a.mensaje ?? ""].join("|"))
     .sort((a, b) => {
       const pa = alertPriority(a);
       const pb = alertPriority(b);
       if (pa.entityRank !== pb.entityRank) return pa.entityRank - pb.entityRank;
       if (pa.severityRank !== pb.severityRank) return pa.severityRank - pb.severityRank;
       return pb.time - pa.time;
-    })
-    .slice(0, 8);
+    });
+
 
   // Lookups por teléfono para resolver IMEI (UEM > POPS)
   const dispByPhone = new Map<string, (typeof disp)[number]>();
