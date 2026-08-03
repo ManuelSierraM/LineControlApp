@@ -153,11 +153,12 @@ function Dashboard() {
   ];
 
   // Alertas de dispositivos (gráfico vertical): mismos criterios que la sección Alertas.
-  // Cubre "Sin uso" (UEM >30d), "POPS sin centro" e "Inconsistencias" (UEM+POPS sin teléfono válido).
+  // Cubre "Sin uso" (UEM >30d), "POPS sin centro", "Sin línea asociada" e "IMEI duplicado".
   const dispAlertData = [
     { name: "Sin uso", cantidad: sinUso30 },
     { name: "POPS sin centro", cantidad: popsSinCC },
-    { name: "Inconsistencias", cantidad: inconsistencias },
+    { name: "Sin línea asociada", cantidad: inconsistencias },
+    { name: "IMEI duplicado", cantidad: imeiDuplicados },
   ].filter((d) => d.cantidad > 0)
     .sort((a, b) => b.cantidad - a.cantidad);
 
