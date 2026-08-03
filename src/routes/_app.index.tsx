@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { DollarSign, TrendingDown, Wifi, Smartphone, AlertCircle, AlertTriangle, Info } from "lucide-react";
+import { DollarSign, TrendingDown, Wifi, Smartphone, AlertCircle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
@@ -75,15 +75,15 @@ function Dashboard() {
   const lineasRaw = dedupeBy(data?.lineas ?? [], (l: any) => normPhone(l.msisdn) || (l.iccid ? String(l.iccid) : null) || (l.id ? String(l.id) : null));
   const disp = dedupeBy(data?.dispositivos ?? [], (d: any) => (d.imei ? String(d.imei) : null) || normPhone(d.numero_telefono) || (d.id ? String(d.id) : null));
   const pops = dedupeBy(data?.pops ?? [], (p: any) => (p.codigo ? String(p.codigo) : null) || normPhone(p.numero_telefono) || (p.id ? String(p.id) : null));
-  const alertas = dedupeBy(data?.alertas ?? [], (a: any) => [a.tipo, a.entidad ?? "", a.referencia ?? "", a.mensaje ?? ""].join("|"))
+  const alertasAll = dedupeBy(data?.alertas ?? [], (a: any) => [a.tipo, a.entidad ?? "", a.referencia ?? "", a.mensaje ?? ""].join("|"))
     .sort((a, b) => {
       const pa = alertPriority(a);
       const pb = alertPriority(b);
       if (pa.entityRank !== pb.entityRank) return pa.entityRank - pb.entityRank;
       if (pa.severityRank !== pb.severityRank) return pa.severityRank - pb.severityRank;
       return pb.time - pa.time;
-    })
-    .slice(0, 8);
+    });
+
 
   // Lookups por teléfono para resolver IMEI (UEM > POPS)
   const dispByPhone = new Map<string, (typeof disp)[number]>();
@@ -142,6 +142,24 @@ function Dashboard() {
     { name: "Sin uso", valor: ahorroSinUso },
     { name: "Sin equipo", valor: ahorroSinEquipo },
   ];
+
+  // Alertas de dispositivos agrupadas por tipo (gráfico vertical)
+  const tipoLabel: Record<string, string> = {
+    sin_uso: "Sin uso",
+    sin_equipo: "Sin equipo",
+    inconsistencia: "Inconsistencia",
+    sin_centro_costo: "Sin centro",
+  };
+  const dispAlertMap = new Map<string, number>();
+  for (const a of alertasAll) {
+    if (a.entidad !== "dispositivo") continue;
+    const key = tipoLabel[a.tipo as string] ?? String(a.tipo ?? "Otras");
+    dispAlertMap.set(key, (dispAlertMap.get(key) ?? 0) + 1);
+  }
+  const dispAlertData = Array.from(dispAlertMap, ([name, cantidad]) => ({ name, cantidad })).sort(
+    (a, b) => b.cantidad - a.cantidad,
+  );
+
 
   // Top líneas con mayor impacto económico (a partir de alertas: sin uso + sin equipo)
   // Se toma la línea asociada por teléfono normalizado y se calcula su costo mensual.
@@ -235,28 +253,34 @@ function Dashboard() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <h3 className="font-semibold">Alertas Recientes</h3>
-            <p className="text-xs text-muted-foreground">Top alertas más relevantes del análisis</p>
-            <div className="mt-4 space-y-2">
-              {alertas.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">Sin alertas registradas</p>
+            <h3 className="font-semibold">Alertas de Dispositivos</h3>
+            <p className="text-xs text-muted-foreground">Cantidad de alertas por tipo sobre dispositivos</p>
+            <div className="mt-4 h-72">
+              {dispAlertData.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">Sin alertas de dispositivos</p>
               ) : (
-                alertas.map((a) => {
-                  const Icon = a.severidad === "alta" ? AlertCircle : a.severidad === "media" ? AlertTriangle : Info;
-                  const tone = a.severidad === "alta" ? "bg-destructive/10 text-destructive" : a.severidad === "media" ? "bg-warning/15 text-warning-foreground" : "bg-info/10 text-info";
-                  return (
-                    <div key={a.id} className={`flex items-start gap-3 rounded-lg p-3 ${tone}`}>
-                      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground">{a.mensaje}</p>
-                        {a.detalle && <p className="truncate text-xs text-muted-foreground">{a.detalle}</p>}
-                      </div>
-                    </div>
-                  );
-                })
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dispAlertData} margin={{ left: 8, right: 20, top: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <XAxis dataKey="name" stroke="var(--color-muted-foreground)" fontSize={12} />
+                    <YAxis
+                      allowDecimals={false}
+                      tickFormatter={(v) => Number(v).toLocaleString("es-CO")}
+                      stroke="var(--color-muted-foreground)"
+                      fontSize={12}
+                      width={60}
+                    />
+                    <Tooltip
+                      formatter={(v: number) => [Number(v).toLocaleString("es-CO"), "Alertas"]}
+                      contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }}
+                    />
+                    <Bar dataKey="cantidad" fill="var(--color-chart-5)" radius={[6, 6, 0, 0]} maxBarSize={64} />
+                  </BarChart>
+                </ResponsiveContainer>
               )}
             </div>
           </div>
+
         </div>
 
         <DataTable
