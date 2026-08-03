@@ -253,28 +253,34 @@ function Dashboard() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <h3 className="font-semibold">Alertas Recientes</h3>
-            <p className="text-xs text-muted-foreground">Top alertas más relevantes del análisis</p>
-            <div className="mt-4 space-y-2">
-              {alertas.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">Sin alertas registradas</p>
+            <h3 className="font-semibold">Alertas de Dispositivos</h3>
+            <p className="text-xs text-muted-foreground">Cantidad de alertas por tipo sobre dispositivos</p>
+            <div className="mt-4 h-72">
+              {dispAlertData.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">Sin alertas de dispositivos</p>
               ) : (
-                alertas.map((a) => {
-                  const Icon = a.severidad === "alta" ? AlertCircle : a.severidad === "media" ? AlertTriangle : Info;
-                  const tone = a.severidad === "alta" ? "bg-destructive/10 text-destructive" : a.severidad === "media" ? "bg-warning/15 text-warning-foreground" : "bg-info/10 text-info";
-                  return (
-                    <div key={a.id} className={`flex items-start gap-3 rounded-lg p-3 ${tone}`}>
-                      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground">{a.mensaje}</p>
-                        {a.detalle && <p className="truncate text-xs text-muted-foreground">{a.detalle}</p>}
-                      </div>
-                    </div>
-                  );
-                })
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dispAlertData} margin={{ left: 8, right: 20, top: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <XAxis dataKey="name" stroke="var(--color-muted-foreground)" fontSize={12} />
+                    <YAxis
+                      allowDecimals={false}
+                      tickFormatter={(v) => Number(v).toLocaleString("es-CO")}
+                      stroke="var(--color-muted-foreground)"
+                      fontSize={12}
+                      width={60}
+                    />
+                    <Tooltip
+                      formatter={(v: number) => [Number(v).toLocaleString("es-CO"), "Alertas"]}
+                      contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }}
+                    />
+                    <Bar dataKey="cantidad" fill="var(--color-chart-5)" radius={[6, 6, 0, 0]} maxBarSize={64} />
+                  </BarChart>
+                </ResponsiveContainer>
               )}
             </div>
           </div>
+
         </div>
 
         <DataTable
