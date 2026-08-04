@@ -20,11 +20,14 @@ interface Props<T> {
   emptyText?: string;
   /** Tamaños de página disponibles. El primero es el valor inicial. */
   pageSizeOptions?: number[];
+  /** Footer opcional para mostrar totales o resúmenes debajo de la paginación. */
+  footer?: React.ReactNode;
 }
 
 export function DataTable<T extends Record<string, any>>({
   title, rows, columns, searchKeys, emptyText = "No se encontraron registros",
   pageSizeOptions = [50, 100, 250, 500],
+  footer,
 }: Props<T>) {
   const [q, setQ] = useState("");
   const [pageSize, setPageSize] = useState(pageSizeOptions[0]);
@@ -166,6 +169,11 @@ export function DataTable<T extends Record<string, any>>({
           </Button>
         </div>
       </nav>
+      {footer && (
+        <div className="border-t border-border bg-muted/30 p-4">
+          {footer}
+        </div>
+      )}
     </div>
 
   );
