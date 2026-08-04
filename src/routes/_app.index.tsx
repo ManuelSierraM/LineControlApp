@@ -286,12 +286,12 @@ function Dashboard() {
         </div>
 
         <DataTable
-          title="Top Líneas con Mayor Impacto Económico"
+          title="Líneas con Mayor Impacto Económico"
           rows={topImpacto}
           columns={[
             { key: "msisdn", header: "Número" },
             { key: "imei", header: "IMEI", render: (r) => r.imei ?? "—" },
-            { key: "modelo", header: "Modelo" },
+            { key: "plan", header: "Plan" },
             {
               key: "categoria",
               header: "Categoría",
@@ -306,7 +306,7 @@ function Dashboard() {
             { key: "costo", header: "Costo mensual", render: (r) => fmtMoney(r.costo) },
             { key: "costoAnual", header: "Costo anualizado", render: (r) => fmtMoney(r.costoAnual) },
           ]}
-          searchKeys={["msisdn", "imei", "modelo", "categoria", "centro_costo"]}
+          searchKeys={["msisdn", "imei", "plan", "categoria", "centro_costo"]}
         />
       </div>
     </div>
