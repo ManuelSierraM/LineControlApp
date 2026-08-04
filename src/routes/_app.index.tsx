@@ -169,7 +169,7 @@ function Dashboard() {
   const impactoMap = new Map<string, {
     msisdn: string;
     imei: string | null;
-    modelo: string;
+    plan: string;
     categoria: string;
     dias: number | null;
     centro_costo: string;
@@ -188,7 +188,7 @@ function Dashboard() {
     impactoMap.set(key, {
       msisdn: ln?.msisdn ?? d?.numero_telefono ?? pop?.numero_telefono ?? "—",
       imei: d?.imei ?? pop?.codigo ?? ln?.imei ?? null,
-      modelo: d?.modelo ?? pop?.modelo ?? "—",
+      plan: ln?.plan ?? "—",
       categoria: "Sin uso",
       dias: r.dias,
       centro_costo: ln?.centro_costo ?? pop?.centro_costo ?? "—",
@@ -206,7 +206,7 @@ function Dashboard() {
     impactoMap.set(key, {
       msisdn: l.msisdn ?? "—",
       imei: null,
-      modelo: "—",
+      plan: l.plan ?? "—",
       categoria: "Sin equipo",
       dias: null,
       centro_costo: l.centro_costo ?? "—",
@@ -217,8 +217,7 @@ function Dashboard() {
 
   const topImpacto = Array.from(impactoMap.values())
     .filter((r) => r.costo > 0)
-    .sort((a, b) => b.costo - a.costo)
-    .slice(0, 10);
+    .sort((a, b) => b.costo - a.costo);
 
   return (
     <div>
@@ -287,12 +286,12 @@ function Dashboard() {
         </div>
 
         <DataTable
-          title="Top Líneas con Mayor Impacto Económico"
+          title="Líneas con Mayor Impacto Económico"
           rows={topImpacto}
           columns={[
             { key: "msisdn", header: "Número" },
             { key: "imei", header: "IMEI", render: (r) => r.imei ?? "—" },
-            { key: "modelo", header: "Modelo" },
+            { key: "plan", header: "Plan" },
             {
               key: "categoria",
               header: "Categoría",
@@ -307,7 +306,7 @@ function Dashboard() {
             { key: "costo", header: "Costo mensual", render: (r) => fmtMoney(r.costo) },
             { key: "costoAnual", header: "Costo anualizado", render: (r) => fmtMoney(r.costoAnual) },
           ]}
-          searchKeys={["msisdn", "imei", "modelo", "categoria", "centro_costo"]}
+          searchKeys={["msisdn", "imei", "plan", "categoria", "centro_costo"]}
         />
       </div>
     </div>
