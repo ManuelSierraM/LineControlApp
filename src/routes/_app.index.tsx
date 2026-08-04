@@ -315,7 +315,7 @@ function Dashboard() {
           footer={
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end" aria-label="Resumen de impacto económico">
               <SummaryItem
-                label="% de facturación total"
+                label="% DE LA FACTURACIÓN TOTAL"
                 value={`${pctFacturacion.toLocaleString("es-CO", { maximumFractionDigits: 2 })}%`}
                 hint={`Sobre ${fmtMoney(costoTotal)}`}
               />
