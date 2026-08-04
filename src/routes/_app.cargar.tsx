@@ -314,7 +314,15 @@ function CargarPage() {
     if (!user) return;
     setDeleting(true);
     try {
-      let q = supabase.from("archivos_carga").delete().eq("user_id", user.id);
+      // Usuarios objetivo: el seleccionado, o todos los presentes en los
+      // registros que coinciden con los filtros actuales.
+      const targetUserIds =
+        filtroUsuario !== "todos"
+          ? [filtroUsuario]
+          : [...new Set(afectados.map((h: any) => h.user_id as string))];
+      if (targetUserIds.length === 0) targetUserIds.push(user.id);
+
+      let q = supabase.from("archivos_carga").delete().in("user_id", targetUserIds);
       if (filtroTipo !== "todos") q = q.eq("tipo", filtroTipo);
       if (filtroDesde) q = q.gte("created_at", filtroDesde);
       if (filtroHasta) q = q.lte("created_at", new Date(new Date(filtroHasta).getTime() + 86400000).toISOString());
@@ -324,7 +332,7 @@ function CargarPage() {
       if (purgarDatos) {
         const tipos: Tipo[] = filtroTipo === "todos" ? ["lineas", "dispositivos", "pops"] : [filtroTipo];
         for (const t of tipos) {
-          await supabase.from(t).delete().eq("user_id", user.id);
+          await supabase.from(t).delete().in("user_id", targetUserIds);
         }
         // NOTA: no tocamos la tabla "alertas" — se preserva el histórico para auditoría
         // y para la tarjeta "HISTORICO ALERTAS" en Reportes.
