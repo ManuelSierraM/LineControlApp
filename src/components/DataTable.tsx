@@ -18,19 +18,23 @@ interface Props<T> {
   columns: Column<T>[];
   searchKeys?: (keyof T)[];
   emptyText?: string;
-  /** Tamaños de página disponibles. El primero es el valor inicial. */
+  /** Tamaños de página disponibles (orden ascendente). */
   pageSizeOptions?: number[];
+  /** Valor inicial de filas por página. Si no se indica, usa el primer valor de pageSizeOptions. */
+  defaultPageSize?: number;
   /** Footer opcional para mostrar totales o resúmenes debajo de la paginación. */
   footer?: React.ReactNode;
 }
 
 export function DataTable<T extends Record<string, any>>({
   title, rows, columns, searchKeys, emptyText = "No se encontraron registros",
-  pageSizeOptions = [50, 100, 250, 500],
+  pageSizeOptions = [10, 25, 50, 100, 250, 500],
+  defaultPageSize,
   footer,
 }: Props<T>) {
   const [q, setQ] = useState("");
-  const [pageSize, setPageSize] = useState(pageSizeOptions[0]);
+  const initialPageSize = defaultPageSize && pageSizeOptions.includes(defaultPageSize) ? defaultPageSize : pageSizeOptions[0];
+  const [pageSize, setPageSize] = useState(initialPageSize);
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
