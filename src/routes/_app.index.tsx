@@ -217,8 +217,7 @@ function Dashboard() {
 
   const topImpacto = Array.from(impactoMap.values())
     .filter((r) => r.costo > 0)
-    .sort((a, b) => b.costo - a.costo)
-    .slice(0, 10);
+    .sort((a, b) => b.costo - a.costo);
 
   return (
     <div>
