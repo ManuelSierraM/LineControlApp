@@ -33,7 +33,8 @@ export function DataTable<T extends Record<string, any>>({
   footer,
 }: Props<T>) {
   const [q, setQ] = useState("");
-  const [pageSize, setPageSize] = useState(pageSizeOptions[0]);
+  const initialPageSize = defaultPageSize && pageSizeOptions.includes(defaultPageSize) ? defaultPageSize : pageSizeOptions[0];
+  const [pageSize, setPageSize] = useState(initialPageSize);
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
