@@ -219,6 +219,11 @@ function Dashboard() {
     .filter((r) => r.costo > 0)
     .sort((a, b) => b.costo - a.costo);
 
+  // Totales de la tabla de impacto económico
+  const totalCostoMensual = topImpacto.reduce((s, r) => s + (r.costo ?? 0), 0);
+  const totalCostoAnual = topImpacto.reduce((s, r) => s + (r.costoAnual ?? 0), 0);
+  const pctFacturacion = costoTotal > 0 ? (totalCostoMensual / costoTotal) * 100 : 0;
+
   return (
     <div>
       <PageHeader title="Dashboard" subtitle="Resumen ejecutivo del control de líneas y dispositivos corporativos" />
@@ -307,6 +312,17 @@ function Dashboard() {
             { key: "costoAnual", header: "Costo anualizado", render: (r) => fmtMoney(r.costoAnual) },
           ]}
           searchKeys={["msisdn", "imei", "plan", "categoria", "centro_costo"]}
+          footer={
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end" aria-label="Resumen de impacto económico">
+              <SummaryItem label="Total costo mensual" value={fmtMoney(totalCostoMensual)} />
+              <SummaryItem label="Total costo anualizado" value={fmtMoney(totalCostoAnual)} />
+              <SummaryItem
+                label="% de facturación total"
+                value={`${pctFacturacion.toLocaleString("es-CO", { maximumFractionDigits: 2 })}%`}
+                hint={`Sobre ${fmtMoney(costoTotal)}`}
+              />
+            </div>
+          }
         />
       </div>
     </div>
@@ -328,6 +344,16 @@ function KpiCard({
       </div>
       <p className="mt-3 text-3xl font-bold tracking-tight text-foreground">{value}</p>
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+function SummaryItem({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="text-right">
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-lg font-semibold text-foreground">{value}</p>
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }
