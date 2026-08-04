@@ -282,14 +282,26 @@ function CargarPage() {
     },
   });
 
+  // Usuarios presentes en el historial visible (para el filtro de borrado).
+  const usuariosHistorial = Array.from(
+    new Map(
+      (historial ?? []).map((h: any) => [
+        h.user_id,
+        (h.profiles as { email?: string } | null)?.email ?? "Usuario desconocido",
+      ]),
+    ).entries(),
+  ).map(([id, email]) => ({ id, email }));
+
   const matchesFilter = (h: any) => {
     if (filtroTipo !== "todos" && h.tipo !== filtroTipo) return false;
+    if (filtroUsuario !== "todos" && h.user_id !== filtroUsuario) return false;
     const t = new Date(h.created_at).getTime();
     if (filtroDesde && t < new Date(filtroDesde).getTime()) return false;
     if (filtroHasta && t > new Date(filtroHasta).getTime() + 86400000) return false;
     return true;
   };
   const afectados = (historial ?? []).filter(matchesFilter);
+
 
   const eliminarRegistroIndividual = async (h: any) => {
     if (!user) return;
