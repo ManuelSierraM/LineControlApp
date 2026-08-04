@@ -227,6 +227,7 @@ function CargarPage() {
   const [guideTipo, setGuideTipo] = useState<Tipo | null>(null);
   const [borrarOpen, setBorrarOpen] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<"todos" | Tipo>("todos");
+  const [filtroUsuario, setFiltroUsuario] = useState<string>("todos");
   const [filtroDesde, setFiltroDesde] = useState("");
   const [filtroHasta, setFiltroHasta] = useState("");
   const [purgarDatos, setPurgarDatos] = useState(false);
@@ -281,14 +282,26 @@ function CargarPage() {
     },
   });
 
+  // Usuarios presentes en el historial visible (para el filtro de borrado).
+  const usuariosHistorial = Array.from(
+    new Map(
+      (historial ?? []).map((h: any) => [
+        h.user_id,
+        (h.profiles as { email?: string } | null)?.email ?? "Usuario desconocido",
+      ]),
+    ).entries(),
+  ).map(([id, email]) => ({ id, email }));
+
   const matchesFilter = (h: any) => {
     if (filtroTipo !== "todos" && h.tipo !== filtroTipo) return false;
+    if (filtroUsuario !== "todos" && h.user_id !== filtroUsuario) return false;
     const t = new Date(h.created_at).getTime();
     if (filtroDesde && t < new Date(filtroDesde).getTime()) return false;
     if (filtroHasta && t > new Date(filtroHasta).getTime() + 86400000) return false;
     return true;
   };
   const afectados = (historial ?? []).filter(matchesFilter);
+
 
   const eliminarRegistroIndividual = async (h: any) => {
     if (!user) return;
@@ -301,7 +314,15 @@ function CargarPage() {
     if (!user) return;
     setDeleting(true);
     try {
-      let q = supabase.from("archivos_carga").delete().eq("user_id", user.id);
+      // Usuarios objetivo: el seleccionado, o todos los presentes en los
+      // registros que coinciden con los filtros actuales.
+      const targetUserIds =
+        filtroUsuario !== "todos"
+          ? [filtroUsuario]
+          : [...new Set(afectados.map((h: any) => h.user_id as string))];
+      if (targetUserIds.length === 0) targetUserIds.push(user.id);
+
+      let q = supabase.from("archivos_carga").delete().in("user_id", targetUserIds);
       if (filtroTipo !== "todos") q = q.eq("tipo", filtroTipo);
       if (filtroDesde) q = q.gte("created_at", filtroDesde);
       if (filtroHasta) q = q.lte("created_at", new Date(new Date(filtroHasta).getTime() + 86400000).toISOString());
@@ -311,7 +332,7 @@ function CargarPage() {
       if (purgarDatos) {
         const tipos: Tipo[] = filtroTipo === "todos" ? ["lineas", "dispositivos", "pops"] : [filtroTipo];
         for (const t of tipos) {
-          await supabase.from(t).delete().eq("user_id", user.id);
+          await supabase.from(t).delete().in("user_id", targetUserIds);
         }
         // NOTA: no tocamos la tabla "alertas" — se preserva el histórico para auditoría
         // y para la tarjeta "HISTORICO ALERTAS" en Reportes.
@@ -684,6 +705,18 @@ function CargarPage() {
                   <SelectItem value="lineas">Maestro de Líneas</SelectItem>
                   <SelectItem value="dispositivos">Devices UEM</SelectItem>
                   <SelectItem value="pops">Inventario POPS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Usuario que cargó</Label>
+              <Select value={filtroUsuario} onValueChange={setFiltroUsuario}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los usuarios</SelectItem>
+                  {usuariosHistorial.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.email}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
