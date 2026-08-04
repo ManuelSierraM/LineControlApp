@@ -227,6 +227,7 @@ function CargarPage() {
   const [guideTipo, setGuideTipo] = useState<Tipo | null>(null);
   const [borrarOpen, setBorrarOpen] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<"todos" | Tipo>("todos");
+  const [filtroUsuario, setFiltroUsuario] = useState<string>("todos");
   const [filtroDesde, setFiltroDesde] = useState("");
   const [filtroHasta, setFiltroHasta] = useState("");
   const [purgarDatos, setPurgarDatos] = useState(false);
