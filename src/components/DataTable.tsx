@@ -125,6 +125,12 @@ export function DataTable<T extends Record<string, any>>({
         </Table>
       </div>
 
+      {footer && (
+        <div className="border-y border-border bg-muted/30 p-4">
+          {footer}
+        </div>
+      )}
+
       <nav
         aria-label="Paginación de la tabla"
         className="flex flex-wrap items-center justify-between gap-3 border-t border-border p-4"
@@ -169,11 +175,6 @@ export function DataTable<T extends Record<string, any>>({
           </Button>
         </div>
       </nav>
-      {footer && (
-        <div className="border-t border-border bg-muted/30 p-4">
-          {footer}
-        </div>
-      )}
     </div>
 
   );

@@ -314,13 +314,13 @@ function Dashboard() {
           searchKeys={["msisdn", "imei", "plan", "categoria", "centro_costo"]}
           footer={
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end" aria-label="Resumen de impacto económico">
-              <SummaryItem label="Total costo mensual" value={fmtMoney(totalCostoMensual)} />
-              <SummaryItem label="Total costo anualizado" value={fmtMoney(totalCostoAnual)} />
               <SummaryItem
                 label="% de facturación total"
                 value={`${pctFacturacion.toLocaleString("es-CO", { maximumFractionDigits: 2 })}%`}
                 hint={`Sobre ${fmtMoney(costoTotal)}`}
               />
+              <SummaryItem label="Total costo mensual" value={fmtMoney(totalCostoMensual)} />
+              <SummaryItem label="Total costo anualizado" value={fmtMoney(totalCostoAnual)} />
             </div>
           }
         />
