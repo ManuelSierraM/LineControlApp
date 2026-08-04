@@ -169,7 +169,7 @@ function Dashboard() {
   const impactoMap = new Map<string, {
     msisdn: string;
     imei: string | null;
-    modelo: string;
+    plan: string;
     categoria: string;
     dias: number | null;
     centro_costo: string;
@@ -188,7 +188,7 @@ function Dashboard() {
     impactoMap.set(key, {
       msisdn: ln?.msisdn ?? d?.numero_telefono ?? pop?.numero_telefono ?? "—",
       imei: d?.imei ?? pop?.codigo ?? ln?.imei ?? null,
-      modelo: d?.modelo ?? pop?.modelo ?? "—",
+      plan: ln?.plan ?? "—",
       categoria: "Sin uso",
       dias: r.dias,
       centro_costo: ln?.centro_costo ?? pop?.centro_costo ?? "—",
@@ -206,7 +206,7 @@ function Dashboard() {
     impactoMap.set(key, {
       msisdn: l.msisdn ?? "—",
       imei: null,
-      modelo: "—",
+      plan: l.plan ?? "—",
       categoria: "Sin equipo",
       dias: null,
       centro_costo: l.centro_costo ?? "—",
