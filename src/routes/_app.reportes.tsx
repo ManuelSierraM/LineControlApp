@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
@@ -83,12 +84,12 @@ function ReportesPage() {
   const { data } = useQuery({
     queryKey: ["reportes-data"],
     queryFn: async () => {
-      const [{ data: lineas }, { data: disp }, { data: pops }, { data: alertas }, { data: cargas }] = await Promise.all([
-        supabase.from("lineas").select("*").order("created_at", { ascending: false }).limit(10000),
-        supabase.from("dispositivos").select("*").order("created_at", { ascending: false }).limit(10000),
-        supabase.from("pops").select("*").order("created_at", { ascending: false }).limit(10000),
-        supabase.from("alertas").select("*").order("created_at", { ascending: false }).limit(10000),
-        supabase.from("archivos_carga").select("tipo, created_at").order("created_at", { ascending: false }).limit(500),
+      const [lineas, disp, pops, alertas, cargas] = await Promise.all([
+        fetchAll<any>("lineas", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("dispositivos", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("pops", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("alertas", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("archivos_carga", { columns: "tipo, created_at", orderBy: { column: "created_at", ascending: false } }),
       ]);
       return { lineas: lineas ?? [], disp: disp ?? [], pops: pops ?? [], alertas: alertas ?? [], cargas: cargas ?? [] };
     },
@@ -191,6 +192,23 @@ function ReportesPage() {
   const ahorroTotal = ahorroSinUso + ahorroSinEq;
   const alertasActuales = sinUso.length + sinEquipo.length + popsSC.length + inconsist.length;
 
+  // HISTORICO ALERTAS = alertas guardadas en cargues ANTERIORES al último.
+  // El último lote se detecta agrupando las alertas cuyo created_at cae dentro
+  // de una ventana de 10 minutos respecto a la alerta más reciente (una
+  // regeneración inserta todas sus filas casi simultáneamente).
+  const allAlertas = data?.alertas ?? [];
+  const alertTs = allAlertas
+    .map((a: any) => (a.created_at ? new Date(a.created_at).getTime() : 0))
+    .filter((t: number) => t > 0);
+  const maxAlertTs = alertTs.length ? Math.max(...alertTs) : 0;
+  const LOTE_MS = 10 * 60 * 1000;
+  const historicoAlertas = maxAlertTs
+    ? allAlertas.filter((a: any) => {
+        const t = a.created_at ? new Date(a.created_at).getTime() : 0;
+        return t > 0 && t < maxAlertTs - LOTE_MS;
+      }).length
+    : 0;
+
 
 
   const reportes = [
@@ -199,7 +217,7 @@ function ReportesPage() {
     { key: "pops_sc", icon: MapPin, titulo: "POPS sin centro", desc: `${popsSC.length.toLocaleString("es-CO")} registros sin centro asignado`, ahorro: 0, rows: popsSC, rowsMes: popsSCMes },
     // -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
     // { key: "sobredim", icon: AlertTriangle, titulo: "Planes sobredimensionados", desc: `${sobredim.length.toLocaleString("es-CO")} planes innecesarios detectados`, ahorro: ahorroSobre, rows: sobredim },
-    { key: "inconsist", icon: FileText, titulo: "Inconsistencias", desc: `${inconsist.length.toLocaleString("es-CO")} inconsistencias detectadas`, ahorro: 0, rows: inconsist, rowsMes: inconsistMes },
+    { key: "inconsist", icon: FileText, titulo: "Sin línea asociada", desc: `${inconsist.length.toLocaleString("es-CO")} dispositivos sin línea asociada`, ahorro: 0, rows: inconsist, rowsMes: inconsistMes },
   ];
 
   const exportar = (titulo: string, rows: any[], suffix: string) => {
@@ -252,7 +270,7 @@ function ReportesPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <KpiTop label="HISTORICO ALERTAS" value={alertas.length.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
+          <KpiTop label="HISTORICO ALERTAS" value={historicoAlertas.toLocaleString("es-CO")} icon={AlertCircle} tone="danger" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

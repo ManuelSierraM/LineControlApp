@@ -1,22 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertCircle, Wifi, AlertTriangle, MapPin, Info } from "lucide-react";
+import { AlertCircle, Wifi, AlertTriangle, MapPin, Info, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 
 export const Route = createFileRoute("/_app/alertas")({ component: AlertasPage });
 
 
-type TabKey = "sin_uso" | "sin_equipo" | "sobredim" | "pops_sin_centro" | "inconsistencias";
+type TabKey = "sin_uso" | "sin_equipo" | "sobredim" | "pops_sin_centro" | "inconsistencias" | "imei_duplicado";
 
 const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: "sin_uso", label: "Sin uso", icon: AlertCircle },
   { key: "sin_equipo", label: "Sin equipo", icon: Wifi },
   // { key: "sobredim", label: "Sobredimensionado", icon: AlertTriangle }, -> Manuel Sierra. posible uso a futuro: lineas con planes de datos caros cuyo uso o consumo es muy minimo y por ende no justifica el valor del plan
   { key: "pops_sin_centro", label: "POPS sin centro", icon: MapPin },
-  { key: "inconsistencias", label: "Inconsistencias", icon: Info },
+  { key: "inconsistencias", label: "Sin línea asociada", icon: Info },
+  { key: "imei_duplicado", label: "IMEI duplicado", icon: Copy },
 ];
 
 function fmtMoney(n: number) {
@@ -60,10 +62,10 @@ function AlertasPage() {
   const { data } = useQuery({
     queryKey: ["alertas-cruzado"],
     queryFn: async () => {
-      const [{ data: lineas }, { data: disp }, { data: pops }] = await Promise.all([
-        supabase.from("lineas").select("*").order("created_at", { ascending: false }).limit(10000),
-        supabase.from("dispositivos").select("*").order("created_at", { ascending: false }).limit(10000),
-        supabase.from("pops").select("*").order("created_at", { ascending: false }).limit(10000),
+      const [lineas, disp, pops] = await Promise.all([
+        fetchAll<any>("lineas", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("dispositivos", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("pops", { orderBy: { column: "created_at", ascending: false } }),
       ]);
       return { lineas: lineas ?? [], disp: disp ?? [], pops: pops ?? [] };
     },
@@ -165,6 +167,27 @@ function AlertasPage() {
     }));
   const inconsist = [...inconsistUem, ...inconsistPops];
 
+  // "IMEI duplicado": el cargue de Dispositivos UEM puede traer el mismo IMEI
+  // en varias filas. Se calcula sobre los datos crudos (antes del dedupe).
+  const dupMap = new Map<string, any[]>();
+  for (const d of data?.disp ?? []) {
+    const imei = d.imei ? String(d.imei).trim() : "";
+    if (!imei) continue;
+    const arr = dupMap.get(imei);
+    if (arr) arr.push(d);
+    else dupMap.set(imei, [d]);
+  }
+  const imeiDup = Array.from(dupMap.entries())
+    .filter(([, rows]) => rows.length > 1)
+    .map(([imei, rows]) => ({
+      imei,
+      repeticiones: rows.length,
+      modelo: rows[0].modelo ?? "—",
+      numero_telefono: rows.find((r) => normPhone(r.numero_telefono))?.numero_telefono ?? "—",
+      asignado_a: rows[0].asignado_a ?? "—",
+      estado: rows[0].estado ?? "—",
+    }))
+    .sort((a, b) => b.repeticiones - a.repeticiones);
 
   const counts: Record<TabKey, number> = {
     sin_uso: sinUso.length,
@@ -172,6 +195,7 @@ function AlertasPage() {
     sobredim: sobredim.length,
     pops_sin_centro: popsSC.length,
     inconsistencias: inconsist.length,
+    imei_duplicado: imeiDup.length,
   };
 
   const total =
@@ -179,7 +203,8 @@ function AlertasPage() {
     counts.sin_equipo +
     counts.sobredim +
     counts.pops_sin_centro +
-    counts.inconsistencias;
+    counts.inconsistencias +
+    counts.imei_duplicado;
 
   return (
     <div>
@@ -310,6 +335,30 @@ function AlertasPage() {
               { key: "asignado_a", header: "Usuario / Centro" },
               { key: "ultimo_checkin", header: "Último check-in" },
               { key: "fuente", header: "Fuente" },
+            ]}
+          />
+        )}
+
+        {tab === "imei_duplicado" && (
+          <DataTable
+            title="IMEI duplicados en Dispositivos UEM"
+            rows={imeiDup}
+            searchKeys={["imei", "modelo", "asignado_a", "numero_telefono"]}
+            columns={[
+              { key: "imei", header: "IMEI" },
+              {
+                key: "repeticiones",
+                header: "Repeticiones",
+                render: (r) => (
+                  <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
+                    {r.repeticiones} registros
+                  </span>
+                ),
+              },
+              { key: "modelo", header: "Modelo" },
+              { key: "numero_telefono", header: "Número" },
+              { key: "estado", header: "Estado" },
+              { key: "asignado_a", header: "Usuario" },
             ]}
           />
         )}

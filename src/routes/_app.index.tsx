@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { DollarSign, TrendingDown, Wifi, Smartphone, AlertCircle, AlertTriangle, Info } from "lucide-react";
+import { DollarSign, TrendingDown, Wifi, Smartphone, AlertCircle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 
@@ -57,16 +57,16 @@ function Dashboard() {
     queryKey: ["dashboard"],
     queryFn: async () => {
       const [lineas, dispositivos, pops, alertas] = await Promise.all([
-        supabase.from("lineas").select("*").limit(10000),
-        supabase.from("dispositivos").select("*").limit(10000),
-        supabase.from("pops").select("*").limit(10000),
-        supabase.from("alertas").select("*").order("created_at", { ascending: false }).limit(500),
+        fetchAll<any>("lineas"),
+        fetchAll<any>("dispositivos"),
+        fetchAll<any>("pops"),
+        fetchAll<any>("alertas", { orderBy: { column: "created_at", ascending: false } }),
       ]);
       return {
-        lineas: lineas.data ?? [],
-        dispositivos: dispositivos.data ?? [],
-        pops: pops.data ?? [],
-        alertas: alertas.data ?? [],
+        lineas: lineas ?? [],
+        dispositivos: dispositivos ?? [],
+        pops: pops ?? [],
+        alertas: alertas ?? [],
       };
     },
   });
@@ -75,15 +75,15 @@ function Dashboard() {
   const lineasRaw = dedupeBy(data?.lineas ?? [], (l: any) => normPhone(l.msisdn) || (l.iccid ? String(l.iccid) : null) || (l.id ? String(l.id) : null));
   const disp = dedupeBy(data?.dispositivos ?? [], (d: any) => (d.imei ? String(d.imei) : null) || normPhone(d.numero_telefono) || (d.id ? String(d.id) : null));
   const pops = dedupeBy(data?.pops ?? [], (p: any) => (p.codigo ? String(p.codigo) : null) || normPhone(p.numero_telefono) || (p.id ? String(p.id) : null));
-  const alertas = dedupeBy(data?.alertas ?? [], (a: any) => [a.tipo, a.entidad ?? "", a.referencia ?? "", a.mensaje ?? ""].join("|"))
+  const alertasAll = dedupeBy(data?.alertas ?? [], (a: any) => [a.tipo, a.entidad ?? "", a.referencia ?? "", a.mensaje ?? ""].join("|"))
     .sort((a, b) => {
       const pa = alertPriority(a);
       const pb = alertPriority(b);
       if (pa.entityRank !== pb.entityRank) return pa.entityRank - pb.entityRank;
       if (pa.severityRank !== pb.severityRank) return pa.severityRank - pb.severityRank;
       return pb.time - pa.time;
-    })
-    .slice(0, 8);
+    });
+
 
   // Lookups por teléfono para resolver IMEI (UEM > POPS)
   const dispByPhone = new Map<string, (typeof disp)[number]>();
@@ -127,11 +127,20 @@ function Dashboard() {
   // POPS sin centro
   const popsSinCC = pops.filter((p) => !p.centro_costo).length;
 
-  // Inconsistencias: dispositivos (UEM+POPS) con IMEI pero sin teléfono válido
+  // Sin línea asociada: dispositivos (UEM+POPS) con IMEI pero sin teléfono válido
   const uemIncon = disp.filter((d) => d.imei && !normPhone(d.numero_telefono));
   const uemIds = new Set(uemIncon.map((d) => d.imei));
   const popsIncon = pops.filter((p) => p.codigo && !uemIds.has(p.codigo) && !normPhone(p.numero_telefono));
   const inconsistencias = uemIncon.length + popsIncon.length;
+
+  // IMEI duplicado: mismo IMEI repetido en el cargue de Dispositivos UEM (datos crudos)
+  const imeiCount = new Map<string, number>();
+  for (const d of data?.dispositivos ?? []) {
+    const imei = d.imei ? String(d.imei).trim() : "";
+    if (!imei) continue;
+    imeiCount.set(imei, (imeiCount.get(imei) ?? 0) + 1);
+  }
+  const imeiDuplicados = Array.from(imeiCount.values()).filter((n) => n > 1).length;
 
   // Ahorros (mismos que Reportes)
   const ahorroSinUso = sinUsoRows.reduce((s, r) => s + r.costo, 0);
@@ -143,12 +152,24 @@ function Dashboard() {
     { name: "Sin equipo", valor: ahorroSinEquipo },
   ];
 
+  // Alertas de dispositivos (gráfico vertical): mismos criterios que la sección Alertas.
+  // Cubre "Sin uso" (UEM >30d), "POPS sin centro", "Sin línea asociada" e "IMEI duplicado".
+  const dispAlertData = [
+    { name: "Sin uso", cantidad: sinUso30 },
+    { name: "POPS sin centro", cantidad: popsSinCC },
+    { name: "Sin línea asociada", cantidad: inconsistencias },
+    { name: "IMEI duplicado", cantidad: imeiDuplicados },
+  ].filter((d) => d.cantidad > 0)
+    .sort((a, b) => b.cantidad - a.cantidad);
+
+
+
   // Top líneas con mayor impacto económico (a partir de alertas: sin uso + sin equipo)
   // Se toma la línea asociada por teléfono normalizado y se calcula su costo mensual.
   const impactoMap = new Map<string, {
     msisdn: string;
     imei: string | null;
-    modelo: string;
+    plan: string;
     categoria: string;
     dias: number | null;
     centro_costo: string;
@@ -167,7 +188,7 @@ function Dashboard() {
     impactoMap.set(key, {
       msisdn: ln?.msisdn ?? d?.numero_telefono ?? pop?.numero_telefono ?? "—",
       imei: d?.imei ?? pop?.codigo ?? ln?.imei ?? null,
-      modelo: d?.modelo ?? pop?.modelo ?? "—",
+      plan: ln?.plan ?? "—",
       categoria: "Sin uso",
       dias: r.dias,
       centro_costo: ln?.centro_costo ?? pop?.centro_costo ?? "—",
@@ -185,7 +206,7 @@ function Dashboard() {
     impactoMap.set(key, {
       msisdn: l.msisdn ?? "—",
       imei: null,
-      modelo: "—",
+      plan: l.plan ?? "—",
       categoria: "Sin equipo",
       dias: null,
       centro_costo: l.centro_costo ?? "—",
@@ -196,8 +217,12 @@ function Dashboard() {
 
   const topImpacto = Array.from(impactoMap.values())
     .filter((r) => r.costo > 0)
-    .sort((a, b) => b.costo - a.costo)
-    .slice(0, 10);
+    .sort((a, b) => b.costo - a.costo);
+
+  // Totales de la tabla de impacto económico
+  const totalCostoMensual = topImpacto.reduce((s, r) => s + (r.costo ?? 0), 0);
+  const totalCostoAnual = topImpacto.reduce((s, r) => s + (r.costoAnual ?? 0), 0);
+  const pctFacturacion = costoTotal > 0 ? (totalCostoMensual / costoTotal) * 100 : 0;
 
   return (
     <div>
@@ -214,7 +239,7 @@ function Dashboard() {
           <BadgeStat tone="red" count={sinUso30} label="Sin uso >30d" />
           <BadgeStat tone="red" count={sinEquipo} label="Sin equipo" />
           <BadgeStat tone="blue" count={popsSinCC} label="POPS sin centro" />
-          <BadgeStat tone="amber" count={inconsistencias} label="Inconsistencias" />
+          <BadgeStat tone="amber" count={inconsistencias} label="Sin línea asociada" />
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -235,37 +260,43 @@ function Dashboard() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <h3 className="font-semibold">Alertas Recientes</h3>
-            <p className="text-xs text-muted-foreground">Top alertas más relevantes del análisis</p>
-            <div className="mt-4 space-y-2">
-              {alertas.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">Sin alertas registradas</p>
+            <h3 className="font-semibold">Alertas de Dispositivos</h3>
+            <p className="text-xs text-muted-foreground">Cantidad de alertas por tipo sobre dispositivos</p>
+            <div className="mt-4 h-72">
+              {dispAlertData.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">Sin alertas de dispositivos</p>
               ) : (
-                alertas.map((a) => {
-                  const Icon = a.severidad === "alta" ? AlertCircle : a.severidad === "media" ? AlertTriangle : Info;
-                  const tone = a.severidad === "alta" ? "bg-destructive/10 text-destructive" : a.severidad === "media" ? "bg-warning/15 text-warning-foreground" : "bg-info/10 text-info";
-                  return (
-                    <div key={a.id} className={`flex items-start gap-3 rounded-lg p-3 ${tone}`}>
-                      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground">{a.mensaje}</p>
-                        {a.detalle && <p className="truncate text-xs text-muted-foreground">{a.detalle}</p>}
-                      </div>
-                    </div>
-                  );
-                })
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dispAlertData} margin={{ left: 8, right: 20, top: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <XAxis dataKey="name" stroke="var(--color-muted-foreground)" fontSize={12} />
+                    <YAxis
+                      allowDecimals={false}
+                      tickFormatter={(v) => Number(v).toLocaleString("es-CO")}
+                      stroke="var(--color-muted-foreground)"
+                      fontSize={12}
+                      width={60}
+                    />
+                    <Tooltip
+                      formatter={(v: number) => [Number(v).toLocaleString("es-CO"), "Alertas"]}
+                      contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }}
+                    />
+                    <Bar dataKey="cantidad" fill="var(--color-chart-5)" radius={[6, 6, 0, 0]} maxBarSize={64} />
+                  </BarChart>
+                </ResponsiveContainer>
               )}
             </div>
           </div>
+
         </div>
 
         <DataTable
-          title="Top Líneas con Mayor Impacto Económico"
+          title="Líneas con Mayor Impacto Económico"
           rows={topImpacto}
           columns={[
             { key: "msisdn", header: "Número" },
             { key: "imei", header: "IMEI", render: (r) => r.imei ?? "—" },
-            { key: "modelo", header: "Modelo" },
+            { key: "plan", header: "Plan" },
             {
               key: "categoria",
               header: "Categoría",
@@ -280,7 +311,18 @@ function Dashboard() {
             { key: "costo", header: "Costo mensual", render: (r) => fmtMoney(r.costo) },
             { key: "costoAnual", header: "Costo anualizado", render: (r) => fmtMoney(r.costoAnual) },
           ]}
-          searchKeys={["msisdn", "imei", "modelo", "categoria", "centro_costo"]}
+          searchKeys={["msisdn", "imei", "plan", "categoria", "centro_costo"]}
+          footer={
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end" aria-label="Resumen de impacto económico">
+              <SummaryItem
+                label="% DE LA FACTURACIÓN TOTAL"
+                value={`${pctFacturacion.toLocaleString("es-CO", { maximumFractionDigits: 2 })}%`}
+                hint={`Sobre ${fmtMoney(costoTotal)}`}
+              />
+              <SummaryItem label="Total costo mensual" value={fmtMoney(totalCostoMensual)} />
+              <SummaryItem label="Total costo anualizado" value={fmtMoney(totalCostoAnual)} />
+            </div>
+          }
         />
       </div>
     </div>
@@ -302,6 +344,16 @@ function KpiCard({
       </div>
       <p className="mt-3 text-3xl font-bold tracking-tight text-foreground">{value}</p>
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+function SummaryItem({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="text-right">
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-lg font-semibold text-foreground">{value}</p>
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/fetch-all";
 import { useAuth } from "@/lib/auth";
 import { useRoles } from "@/lib/roles";
 import { PageHeader } from "@/components/PageHeader";
@@ -96,7 +97,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
     { columna: "VALOR_CFM", target: "valor_plan", required: true, type: "number", min: 0, hint: "Número ≥ 0. Sin símbolos $, ni texto." },
   ],
   dispositivos: [
-    { columna: "IMEI", target: "imei", required: true, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "Solo dígitos, 14–16 caracteres. No debe repetirse." },
+    { columna: "IMEI", target: "imei", required: true, type: "digits", minLen: 14, maxLen: 16, hint: "Solo dígitos, 14–16 caracteres. Se permiten repetidos (se reportan en la alerta IMEI duplicado)." },
     { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
     { columna: "Número_Teléfono", target: "numero_telefono", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
     { columna: "Last_CheckIn", target: "ultimo_checkin", required: true, type: "date", hint: "Fecha YYYY-MM-DD (ej. 2025-04-12)." },
@@ -255,6 +256,7 @@ function CargarPage() {
   };
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [inserting, setInserting] = useState(false);
+  const [regenerando, setRegenerando] = useState(false);
 
 
   const { data: historial } = useQuery({
@@ -587,11 +589,13 @@ function CargarPage() {
           <div className="rounded-xl border border-border bg-card shadow-sm">
             <div className="flex items-center justify-between border-b border-border p-4">
               <h3 className="font-semibold">Historial de cargas</h3>
-              {isAdmin && (
-                <Button variant="outline" size="sm" onClick={() => setBorrarOpen(true)}>
-                  <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Borrar registros
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Button variant="outline" size="sm" onClick={() => setBorrarOpen(true)}>
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Borrar registros
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="divide-y divide-border">
               {historial!.map((h) => (
@@ -960,10 +964,13 @@ function UploadCard({
 async function regenerateAlerts(userId: string) {
   // Append-only: NUNCA borramos la tabla "alertas" — es histórico de auditoría.
   // Deduplicamos contra lo ya existente por fingerprint (tipo|entidad|referencia|mensaje).
-  const [{ data: existentes }, { data: lineas }, { data: disp }] = await Promise.all([
-    supabase.from("alertas").select("tipo,entidad,referencia,mensaje").eq("user_id", userId),
-    supabase.from("lineas").select("*"),
-    supabase.from("dispositivos").select("*"),
+  // IMPORTANTE: usamos fetchAll (paginado) porque PostgREST devuelve solo 1000
+  // filas por defecto; de lo contrario las alertas se generarían con una muestra
+  // parcial de los maestros y la deduplicación compararía contra un histórico incompleto.
+  const [existentes, lineas, disp] = await Promise.all([
+    fetchAll<any>("alertas", { columns: "tipo,entidad,referencia,mensaje", eq: { user_id: userId } }),
+    fetchAll<any>("lineas"),
+    fetchAll<any>("dispositivos"),
   ]);
   if (!lineas || !disp) return;
   const fp = (a: { tipo: string; entidad: string | null; referencia: string | null; mensaje: string | null }) =>
@@ -979,7 +986,7 @@ async function regenerateAlerts(userId: string) {
     }
     if (!l.imei) pushIfNew({ user_id: userId, tipo: "sin_equipo", severidad: "media", entidad: "linea", referencia: l.msisdn, mensaje: `${l.msisdn} — Línea sin equipo asociado`, detalle: l.plan ?? "" });
   }
-  const imeisLineas = new Set(lineas.map((l) => l.imei).filter(Boolean));
+  const imeisLineas = new Set(lineas.map((l: any) => l.imei).filter(Boolean));
   for (const d of disp) {
     if (d.imei && !imeisLineas.has(d.imei)) {
       pushIfNew({ user_id: userId, tipo: "inconsistencia", severidad: "media", entidad: "dispositivo", referencia: d.imei, mensaje: "IMEI en Devices no existe en Maestro de Líneas", detalle: d.imei });

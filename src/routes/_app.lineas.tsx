@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 
@@ -48,15 +48,16 @@ function LineasPage() {
   const { data } = useQuery({
     queryKey: ["lineas-maestro"],
     queryFn: async () => {
-      const [{ data: lineas }, { data: disp }] = await Promise.all([
-        supabase.from("lineas").select("*").order("created_at", { ascending: false }).limit(5000),
-        supabase.from("dispositivos").select("imei,modelo,asignado_a,numero_telefono,created_at").limit(10000),
+      const [lineas, disp] = await Promise.all([
+        fetchAll<any>("lineas", { orderBy: { column: "created_at", ascending: false } }),
+        fetchAll<any>("dispositivos", { columns: "imei,modelo,asignado_a,numero_telefono,created_at" }),
       ]);
-      type Disp = NonNullable<typeof disp>[number];
-      const dispDedup = dedupeBy(disp ?? [], (d: any) => (d.imei ? String(d.imei) : null) || normPhone(d.numero_telefono) || null);
-      const lineasDedup = dedupeBy(lineas ?? [], (l: any) => normPhone(l.msisdn) || (l.iccid ? String(l.iccid) : null) || (l.id ? String(l.id) : null));
-      const byImei = new Map<string, Disp>(dispDedup.filter((d) => d.imei).map((d) => [d.imei as string, d]));
-      const dispByPhone = new Map<string, Disp>();
+      // Maestro: NO deduplicar por msisdn/imei normalizados — cada fila del cargue
+      // es un registro válido; usamos id (único) para preservar la totalidad.
+      const dispDedup = dedupeBy(disp ?? [], (d: any) => (d.id ? String(d.id) : null));
+      const lineasDedup = dedupeBy(lineas ?? [], (l: any) => (l.id ? String(l.id) : null));
+      const byImei = new Map<string, any>(dispDedup.filter((d) => d.imei).map((d) => [d.imei as string, d]));
+      const dispByPhone = new Map<string, any>();
       for (const d of dispDedup) {
         const key = normPhone(d.numero_telefono);
         if (key && d.imei) dispByPhone.set(key, d);
