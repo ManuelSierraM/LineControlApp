@@ -708,6 +708,18 @@ function CargarPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label>Usuario que cargó</Label>
+              <Select value={filtroUsuario} onValueChange={setFiltroUsuario}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los usuarios</SelectItem>
+                  {usuariosHistorial.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.email}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Desde</Label>
