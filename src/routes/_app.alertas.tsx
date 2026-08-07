@@ -147,7 +147,7 @@ function AlertasPage() {
       imei: d.imei,
       modelo: d.modelo ?? "—",
       estado: d.estado ?? "—",
-      asignado_a: d.asignado_a ?? "—",
+      numero_telefono: d.numero_telefono ?? "—",
       ultimo_checkin: d.ultimo_checkin,
       fuente: "UEM",
     }));
@@ -163,7 +163,7 @@ function AlertasPage() {
       imei: p.codigo,
       modelo: p.modelo ?? "—",
       estado: p.estado ?? "—",
-      asignado_a: p.centro_costo ?? "—",
+      numero_telefono: p.numero_telefono ?? "—",
       ultimo_checkin: p.fecha_alta ?? p.created_at,
       fuente: "POPS",
     }));
@@ -370,12 +370,12 @@ function AlertasPage() {
           <DataTable
             title="Dispositivos sin línea asociada"
             rows={inconsist}
-            searchKeys={["imei", "modelo", "asignado_a", "fuente"]}
+            searchKeys={["imei", "modelo", "numero_telefono", "fuente"]}
             columns={[
               { key: "imei", header: "IMEI" },
               { key: "modelo", header: "Modelo" },
               { key: "estado", header: "Estado" },
-              { key: "asignado_a", header: "Usuario / Centro" },
+              { key: "numero_telefono", header: "Número de Teléfono" },
               { key: "ultimo_checkin", header: "Último check-in" },
               { key: "fuente", header: "Fuente" },
             ]}
