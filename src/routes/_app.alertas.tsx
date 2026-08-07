@@ -405,6 +405,39 @@ function AlertasPage() {
             ]}
           />
         )}
+
+        {tab === "pops_tel_invalido" && (
+          <DataTable
+            title="POPS Inconsistencias en Líneas (campo Numero_Telefono)"
+            rows={popsTelInvalido}
+            searchKeys={["valor_crudo", "motivo", "codigo", "centro_costo", "ubicacion"]}
+            columns={[
+              {
+                key: "valor_crudo",
+                header: "Valor registrado (sin formato)",
+                render: (r) => (
+                  <span className="font-mono text-xs whitespace-pre-wrap break-all">{r.valor_crudo}</span>
+                ),
+              },
+              {
+                key: "motivo",
+                header: "Motivo",
+                render: (r) => (
+                  <span className="rounded-full bg-warning/20 px-2 py-0.5 text-xs text-warning-foreground">
+                    {r.motivo}
+                  </span>
+                ),
+              },
+              { key: "digitos", header: "Dígitos detectados" },
+              { key: "codigo", header: "IMEI" },
+              { key: "centro_costo", header: "Centro" },
+              { key: "ubicacion", header: "Delegación" },
+              { key: "modelo", header: "Modelo" },
+              { key: "estado", header: "Estado" },
+            ]}
+          />
+        )}
+
       </div>
     </div>
   );
