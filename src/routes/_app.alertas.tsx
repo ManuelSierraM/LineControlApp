@@ -191,6 +191,44 @@ function AlertasPage() {
     }))
     .sort((a, b) => b.repeticiones - a.repeticiones);
 
+  // "POPS Inconsistencias en Líneas": el campo Numero_Telefono del Inventario POPS
+  // se captura como texto libre. Se detectan (a) valores con letras o caracteres
+  // especiales y (b) valores que solo traen el indicativo de país.
+  // Se muestra el valor CRUDO, sin formatear, para auditar cómo se está gestionando.
+  const popsTelInvalido = pops
+    .map((p) => {
+      const raw = p.numero_telefono == null ? "" : String(p.numero_telefono);
+      const v = raw.trim();
+      if (!v) return null;
+      const digitos = v.replace(/\D/g, "");
+      const tieneLetras = /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(v);
+      // Se toleran "+", espacios, guiones y paréntesis como formato habitual.
+      const tieneEspeciales = /[^\d+\s()\-]/.test(v.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
+      const soloIndicativo = digitos.length > 0 && digitos.length <= 3 && /^0?57$|^\d{1,3}$/.test(digitos);
+
+      let motivo: string | null = null;
+      if (tieneLetras && tieneEspeciales) motivo = "Letras y caracteres especiales";
+      else if (tieneLetras) motivo = "Contiene letras";
+      else if (tieneEspeciales) motivo = "Caracteres especiales";
+      else if (soloIndicativo) motivo = "Solo indicativo de país";
+      if (!motivo) return null;
+
+      return {
+        valor_crudo: raw,
+        motivo,
+        digitos: digitos || "—",
+        codigo: p.codigo ?? "—",
+        centro_costo: p.centro_costo ?? "—",
+        ubicacion: p.ubicacion ?? "—",
+        modelo: p.modelo ?? "—",
+        estado: p.estado ?? "—",
+      };
+    })
+    .filter(Boolean) as {
+      valor_crudo: string; motivo: string; digitos: string; codigo: string;
+      centro_costo: string; ubicacion: string; modelo: string; estado: string;
+    }[];
+
   const counts: Record<TabKey, number> = {
     sin_uso: sinUso.length,
     sin_equipo: sinEquipo.length,
@@ -198,6 +236,7 @@ function AlertasPage() {
     pops_sin_centro: popsSC.length,
     inconsistencias: inconsist.length,
     imei_duplicado: imeiDup.length,
+    pops_tel_invalido: popsTelInvalido.length,
   };
 
   const total =
@@ -206,7 +245,9 @@ function AlertasPage() {
     counts.sobredim +
     counts.pops_sin_centro +
     counts.inconsistencias +
-    counts.imei_duplicado;
+    counts.imei_duplicado +
+    counts.pops_tel_invalido;
+
 
   return (
     <div>
