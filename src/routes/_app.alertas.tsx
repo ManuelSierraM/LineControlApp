@@ -147,7 +147,7 @@ function AlertasPage() {
       imei: d.imei,
       modelo: d.modelo ?? "—",
       estado: d.estado ?? "—",
-      asignado_a: d.asignado_a ?? "—",
+      numero_telefono: d.numero_telefono ?? "—",
       ultimo_checkin: d.ultimo_checkin,
       fuente: "UEM",
     }));
@@ -163,7 +163,7 @@ function AlertasPage() {
       imei: p.codigo,
       modelo: p.modelo ?? "—",
       estado: p.estado ?? "—",
-      asignado_a: p.centro_costo ?? "—",
+      numero_telefono: p.numero_telefono ?? "—",
       ultimo_checkin: p.fecha_alta ?? p.created_at,
       fuente: "POPS",
     }));
