@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertCircle, Wifi, AlertTriangle, MapPin, Info, Copy } from "lucide-react";
+import { AlertCircle, Wifi, AlertTriangle, MapPin, Info, Copy, PhoneOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
@@ -10,7 +10,7 @@ import { DataTable } from "@/components/DataTable";
 export const Route = createFileRoute("/_app/alertas")({ component: AlertasPage });
 
 
-type TabKey = "sin_uso" | "sin_equipo" | "sobredim" | "pops_sin_centro" | "inconsistencias" | "imei_duplicado";
+type TabKey = "sin_uso" | "sin_equipo" | "sobredim" | "pops_sin_centro" | "inconsistencias" | "imei_duplicado" | "pops_tel_invalido";
 
 const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: "sin_uso", label: "Sin uso", icon: AlertCircle },
@@ -19,7 +19,9 @@ const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: "pops_sin_centro", label: "POPS sin centro", icon: MapPin },
   { key: "inconsistencias", label: "Sin línea asociada", icon: Info },
   { key: "imei_duplicado", label: "IMEI duplicado", icon: Copy },
+  { key: "pops_tel_invalido", label: "POPS Inconsistencias en Líneas", icon: PhoneOff },
 ];
+
 
 function fmtMoney(n: number) {
   return `$ ${Number(n ?? 0).toLocaleString("es-CO")}`;
