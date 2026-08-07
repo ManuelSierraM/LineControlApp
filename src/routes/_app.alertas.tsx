@@ -19,7 +19,7 @@ const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: "pops_sin_centro", label: "POPS sin centro", icon: MapPin },
   { key: "inconsistencias", label: "Sin línea asociada", icon: Info },
   { key: "imei_duplicado", label: "IMEI duplicado", icon: Copy },
-  { key: "pops_tel_invalido", label: "POPS Inconsistencias en Líneas", icon: PhoneOff },
+  { key: "pops_tel_invalido", label: "Líneas POPS Inconsistentes", icon: PhoneOff },
 ];
 
 
@@ -191,7 +191,7 @@ function AlertasPage() {
     }))
     .sort((a, b) => b.repeticiones - a.repeticiones);
 
-  // "POPS Inconsistencias en Líneas": el campo Numero_Telefono del Inventario POPS
+  // "Líneas POPS Inconsistentes": el campo Numero_Telefono del Inventario POPS
   // se captura como texto libre. Se detectan (a) valores con letras o caracteres
   // especiales y (b) valores que solo traen el indicativo de país.
   // Se muestra el valor CRUDO, sin formatear, para auditar cómo se está gestionando.
@@ -408,7 +408,7 @@ function AlertasPage() {
 
         {tab === "pops_tel_invalido" && (
           <DataTable
-            title="POPS Inconsistencias en Líneas (campo Numero_Telefono)"
+            title="Líneas POPS Inconsistentes (campo Numero_Telefono)"
             rows={popsTelInvalido}
             searchKeys={["valor_crudo", "motivo", "codigo", "centro_costo", "ubicacion"]}
             columns={[
