@@ -194,7 +194,8 @@ function AlertasPage() {
   // "Líneas POPS Inconsistentes": el campo Numero_Telefono del Inventario POPS
   // se captura como texto libre. Se detectan (a) valores con letras o caracteres
   // especiales y (b) valores que solo traen el indicativo de país.
-  // Se muestra el valor CRUDO, sin formatear, para auditar cómo se está gestionando.
+  // Además se cruza con Dispositivos UEM (por IMEI = POPS.codigo) y solo se
+  // muestran los equipos activos: último check-in con 15 días o menos de inactividad.
   const popsTelInvalido = pops
     .map((p) => {
       const raw = p.numero_telefono == null ? "" : String(p.numero_telefono);
@@ -213,6 +214,12 @@ function AlertasPage() {
       else if (soloIndicativo) motivo = "Solo indicativo de país";
       if (!motivo) return null;
 
+      // Cruce con Dispositivos UEM por IMEI
+      const d = p.codigo ? dispByImei.get(String(p.codigo)) : undefined;
+      const dias = diffDays(d?.ultimo_checkin);
+      // Solo dispositivos activos/con actividad reciente (<= 15 días)
+      if (dias == null || dias > 15) return null;
+
       return {
         valor_crudo: raw,
         motivo,
@@ -220,14 +227,19 @@ function AlertasPage() {
         codigo: p.codigo ?? "—",
         centro_costo: p.centro_costo ?? "—",
         ubicacion: p.ubicacion ?? "—",
-        modelo: p.modelo ?? "—",
-        estado: p.estado ?? "—",
+        modelo: d?.modelo ?? p.modelo ?? "—",
+        estado: d?.estado ?? p.estado ?? "—",
+        ultimo_checkin: d?.ultimo_checkin ?? "—",
+        dias,
       };
     })
-    .filter(Boolean) as {
+    .filter(Boolean)
+    .sort((a: any, b: any) => (a.dias ?? 0) - (b.dias ?? 0)) as {
       valor_crudo: string; motivo: string; digitos: string; codigo: string;
       centro_costo: string; ubicacion: string; modelo: string; estado: string;
+      ultimo_checkin: string; dias: number;
     }[];
+
 
   const counts: Record<TabKey, number> = {
     sin_uso: sinUso.length,
