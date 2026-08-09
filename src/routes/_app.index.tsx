@@ -267,12 +267,25 @@ function Dashboard() {
           <KpiCard label="Total Dispositivos" value={disp.length.toLocaleString("es-CO")} icon={Smartphone} accent="info" />
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <BadgeStat tone="red" count={sinUso30} label="Sin uso >30d" />
-          <BadgeStat tone="red" count={sinEquipo} label="Sin equipo" />
-          <BadgeStat tone="blue" count={popsSinCC} label="POPS sin centro" />
-          <BadgeStat tone="amber" count={inconsistencias} label="Sin línea asociada" />
-        </div>
+        {[
+          { tone: "red" as const, count: sinUso30, label: "Sin uso >30d" },
+          { tone: "red" as const, count: sinEquipo, label: "Sin equipo" },
+          { tone: "blue" as const, count: popsSinCC, label: "POPS sin centro" },
+          { tone: "amber" as const, count: inconsistencias, label: "Sin línea asociada" },
+        ].filter((b) => b.count > 0).length > 0 && (
+          <div className="flex flex-wrap gap-3">
+            {[
+              { tone: "red" as const, count: sinUso30, label: "Sin uso >30d" },
+              { tone: "red" as const, count: sinEquipo, label: "Sin equipo" },
+              { tone: "blue" as const, count: popsSinCC, label: "POPS sin centro" },
+              { tone: "amber" as const, count: inconsistencias, label: "Sin línea asociada" },
+            ]
+              .filter((b) => b.count > 0)
+              .map((b) => (
+                <BadgeStat key={b.label} tone={b.tone} count={b.count} label={b.label} />
+              ))}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
