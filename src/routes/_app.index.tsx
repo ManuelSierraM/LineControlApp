@@ -148,17 +148,17 @@ function Dashboard() {
   const ahorroTotal = ahorroSinUso + ahorroSinEquipo;
 
   const chartData = [
-    { name: "Sin uso", valor: ahorroSinUso },
-    { name: "Sin equipo", valor: ahorroSinEquipo },
+    { name: "Sin uso", tableName: "Equipos sin uso >30 días", valor: ahorroSinUso },
+    { name: "Sin equipo", tableName: "Líneas activas sin dispositivo asociado", valor: ahorroSinEquipo },
   ];
 
   // Alertas de dispositivos (gráfico vertical): mismos criterios que la sección Alertas.
   // Cubre "Sin uso" (UEM >30d), "POPS sin centro", "Sin línea asociada" e "IMEI duplicado".
   const dispAlertData = [
-    { name: "Sin uso", cantidad: sinUso30 },
-    { name: "POPS sin centro", cantidad: popsSinCC },
-    { name: "Sin línea asociada", cantidad: inconsistencias },
-    { name: "IMEI duplicado", cantidad: imeiDuplicados },
+    { name: "Sin uso", tableName: "Equipos sin uso >30 días", cantidad: sinUso30 },
+    { name: "POPS sin centro", tableName: "Dispositivos sin centro asignado", cantidad: popsSinCC },
+    { name: "Sin línea asociada", tableName: "Dispositivos sin línea asociada", cantidad: inconsistencias },
+    { name: "IMEI duplicado", tableName: "IMEI duplicados en Dispositivos UEM", cantidad: imeiDuplicados },
   ].filter((d) => d.cantidad > 0)
     .sort((a, b) => b.cantidad - a.cantidad);
 
