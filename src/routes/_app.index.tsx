@@ -279,20 +279,25 @@ function Dashboard() {
             <h3 className="font-semibold">Ahorro Potencial por Categoría</h3>
             <p className="text-xs text-muted-foreground">Distribución del ahorro mensual identificado</p>
             <div className="mt-4 h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis type="number" tickFormatter={(v) => fmtMoney(v as number)} stroke="var(--color-muted-foreground)" fontSize={12} />
-                  <YAxis dataKey="name" type="category" stroke="var(--color-muted-foreground)" fontSize={12} width={100} />
-                  <Tooltip
-                    formatter={(v: number) => fmtMoney(v)}
-                    labelFormatter={(_label, payload: any[]) => payload?.[0]?.payload?.tableName ?? _label}
-                    contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }}
-                  />
-                  <Bar dataKey="valor" fill="var(--color-primary)" radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {chartData.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">No se identifico ningún ahorro posible</p>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <XAxis type="number" tickFormatter={(v) => fmtMoney(v as number)} stroke="var(--color-muted-foreground)" fontSize={12} />
+                    <YAxis dataKey="name" type="category" stroke="var(--color-muted-foreground)" fontSize={12} width={100} />
+                    <Tooltip
+                      formatter={(v: number) => fmtMoney(v)}
+                      labelFormatter={(_label, payload: any[]) => payload?.[0]?.payload?.tableName ?? _label}
+                      contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }}
+                    />
+                    <Bar dataKey="valor" fill="var(--color-primary)" radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
+
           </div>
 
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
