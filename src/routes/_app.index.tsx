@@ -144,10 +144,37 @@ function Dashboard() {
   }
   const imeiDuplicados = Array.from(imeiCount.values()).filter((n) => n > 1).length;
 
+  // Líneas POPS Inconsistentes: campo Numero_Telefono de POPS con letras, caracteres especiales
+  // o solo indicativo de país. Se cruza con UEM por IMEI y solo se cuenta actividad <= 15 días.
+  const popsTelInvalidoCount = pops
+    .map((p) => {
+      const raw = p.numero_telefono == null ? "" : String(p.numero_telefono);
+      const v = raw.trim();
+      if (!v) return null;
+      const digitos = v.replace(/\D/g, "");
+      const tieneLetras = /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(v);
+      const tieneEspeciales = /[^\d+\s()\-]/.test(v.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
+      const soloIndicativo = digitos.length > 0 && digitos.length <= 3 && /^0?57$|^\d{1,3}$/.test(digitos);
+
+      let motivo: string | null = null;
+      if (tieneLetras && tieneEspeciales) motivo = "Letras y caracteres especiales";
+      else if (tieneLetras) motivo = "Contiene letras";
+      else if (tieneEspeciales) motivo = "Caracteres especiales";
+      else if (soloIndicativo) motivo = "Solo indicativo de país";
+      if (!motivo) return null;
+
+      const d = p.codigo ? dispByImei.get(String(p.codigo)) : undefined;
+      const dias = diffDays(d?.ultimo_checkin);
+      if (dias == null || dias > 15) return null;
+      return { motivo };
+    })
+    .filter(Boolean).length;
+
   // Ahorros (mismos que Reportes)
   const ahorroSinUso = sinUsoRows.reduce((s, r) => s + r.costo, 0);
   const ahorroSinEquipo = sinEquipoRows.reduce((s, l) => s + costoLinea(l), 0);
   const ahorroTotal = ahorroSinUso + ahorroSinEquipo;
+
 
   const chartData = [
     { name: "Sin uso", tableName: "Equipos sin uso >30 días", valor: ahorroSinUso },
