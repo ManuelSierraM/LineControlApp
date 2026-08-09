@@ -423,7 +423,7 @@ function AlertasPage() {
           <DataTable
             title="Líneas POPS Inconsistentes (dispositivos activos, ≤15 días)"
             rows={popsTelInvalido}
-            searchKeys={["valor_crudo", "motivo", "codigo", "centro_costo", "ubicacion"]}
+            searchKeys={["valor_crudo", "motivo", "codigo", "centro_costo"]}
             columns={[
               {
                 key: "valor_crudo",
@@ -454,7 +454,6 @@ function AlertasPage() {
                 ),
               },
               { key: "centro_costo", header: "Centro" },
-              { key: "ubicacion", header: "Delegación" },
               { key: "modelo", header: "Modelo" },
               { key: "estado", header: "Estado" },
             ]}
