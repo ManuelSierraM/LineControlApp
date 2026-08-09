@@ -179,7 +179,8 @@ function Dashboard() {
   const chartData = [
     { name: "Sin uso", tableName: "Equipos sin uso >30 días", valor: ahorroSinUso },
     { name: "Sin equipo", tableName: "Líneas activas sin dispositivo asociado", valor: ahorroSinEquipo },
-  ];
+  ].filter((d) => d.valor > 0);
+
 
   // Alertas de dispositivos (gráfico vertical): mismos criterios que la sección Alertas.
   // Cubre "Sin uso" (UEM >30d), "POPS sin centro", "Sin línea asociada", "IMEI duplicado" y "Líneas POPS Inconsistentes".
