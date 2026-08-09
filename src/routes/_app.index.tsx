@@ -148,17 +148,17 @@ function Dashboard() {
   const ahorroTotal = ahorroSinUso + ahorroSinEquipo;
 
   const chartData = [
-    { name: "Sin uso", valor: ahorroSinUso },
-    { name: "Sin equipo", valor: ahorroSinEquipo },
+    { name: "Sin uso", tableName: "Equipos sin uso >30 días", valor: ahorroSinUso },
+    { name: "Sin equipo", tableName: "Líneas activas sin dispositivo asociado", valor: ahorroSinEquipo },
   ];
 
   // Alertas de dispositivos (gráfico vertical): mismos criterios que la sección Alertas.
   // Cubre "Sin uso" (UEM >30d), "POPS sin centro", "Sin línea asociada" e "IMEI duplicado".
   const dispAlertData = [
-    { name: "Sin uso", cantidad: sinUso30 },
-    { name: "POPS sin centro", cantidad: popsSinCC },
-    { name: "Sin línea asociada", cantidad: inconsistencias },
-    { name: "IMEI duplicado", cantidad: imeiDuplicados },
+    { name: "Sin uso", tableName: "Equipos sin uso >30 días", cantidad: sinUso30 },
+    { name: "POPS sin centro", tableName: "Dispositivos sin centro asignado", cantidad: popsSinCC },
+    { name: "Sin línea asociada", tableName: "Dispositivos sin línea asociada", cantidad: inconsistencias },
+    { name: "IMEI duplicado", tableName: "IMEI duplicados en Dispositivos UEM", cantidad: imeiDuplicados },
   ].filter((d) => d.cantidad > 0)
     .sort((a, b) => b.cantidad - a.cantidad);
 
@@ -252,7 +252,11 @@ function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                   <XAxis type="number" tickFormatter={(v) => fmtMoney(v as number)} stroke="var(--color-muted-foreground)" fontSize={12} />
                   <YAxis dataKey="name" type="category" stroke="var(--color-muted-foreground)" fontSize={12} width={100} />
-                  <Tooltip formatter={(v: number) => fmtMoney(v)} contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }} />
+                  <Tooltip
+                    formatter={(v: number) => fmtMoney(v)}
+                    labelFormatter={(_label, payload: any[]) => payload?.[0]?.payload?.tableName ?? _label}
+                    contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }}
+                  />
                   <Bar dataKey="valor" fill="var(--color-primary)" radius={[0, 6, 6, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -279,6 +283,7 @@ function Dashboard() {
                     />
                     <Tooltip
                       formatter={(v: number) => [Number(v).toLocaleString("es-CO"), "Alertas"]}
+                      labelFormatter={(_label, payload: any[]) => payload?.[0]?.payload?.tableName ?? _label}
                       contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }}
                     />
                     <Bar dataKey="cantidad" fill="var(--color-chart-5)" radius={[6, 6, 0, 0]} maxBarSize={64} />
