@@ -421,7 +421,7 @@ function AlertasPage() {
 
         {tab === "pops_tel_invalido" && (
           <DataTable
-            title="Líneas POPS Inconsistentes (campo Numero_Telefono)"
+            title="Líneas POPS Inconsistentes (dispositivos activos, ≤15 días)"
             rows={popsTelInvalido}
             searchKeys={["valor_crudo", "motivo", "codigo", "centro_costo", "ubicacion"]}
             columns={[
@@ -443,6 +443,16 @@ function AlertasPage() {
               },
               { key: "digitos", header: "Dígitos detectados" },
               { key: "codigo", header: "IMEI" },
+              { key: "ultimo_checkin", header: "Último check-in" },
+              {
+                key: "dias",
+                header: "Días inactivo",
+                render: (r) => (
+                  <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">
+                    {r.dias} días
+                  </span>
+                ),
+              },
               { key: "centro_costo", header: "Centro" },
               { key: "ubicacion", header: "Delegación" },
               { key: "modelo", header: "Modelo" },
