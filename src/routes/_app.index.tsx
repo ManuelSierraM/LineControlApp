@@ -252,7 +252,7 @@ function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                   <XAxis type="number" tickFormatter={(v) => fmtMoney(v as number)} stroke="var(--color-muted-foreground)" fontSize={12} />
                   <YAxis dataKey="name" type="category" stroke="var(--color-muted-foreground)" fontSize={12} width={100} />
-                  <Tooltip formatter={(v: number) => fmtMoney(v)} contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }} />
+                  <Tooltip formatter={(v: number, _n: string, props: any) => [fmtMoney(v), props?.payload?.name]} labelFormatter={() => ""} contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }} />
                   <Bar dataKey="valor" fill="var(--color-primary)" radius={[0, 6, 6, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -278,7 +278,8 @@ function Dashboard() {
                       width={60}
                     />
                     <Tooltip
-                      formatter={(v: number) => [Number(v).toLocaleString("es-CO"), "Alertas"]}
+                      formatter={(v: number, _n: string, props: any) => [Number(v).toLocaleString("es-CO"), props?.payload?.name]}
+                      labelFormatter={() => ""}
                       contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }}
                     />
                     <Bar dataKey="cantidad" fill="var(--color-chart-5)" radius={[6, 6, 0, 0]} maxBarSize={64} />
