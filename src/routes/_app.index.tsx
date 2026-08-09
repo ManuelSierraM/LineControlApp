@@ -182,14 +182,16 @@ function Dashboard() {
   ];
 
   // Alertas de dispositivos (gráfico vertical): mismos criterios que la sección Alertas.
-  // Cubre "Sin uso" (UEM >30d), "POPS sin centro", "Sin línea asociada" e "IMEI duplicado".
+  // Cubre "Sin uso" (UEM >30d), "POPS sin centro", "Sin línea asociada", "IMEI duplicado" y "Líneas POPS Inconsistentes".
   const dispAlertData = [
     { name: "Sin uso", tableName: "Equipos sin uso >30 días", cantidad: sinUso30 },
     { name: "POPS sin centro", tableName: "Dispositivos sin centro asignado", cantidad: popsSinCC },
     { name: "Sin línea asociada", tableName: "Dispositivos sin línea asociada", cantidad: inconsistencias },
     { name: "IMEI duplicado", tableName: "IMEI duplicados en Dispositivos UEM", cantidad: imeiDuplicados },
+    { name: "Líneas POPS Inconsistentes", tableName: "Líneas POPS con formato inválido", cantidad: popsTelInvalidoCount },
   ].filter((d) => d.cantidad > 0)
     .sort((a, b) => b.cantidad - a.cantidad);
+
 
 
 
