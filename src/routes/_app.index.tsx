@@ -85,7 +85,8 @@ function Dashboard() {
     });
 
 
-  // Lookups por teléfono para resolver IMEI (UEM > POPS)
+  // Lookups por teléfono / IMEI para resolver alertas cruzadas
+  const dispByImei = new Map(disp.map((d) => [d.imei, d]));
   const dispByPhone = new Map<string, (typeof disp)[number]>();
   for (const d of disp) {
     const key = normPhone(d.numero_telefono);
@@ -96,6 +97,7 @@ function Dashboard() {
     const key = normPhone(p.numero_telefono);
     if (key) popsByPhone.set(key, p);
   }
+
 
   // Enriquecimiento de líneas con IMEI resuelto
   const lineas = lineasRaw.map((l) => {
