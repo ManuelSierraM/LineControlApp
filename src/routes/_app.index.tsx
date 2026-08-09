@@ -85,7 +85,8 @@ function Dashboard() {
     });
 
 
-  // Lookups por teléfono para resolver IMEI (UEM > POPS)
+  // Lookups por teléfono / IMEI para resolver alertas cruzadas
+  const dispByImei = new Map(disp.map((d) => [d.imei, d]));
   const dispByPhone = new Map<string, (typeof disp)[number]>();
   for (const d of disp) {
     const key = normPhone(d.numero_telefono);
@@ -96,6 +97,7 @@ function Dashboard() {
     const key = normPhone(p.numero_telefono);
     if (key) popsByPhone.set(key, p);
   }
+
 
   // Enriquecimiento de líneas con IMEI resuelto
   const lineas = lineasRaw.map((l) => {
@@ -142,10 +144,37 @@ function Dashboard() {
   }
   const imeiDuplicados = Array.from(imeiCount.values()).filter((n) => n > 1).length;
 
+  // Líneas POPS Inconsistentes: campo Numero_Telefono de POPS con letras, caracteres especiales
+  // o solo indicativo de país. Se cruza con UEM por IMEI y solo se cuenta actividad <= 15 días.
+  const popsTelInvalidoCount = pops
+    .map((p) => {
+      const raw = p.numero_telefono == null ? "" : String(p.numero_telefono);
+      const v = raw.trim();
+      if (!v) return null;
+      const digitos = v.replace(/\D/g, "");
+      const tieneLetras = /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(v);
+      const tieneEspeciales = /[^\d+\s()\-]/.test(v.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
+      const soloIndicativo = digitos.length > 0 && digitos.length <= 3 && /^0?57$|^\d{1,3}$/.test(digitos);
+
+      let motivo: string | null = null;
+      if (tieneLetras && tieneEspeciales) motivo = "Letras y caracteres especiales";
+      else if (tieneLetras) motivo = "Contiene letras";
+      else if (tieneEspeciales) motivo = "Caracteres especiales";
+      else if (soloIndicativo) motivo = "Solo indicativo de país";
+      if (!motivo) return null;
+
+      const d = p.codigo ? dispByImei.get(String(p.codigo)) : undefined;
+      const dias = diffDays(d?.ultimo_checkin);
+      if (dias == null || dias > 15) return null;
+      return { motivo };
+    })
+    .filter(Boolean).length;
+
   // Ahorros (mismos que Reportes)
   const ahorroSinUso = sinUsoRows.reduce((s, r) => s + r.costo, 0);
   const ahorroSinEquipo = sinEquipoRows.reduce((s, l) => s + costoLinea(l), 0);
   const ahorroTotal = ahorroSinUso + ahorroSinEquipo;
+
 
   const chartData = [
     { name: "Sin uso", tableName: "Equipos sin uso >30 días", valor: ahorroSinUso },
@@ -153,14 +182,16 @@ function Dashboard() {
   ];
 
   // Alertas de dispositivos (gráfico vertical): mismos criterios que la sección Alertas.
-  // Cubre "Sin uso" (UEM >30d), "POPS sin centro", "Sin línea asociada" e "IMEI duplicado".
+  // Cubre "Sin uso" (UEM >30d), "POPS sin centro", "Sin línea asociada", "IMEI duplicado" y "Líneas POPS Inconsistentes".
   const dispAlertData = [
     { name: "Sin uso", tableName: "Equipos sin uso >30 días", cantidad: sinUso30 },
     { name: "POPS sin centro", tableName: "Dispositivos sin centro asignado", cantidad: popsSinCC },
     { name: "Sin línea asociada", tableName: "Dispositivos sin línea asociada", cantidad: inconsistencias },
     { name: "IMEI duplicado", tableName: "IMEI duplicados en Dispositivos UEM", cantidad: imeiDuplicados },
+    { name: "Líneas POPS Inconsistentes", tableName: "Líneas POPS con formato inválido", cantidad: popsTelInvalidoCount },
   ].filter((d) => d.cantidad > 0)
     .sort((a, b) => b.cantidad - a.cantidad);
+
 
 
 
