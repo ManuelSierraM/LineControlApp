@@ -199,7 +199,7 @@ function AlertasPage() {
       const tieneLetras = /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(v);
       // Se toleran "+", espacios, guiones y paréntesis como formato habitual.
       const tieneEspeciales = /[^\d+\s()\-]/.test(v.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
-      const soloIndicativo = digitos.length > 0 && digitos.length <= 3 && /^0?57$|^\d{1,3}$/.test(digitos);
+      const soloIndicativo = digitos.length > 0 && digitos.length <= 3 && isCountryCode(digitos);
 
       let motivo: string | null = null;
       if (tieneLetras && tieneEspeciales) motivo = "Letras y caracteres especiales";
