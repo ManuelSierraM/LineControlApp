@@ -74,3 +74,8 @@ export function coercePhone(p?: string | null): string | null {
   const normalized = normalizePhone(raw);
   return normalized || raw;
 }
+
+/** Indica si una cadena de solo dígitos corresponde a un indicativo de país. */
+export function isCountryCode(digits: string): boolean {
+  return COUNTRY_CODES.includes(digits);
+}
