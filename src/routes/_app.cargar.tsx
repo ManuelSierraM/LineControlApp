@@ -49,7 +49,7 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
       { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del dispositivo", target: "imei" },
       { columna: "Modelo", ejemplo: "Galaxy S22", requerido: false, nota: "Modelo del equipo", target: "modelo" },
       { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Se quita el indicativo de país (+57, 0057, +1, etc.) de cualquier país. Puede venir vacío.", target: "numero_telefono" },
-      { columna: "Last_CheckIn", ejemplo: "2025-04-12", requerido: true, nota: "Último reporte UEM (YYYY-MM-DD)", target: "ultimo_checkin" },
+      { columna: "Last_CheckIn", ejemplo: "12-04-2025", requerido: true, nota: "Último reporte UEM (DD-MM-YYYY)", target: "ultimo_checkin" },
       { columna: "Estado_UEM", ejemplo: "ACTIVO", requerido: true, nota: "Estado en plataforma UEM", target: "estado" },
       { columna: "País", ejemplo: "Colombia", requerido: false, nota: "País de operación" },
       { columna: "Usuario", ejemplo: "jperez@empresa.com", requerido: false, nota: "Usuario asignado", target: "asignado_a" },
