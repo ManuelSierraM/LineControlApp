@@ -505,6 +505,9 @@ function CargarPage() {
           }
           if (res.warn) warnings.push({ row: rowNum, field: rule.columna, warn: res.warn });
           if (rule.target) coerced[rule.target] = res.coerced;
+          if (rule.normalize === "phone" && rule.target) {
+            coerced[rule.target] = coercePhone(coerced[rule.target] ?? raw);
+          }
           if (rule.unique && res.coerced != null) {
             const key = String(res.coerced);
             if (!uniqueTrack.has(rule.columna)) uniqueTrack.set(rule.columna, new Map());
