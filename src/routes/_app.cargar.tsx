@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { useAuth } from "@/lib/auth";
-import { coercePhone } from "@/lib/utils";
+import { coercePhone, normalizePhone } from "@/lib/utils";
 import { useRoles } from "@/lib/roles";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
