@@ -83,6 +83,7 @@ type FieldRule = {
   max?: number;
   enum?: string[];
   unique?: boolean;
+  normalize?: "phone";
   hint: string;
 };
 
