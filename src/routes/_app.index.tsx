@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
+import { normalizePhone } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/")({ component: Dashboard });
 
@@ -13,14 +14,7 @@ function fmtMoney(n: number) {
 }
 
 function normPhone(p?: string | null) {
-  if (!p) return "";
-  const raw = String(p).trim();
-  if (!raw) return "";
-  if (/[a-zA-Z]/.test(raw)) return "";
-  let s = raw.replace(/[^\d]/g, "");
-  if (!s) return "";
-  if (s.startsWith("57") && s.length > 10) s = s.slice(2);
-  return s;
+  return normalizePhone(p);
 }
 
 function diffDays(d?: string | null) {

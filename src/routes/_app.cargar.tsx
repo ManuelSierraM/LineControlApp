@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { useAuth } from "@/lib/auth";
+import { coercePhone, normalizePhone } from "@/lib/utils";
 import { useRoles } from "@/lib/roles";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
@@ -32,7 +33,7 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     fields: [
       { columna: "OPERADOR", ejemplo: "CLARO", requerido: true, nota: "Nombre del operador", target: "operador" },
       { columna: "TIPO_DE_LINEA", ejemplo: "VOZ+DATOS", requerido: false, nota: "Tipo de servicio" },
-      { columna: "TELE_NUMB", ejemplo: "3001234567", requerido: false, nota: "Número de la línea (MSISDN). Texto libre, puede venir vacío.", target: "msisdn" },
+      { columna: "TELE_NUMB", ejemplo: "3001234567", requerido: false, nota: "Número de la línea (MSISDN). Se quita el indicativo de país (+57, 0057, +1, etc.) de cualquier país. Puede venir vacío.", target: "msisdn" },
       { columna: "NOMBRE_CLIENTE", ejemplo: "vigilancia", requerido: false, nota: "Nombre del usuario asignado", target: "nombre_cliente" },
       { columna: "Cod Empresa", ejemplo: "CO0070", requerido: false, nota: "Código de empresa", target: "cod_empresa" },
 
@@ -47,7 +48,7 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     fields: [
       { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del dispositivo", target: "imei" },
       { columna: "Modelo", ejemplo: "Galaxy S22", requerido: false, nota: "Modelo del equipo", target: "modelo" },
-      { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Texto libre, puede venir vacío.", target: "numero_telefono" },
+      { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Se quita el indicativo de país (+57, 0057, +1, etc.) de cualquier país. Puede venir vacío.", target: "numero_telefono" },
       { columna: "Last_CheckIn", ejemplo: "2025-04-12", requerido: true, nota: "Último reporte UEM (YYYY-MM-DD)", target: "ultimo_checkin" },
       { columna: "Estado_UEM", ejemplo: "ACTIVO", requerido: true, nota: "Estado en plataforma UEM", target: "estado" },
       { columna: "País", ejemplo: "Colombia", requerido: false, nota: "País de operación" },
@@ -59,7 +60,7 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     archivo: "POPS_Inventory.xlsx",
     fields: [
       { columna: "IMEI", ejemplo: "356938035643809", requerido: false, nota: "IMEI del equipo. Puede venir vacío.", target: "codigo" },
-      { columna: "Numero_Telefono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Texto libre, puede venir vacío.", target: "numero_telefono" },
+      { columna: "Numero_Telefono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Se quita el indicativo de país (+57, 0057, +1, etc.) de cualquier país. Texto libre, puede venir vacío.", target: "numero_telefono" },
       { columna: "Centro", ejemplo: "CC-100", requerido: false, nota: "Centro de costo. Puede venir vacío.", target: "centro_costo" },
       { columna: "Delegación", ejemplo: "Bogotá Norte", requerido: false, nota: "Delegación o sede. Puede venir vacío.", target: "ubicacion" },
       { columna: "Fecha_Alta", ejemplo: "2024-01-15", requerido: false, nota: "Fecha de alta del equipo (YYYY-MM-DD)", target: "fecha_alta" },
@@ -82,6 +83,7 @@ type FieldRule = {
   max?: number;
   enum?: string[];
   unique?: boolean;
+  normalize?: "phone" | "phone-strict";
   hint: string;
 };
 
@@ -89,7 +91,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
   lineas: [
     { columna: "OPERADOR", target: "operador", required: true, type: "text", maxLen: 50, hint: "Texto, ej. CLARO / TIGO / MOVISTAR (máx. 50)." },
     { columna: "TIPO_DE_LINEA", type: "text", maxLen: 50, hint: "Texto, ej. VOZ+DATOS." },
-    { columna: "TELE_NUMB", target: "msisdn", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
+    { columna: "TELE_NUMB", target: "msisdn", type: "text", normalize: "phone-strict", hint: "Texto libre. Se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.)." },
     { columna: "NOMBRE_CLIENTE", target: "nombre_cliente", type: "text", maxLen: 100, hint: "Texto (máx. 100)." },
     { columna: "Cod Empresa", target: "cod_empresa", type: "text", maxLen: 30, hint: "Texto corto, ej. CO0070 (máx. 30)." },
     { columna: "ICCID", target: "iccid", required: true, type: "digits", minLen: 18, maxLen: 22, hint: "Solo dígitos, 18–22 caracteres." },
@@ -99,7 +101,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
   dispositivos: [
     { columna: "IMEI", target: "imei", required: true, type: "digits", minLen: 14, maxLen: 16, hint: "Solo dígitos, 14–16 caracteres. Se permiten repetidos (se reportan en la alerta IMEI duplicado)." },
     { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
-    { columna: "Número_Teléfono", target: "numero_telefono", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
+    { columna: "Número_Teléfono", target: "numero_telefono", type: "text", normalize: "phone-strict", hint: "Texto libre. Se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.)." },
     { columna: "Last_CheckIn", target: "ultimo_checkin", required: true, type: "date", hint: "Fecha YYYY-MM-DD (ej. 2025-04-12)." },
     { columna: "Estado_UEM", target: "estado", required: true, type: "text", maxLen: 30, enum: ["ACTIVO","INACTIVO","SUSPENDIDO","BAJA","ENROLADO"], hint: "Valores recomendados: ACTIVO, INACTIVO, SUSPENDIDO, BAJA, ENROLADO." },
     { columna: "País", type: "text", maxLen: 40, hint: "Texto (máx. 40)." },
@@ -107,7 +109,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
   ],
   pops: [
     { columna: "IMEI", target: "codigo", required: false, type: "text", unique: true, hint: "Texto libre. Puede venir vacío." },
-    { columna: "Numero_Telefono", target: "numero_telefono", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
+    { columna: "Numero_Telefono", target: "numero_telefono", type: "text", normalize: "phone", hint: "Texto libre. Se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.). Se conservan letras o símbolos para alertas de inconsistencia." },
     { columna: "Centro", target: "centro_costo", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
     { columna: "Delegación", target: "ubicacion", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
     { columna: "Fecha_Alta", target: "fecha_alta", type: "date", hint: "Fecha YYYY-MM-DD." },
@@ -503,6 +505,12 @@ function CargarPage() {
           }
           if (res.warn) warnings.push({ row: rowNum, field: rule.columna, warn: res.warn });
           if (rule.target) coerced[rule.target] = res.coerced;
+          if (rule.normalize && rule.target) {
+            const value = coerced[rule.target] ?? raw;
+            coerced[rule.target] = rule.normalize === "phone-strict"
+              ? normalizePhone(value)
+              : coercePhone(value);
+          }
           if (rule.unique && res.coerced != null) {
             const key = String(res.coerced);
             if (!uniqueTrack.has(rule.columna)) uniqueTrack.set(rule.columna, new Map());

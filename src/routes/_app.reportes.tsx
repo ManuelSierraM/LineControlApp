@@ -11,6 +11,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
+import { normalizePhone } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/reportes")({ component: ReportesPage });
@@ -27,14 +28,7 @@ function fmtMoney(n: number) {
 }
 
 function normPhone(p?: string | null) {
-  if (!p) return "";
-  const raw = String(p).trim();
-  if (!raw) return "";
-  if (/[a-zA-Z]/.test(raw)) return "";
-  let s = raw.replace(/[^\d]/g, "");
-  if (!s) return "";
-  if (s.startsWith("57") && s.length > 10) s = s.slice(2);
-  return s;
+  return normalizePhone(p);
 }
 
 function diffDays(d?: string | null) {
