@@ -91,7 +91,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
   lineas: [
     { columna: "OPERADOR", target: "operador", required: true, type: "text", maxLen: 50, hint: "Texto, ej. CLARO / TIGO / MOVISTAR (máx. 50)." },
     { columna: "TIPO_DE_LINEA", type: "text", maxLen: 50, hint: "Texto, ej. VOZ+DATOS." },
-    { columna: "TELE_NUMB", target: "msisdn", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
+    { columna: "TELE_NUMB", target: "msisdn", type: "text", normalize: "phone", hint: "Texto libre. Se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.)." },
     { columna: "NOMBRE_CLIENTE", target: "nombre_cliente", type: "text", maxLen: 100, hint: "Texto (máx. 100)." },
     { columna: "Cod Empresa", target: "cod_empresa", type: "text", maxLen: 30, hint: "Texto corto, ej. CO0070 (máx. 30)." },
     { columna: "ICCID", target: "iccid", required: true, type: "digits", minLen: 18, maxLen: 22, hint: "Solo dígitos, 18–22 caracteres." },
@@ -101,7 +101,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
   dispositivos: [
     { columna: "IMEI", target: "imei", required: true, type: "digits", minLen: 14, maxLen: 16, hint: "Solo dígitos, 14–16 caracteres. Se permiten repetidos (se reportan en la alerta IMEI duplicado)." },
     { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
-    { columna: "Número_Teléfono", target: "numero_telefono", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
+    { columna: "Número_Teléfono", target: "numero_telefono", type: "text", normalize: "phone", hint: "Texto libre. Se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.)." },
     { columna: "Last_CheckIn", target: "ultimo_checkin", required: true, type: "date", hint: "Fecha YYYY-MM-DD (ej. 2025-04-12)." },
     { columna: "Estado_UEM", target: "estado", required: true, type: "text", maxLen: 30, enum: ["ACTIVO","INACTIVO","SUSPENDIDO","BAJA","ENROLADO"], hint: "Valores recomendados: ACTIVO, INACTIVO, SUSPENDIDO, BAJA, ENROLADO." },
     { columna: "País", type: "text", maxLen: 40, hint: "Texto (máx. 40)." },
@@ -109,7 +109,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
   ],
   pops: [
     { columna: "IMEI", target: "codigo", required: false, type: "text", unique: true, hint: "Texto libre. Puede venir vacío." },
-    { columna: "Numero_Telefono", target: "numero_telefono", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
+    { columna: "Numero_Telefono", target: "numero_telefono", type: "text", normalize: "phone", hint: "Texto libre. Se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.). Puede contener letras o símbolos para alertas de inconsistencia." },
     { columna: "Centro", target: "centro_costo", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
     { columna: "Delegación", target: "ubicacion", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
     { columna: "Fecha_Alta", target: "fecha_alta", type: "date", hint: "Fecha YYYY-MM-DD." },
