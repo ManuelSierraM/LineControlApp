@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
+import { normalizePhone } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/dispositivos")({ component: DispPage });
 
@@ -18,11 +19,7 @@ function fmtDate(d?: string | null) {
 }
 
 function normPhone(p?: string | null) {
-  if (!p) return "";
-  let s = String(p).replace(/[^\d]/g, "");
-  if (!s) return "";
-  if (s.startsWith("57") && s.length > 10) s = s.slice(2);
-  return s;
+  return normalizePhone(p);
 }
 
 function dedupeBy<T extends { created_at?: string | null }>(rows: T[], keyFn: (r: T) => string | null | undefined): T[] {
