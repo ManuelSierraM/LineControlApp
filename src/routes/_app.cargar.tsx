@@ -59,7 +59,7 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     titulo: "Inventario POPS",
     archivo: "POPS_Inventory.xlsx",
     fields: [
-      { columna: "IMEI", ejemplo: "356938035643809", requerido: false, nota: "IMEI del equipo. Puede venir vacío.", target: "codigo" },
+      { columna: "IMEI", ejemplo: "356938035643809", requerido: false, nota: "IMEI del equipo. Solo dígitos, 14–16 caracteres. Puede venir vacío.", target: "codigo" },
       { columna: "Numero_Telefono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Se quita el indicativo de país (+57, 0057, +1, etc.) de cualquier país. Texto libre, puede venir vacío.", target: "numero_telefono" },
       { columna: "Centro", ejemplo: "CC-100", requerido: false, nota: "Centro de costo. Puede venir vacío.", target: "centro_costo" },
       { columna: "Delegación", ejemplo: "Bogotá Norte", requerido: false, nota: "Delegación o sede. Puede venir vacío.", target: "ubicacion" },
@@ -108,7 +108,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
     { columna: "Usuario", target: "asignado_a", type: "text", maxLen: 120, hint: "Texto / correo (máx. 120)." },
   ],
   pops: [
-    { columna: "IMEI", target: "codigo", required: false, type: "text", unique: true, hint: "Texto libre. Puede venir vacío." },
+    { columna: "IMEI", target: "codigo", required: false, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "Solo dígitos, 14–16 caracteres. Puede venir vacío." },
     { columna: "Numero_Telefono", target: "numero_telefono", type: "text", normalize: "phone", hint: "Texto libre. Se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.). Se conservan letras o símbolos para alertas de inconsistencia." },
     { columna: "Centro", target: "centro_costo", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
     { columna: "Delegación", target: "ubicacion", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
