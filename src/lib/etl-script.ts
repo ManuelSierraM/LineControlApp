@@ -170,6 +170,9 @@ def limpiar_numero(v):
         s = s.replace(".", "").replace(",", ".")     # 1.234.567,89
     elif s.count(","):
         s = s.replace(",", ".")
+    elif re.fullmatch(r"-?\\d{1,3}(\\.\\d{3})+", s):
+        s = s.replace(".", "")                       # 45.000 -> 45000
+
     try:
         n = float(s)
     except ValueError:
