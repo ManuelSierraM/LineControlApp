@@ -494,7 +494,7 @@ function CargarPage() {
     toast.success("Template descargado");
   };
 
-  // ───────── ETL en Python (Google Colab) por cada cargue ─────────
+  // ───────── ETL de formateo por cada cargue ─────────
   const buildEtl = (tipo: Tipo) => {
     const g = GUIDES[tipo];
     const ejemploPorColumna = new Map(g.fields.map((f) => [f.columna, f.ejemplo] as const));
