@@ -45,7 +45,7 @@ function LineasPage() {
     queryFn: async () => {
       const [lineas, disp] = await Promise.all([
         fetchAll<any>("lineas", { orderBy: { column: "created_at", ascending: false } }),
-        fetchAll<any>("dispositivos", { columns: "imei,modelo,asignado_a,numero_telefono,created_at" }),
+        fetchAll<any>("dispositivos", { columns: "id,imei,modelo,asignado_a,numero_telefono,created_at" }),
       ]);
       // Maestro: NO deduplicar por msisdn/imei normalizados — cada fila del cargue
       // es un registro válido; usamos id (único) para preservar la totalidad.
