@@ -89,34 +89,35 @@ type FieldRule = {
 
 const SCHEMAS: Record<Tipo, FieldRule[]> = {
   lineas: [
-    { columna: "OPERADOR", target: "operador", required: true, type: "text", maxLen: 50, hint: "Texto, ej. CLARO / TIGO / MOVISTAR (máx. 50)." },
-    { columna: "TIPO_DE_LINEA", type: "text", maxLen: 50, hint: "Texto, ej. VOZ+DATOS." },
-    { columna: "TELE_NUMB", target: "msisdn", required: true, type: "text", normalize: "phone-strict", hint: "Obligatorio. Se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.)." },
-    { columna: "NOMBRE_CLIENTE", target: "nombre_cliente", type: "text", maxLen: 100, hint: "Texto (máx. 100)." },
-    { columna: "Cod Empresa", target: "cod_empresa", type: "text", maxLen: 30, hint: "Texto corto, ej. CO0070 (máx. 30)." },
-    { columna: "ICCID", target: "iccid", required: true, type: "digits", minLen: 18, maxLen: 22, hint: "Solo dígitos, 18–22 caracteres." },
-    { columna: "PLAN_DESC", target: "plan", type: "text", maxLen: 250, hint: "Texto (máx. 250)." },
-    { columna: "VALOR_CFM", target: "valor_plan", required: true, type: "number", min: 0, hint: "Número ≥ 0. Sin símbolos $, ni texto." },
+    { columna: "OPERADOR", target: "operador", required: true, type: "text", maxLen: 50, hint: "Operador de la línea. Texto obligatorio, ej. CLARO / TIGO / MOVISTAR (máx. 50)." },
+    { columna: "TIPO_DE_LINEA", type: "text", maxLen: 50, hint: "Tipo de servicio. Texto opcional, ej. VOZ+DATOS (máx. 50)." },
+    { columna: "TELE_NUMB", target: "msisdn", required: true, type: "text", normalize: "phone-strict", hint: "Número de la línea (MSISDN). Obligatorio. Se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.)." },
+    { columna: "NOMBRE_CLIENTE", target: "nombre_cliente", type: "text", maxLen: 100, hint: "Nombre del usuario asignado. Texto opcional (máx. 100)." },
+    { columna: "Cod Empresa", target: "cod_empresa", type: "text", maxLen: 30, hint: "Código de empresa. Texto corto opcional, ej. CO0070 (máx. 30)." },
+    { columna: "ICCID", target: "iccid", required: true, type: "digits", minLen: 18, maxLen: 22, hint: "Serial de la SIM. Obligatorio, solo dígitos, 18–22 caracteres." },
+    { columna: "PLAN_DESC", target: "plan", type: "text", maxLen: 250, hint: "Descripción del plan. Texto opcional (máx. 250)." },
+    { columna: "VALOR_CFM", target: "valor_plan", required: true, type: "number", min: 0, hint: "Costo del plan. Obligatorio, número ≥ 0, sin símbolos $ ni texto." },
   ],
   dispositivos: [
-    { columna: "IMEI", target: "imei", required: true, type: "digits", minLen: 14, maxLen: 16, hint: "Solo dígitos, 14–16 caracteres. Se permiten repetidos (se reportan en la alerta IMEI duplicado)." },
-    { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
-    { columna: "Número_Teléfono", target: "numero_telefono", type: "text", normalize: "phone-strict", hint: "Texto libre. Se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.)." },
-    { columna: "Last_CheckIn", target: "ultimo_checkin", required: true, type: "date", hint: "Fecha DD-MM-YYYY (ej. 12-04-2025)." },
-    { columna: "Estado_UEM", target: "estado", required: true, type: "text", maxLen: 30, hint: "Texto (máx. 30)." },
-    { columna: "País", type: "text", maxLen: 40, hint: "Texto (máx. 40)." },
-    { columna: "Usuario", target: "asignado_a", type: "text", maxLen: 120, hint: "Texto / correo (máx. 120)." },
+    { columna: "IMEI", target: "imei", required: true, type: "digits", minLen: 14, maxLen: 16, hint: "IMEI del dispositivo. Obligatorio, solo dígitos, 14–16 caracteres. Se permiten repetidos (se reportan en la alerta IMEI duplicado)." },
+    { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Modelo del equipo. Texto opcional (máx. 60)." },
+    { columna: "Número_Teléfono", target: "numero_telefono", type: "text", normalize: "phone-strict", hint: "Línea asociada. Texto opcional; se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.)." },
+    { columna: "Last_CheckIn", target: "ultimo_checkin", required: true, type: "date", hint: "Último reporte UEM. Obligatorio, fecha DD-MM-YYYY (ej. 12-04-2025)." },
+    { columna: "Estado_UEM", target: "estado", required: true, type: "text", maxLen: 30, hint: "Estado en plataforma UEM. Obligatorio, texto (máx. 30)." },
+    { columna: "País", type: "text", maxLen: 40, hint: "País de operación. Texto opcional (máx. 40)." },
+    { columna: "Usuario", target: "asignado_a", type: "text", maxLen: 120, hint: "Usuario asignado. Texto / correo opcional (máx. 120)." },
   ],
   pops: [
-    { columna: "IMEI", target: "codigo", required: false, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "Solo dígitos, 14–16 caracteres. Puede venir vacío." },
-    { columna: "Numero_Telefono", target: "numero_telefono", type: "text", normalize: "phone", hint: "Texto libre. Se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.). Se conservan letras o símbolos para alertas de inconsistencia." },
-    { columna: "Centro", target: "centro_costo", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
-    { columna: "Delegación", target: "ubicacion", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
-    { columna: "Fecha_Alta", target: "fecha_alta", type: "date", hint: "Fecha YYYY-MM-DD." },
-    { columna: "Fecha_Baja", target: "fecha_baja", type: "date", hint: "Fecha YYYY-MM-DD." },
-    { columna: "Modelo", target: "modelo", type: "text", hint: "Texto libre." },
+    { columna: "IMEI", target: "codigo", required: false, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "IMEI del equipo. Opcional; si viene, solo dígitos, 14–16 caracteres." },
+    { columna: "Numero_Telefono", target: "numero_telefono", type: "text", normalize: "phone", hint: "Línea asociada. Texto libre opcional; se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.). Se conservan letras o símbolos para alertas de inconsistencia." },
+    { columna: "Centro", target: "centro_costo", required: false, type: "text", hint: "Centro de costo. Texto libre opcional." },
+    { columna: "Delegación", target: "ubicacion", required: false, type: "text", hint: "Delegación o sede. Texto libre opcional." },
+    { columna: "Fecha_Alta", target: "fecha_alta", type: "date", hint: "Fecha de alta del equipo. Opcional, formato YYYY-MM-DD." },
+    { columna: "Fecha_Baja", target: "fecha_baja", type: "date", hint: "Fecha de baja si aplica. Opcional, formato YYYY-MM-DD." },
+    { columna: "Modelo", target: "modelo", type: "text", hint: "Modelo del equipo. Texto libre opcional." },
   ],
 };
+
 
 // ───────── Sincronización guía ⇄ validación previa ─────────
 // El formato guía (UI) y el template descargable se derivan del SCHEMA:
