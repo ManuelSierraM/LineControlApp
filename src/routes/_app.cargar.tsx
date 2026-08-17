@@ -492,6 +492,42 @@ function CargarPage() {
     toast.success("Template descargado");
   };
 
+  // ───────── ETL en Python (Google Colab) por cada cargue ─────────
+  const buildEtl = (tipo: Tipo) => {
+    const g = GUIDES[tipo];
+    const ejemploPorColumna = new Map(g.fields.map((f) => [f.columna, f.ejemplo] as const));
+    return buildEtlScript({
+      tipo,
+      titulo: g.titulo,
+      archivoSalida: g.archivo.replace(/\.(csv|xlsx)$/i, "") + "_limpio.xlsx",
+      dateFormat: tipo === "dispositivos" ? "DD-MM-YYYY" : "YYYY-MM-DD",
+      fields: SCHEMAS[tipo].map((r) => ({ ...r, ejemplo: ejemploPorColumna.get(r.columna) ?? "" })),
+    });
+  };
+
+  const descargarEtl = (tipo: Tipo) => {
+    const blob = new Blob([buildEtl(tipo)], { type: "text/x-python;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `etl_${tipo}_colab.py`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success("Script ETL descargado");
+  };
+
+  const copiarEtl = async (tipo: Tipo) => {
+    try {
+      await navigator.clipboard.writeText(buildEtl(tipo));
+      toast.success("Script ETL copiado al portapapeles");
+    } catch {
+      toast.error("No se pudo copiar el script");
+    }
+  };
+
+
   const handleUpload = async (tipo: Tipo, file: File) => {
     if (!user) return;
     setBusy(tipo);
