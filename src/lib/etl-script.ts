@@ -64,10 +64,10 @@ export function buildEtlScript(spec: EtlSpec): string {
 # pase la validación previa de este cargue sin errores.
 #
 # Pasos en Colab:
-#   1. Sube tu archivo fuente con el panel de archivos (icono de carpeta).
-#   2. Ajusta ARCHIVO_ENTRADA y, si tus encabezados difieren, MAPEO_COLUMNAS.
-#   3. Ejecuta todas las celdas (Entorno de ejecución > Ejecutar todo).
-#   4. Descarga el archivo limpio y súbelo en la sección "Cargar Archivos".
+#   1. Ejecuta la celda. El script te pedirá que anexes (suba) tu archivo.
+#   2. Haz clic en "Elegir archivos" y selecciona tu Excel/CSV.
+#   3. Espera a que termine el procesamiento y se descargue el archivo limpio.
+#   4. Sube el archivo limpio en la sección "Cargar Archivos" de la app.
 # =====================================================================
 
 !pip -q install pandas openpyxl xlsxwriter
@@ -77,10 +77,9 @@ import unicodedata
 import pandas as pd
 
 # ------------------------- Configuración -----------------------------
-ARCHIVO_ENTRADA = "entrada.xlsx"          # <-- nombre de tu archivo fuente
-HOJA = 0                                   # hoja de Excel (nombre o índice)
 ARCHIVO_SALIDA = "${spec.archivoSalida}"
 FORMATO_FECHA = "${spec.dateFormat}"
+HOJA = 0                                   # hoja de Excel (nombre o índice)
 
 # Si tus encabezados no coinciden, mapea:  "MI_ENCABEZADO": "COLUMNA_DESTINO"
 MAPEO_COLUMNAS = {}
@@ -178,6 +177,21 @@ def only_digits(value):
 
 
 # ------------------------- 1. EXTRACT --------------------------------
+print("=" * 60)
+print("PASO 1: ANEXA TU ARCHIVO EXCEL/CSV")
+print("=" * 60)
+print("Haz clic en 'Elegir archivos' abajo y selecciona tu archivo fuente.")
+print("")
+
+from google.colab import files
+uploaded = files.upload()
+
+if not uploaded:
+    raise SystemExit("No se anexó ningún archivo. Ejecuta de nuevo la celda.")
+
+ARCHIVO_ENTRADA = list(uploaded.keys())[0]
+print(f"Archivo anexado: {ARCHIVO_ENTRADA}")
+
 if ARCHIVO_ENTRADA.lower().endswith(".csv"):
     df = pd.read_csv(ARCHIVO_ENTRADA, dtype=str, keep_default_na=False, sep=None, engine="python")
 else:
