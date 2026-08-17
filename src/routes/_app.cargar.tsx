@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter, Download, AlertTriangle, XCircle, X } from "lucide-react";
+import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter, Download, AlertTriangle, XCircle, X, FileCode2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { useAuth } from "@/lib/auth";
 import { coercePhone, normalizePhone } from "@/lib/utils";
+import { buildEtlScript } from "@/lib/etl-script";
+
 import { useRoles } from "@/lib/roles";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
@@ -492,6 +494,42 @@ function CargarPage() {
     toast.success("Template descargado");
   };
 
+  // ───────── ETL en Python (Google Colab) por cada cargue ─────────
+  const buildEtl = (tipo: Tipo) => {
+    const g = GUIDES[tipo];
+    const ejemploPorColumna = new Map(g.fields.map((f) => [f.columna, f.ejemplo] as const));
+    return buildEtlScript({
+      tipo,
+      titulo: g.titulo,
+      archivoSalida: g.archivo.replace(/\.(csv|xlsx)$/i, "") + "_limpio.xlsx",
+      dateFormat: tipo === "dispositivos" ? "DD-MM-YYYY" : "YYYY-MM-DD",
+      fields: SCHEMAS[tipo].map((r) => ({ ...r, ejemplo: ejemploPorColumna.get(r.columna) ?? "" })),
+    });
+  };
+
+  const descargarEtl = (tipo: Tipo) => {
+    const blob = new Blob([buildEtl(tipo)], { type: "text/x-python;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `etl_${tipo}_colab.py`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success("Script ETL descargado");
+  };
+
+  const copiarEtl = async (tipo: Tipo) => {
+    try {
+      await navigator.clipboard.writeText(buildEtl(tipo));
+      toast.success("Script ETL copiado al portapapeles");
+    } catch {
+      toast.error("No se pudo copiar el script");
+    }
+  };
+
+
   const handleUpload = async (tipo: Tipo, file: File) => {
     if (!user) return;
     setBusy(tipo);
@@ -690,12 +728,22 @@ function CargarPage() {
               Archivo sugerido: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{guide?.archivo}</code>
             </DialogDescription>
             {guideTipo && (
-              <div className="pt-2">
+              <div className="flex flex-wrap items-center gap-2 pt-2">
                 <Button size="sm" variant="secondary" onClick={() => descargarTemplate(guideTipo)}>
                   <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar template Excel
                 </Button>
+                <Button size="sm" variant="outline" onClick={() => descargarEtl(guideTipo)}>
+                  <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL Python (Colab)
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => copiarEtl(guideTipo)}>
+                  <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar ETL
+                </Button>
+                <p className="w-full text-xs text-muted-foreground">
+                  El ETL es específico de este cargue y replica su validación previa: normaliza teléfonos, fechas, IMEI/ICCID y montos, descarta filas inválidas y entrega un Excel listo para subir.
+                </p>
               </div>
             )}
+
           </DialogHeader>
           {guide && (
             <div className="max-h-[60vh] overflow-auto rounded-md border border-border">
