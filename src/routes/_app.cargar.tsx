@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { useAuth } from "@/lib/auth";
 import { coercePhone, normalizePhone } from "@/lib/utils";
+import { buildEtlScript } from "@/lib/etl-script";
+
 import { useRoles } from "@/lib/roles";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
