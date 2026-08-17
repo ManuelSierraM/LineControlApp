@@ -728,12 +728,22 @@ function CargarPage() {
               Archivo sugerido: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{guide?.archivo}</code>
             </DialogDescription>
             {guideTipo && (
-              <div className="pt-2">
+              <div className="flex flex-wrap items-center gap-2 pt-2">
                 <Button size="sm" variant="secondary" onClick={() => descargarTemplate(guideTipo)}>
                   <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar template Excel
                 </Button>
+                <Button size="sm" variant="outline" onClick={() => descargarEtl(guideTipo)}>
+                  <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL Python (Colab)
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => copiarEtl(guideTipo)}>
+                  <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar ETL
+                </Button>
+                <p className="w-full text-xs text-muted-foreground">
+                  El ETL es específico de este cargue y replica su validación previa: normaliza teléfonos, fechas, IMEI/ICCID y montos, descarta filas inválidas y entrega un Excel listo para subir.
+                </p>
               </div>
             )}
+
           </DialogHeader>
           {guide && (
             <div className="max-h-[60vh] overflow-auto rounded-md border border-border">
