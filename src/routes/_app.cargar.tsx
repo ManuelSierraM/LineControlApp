@@ -118,7 +118,39 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
   ],
 };
 
+// ───────── Sincronización guía ⇄ validación previa ─────────
+// El formato guía (UI) y el template descargable se derivan del SCHEMA:
+// obligatoriedad y nota siempre reflejan exactamente la validación previa.
+(function syncGuidesWithSchemas() {
+  (Object.keys(GUIDES) as Tipo[]).forEach((tipo) => {
+    const rules = SCHEMAS[tipo];
+    const guide = GUIDES[tipo];
+
+    // 1) Toda columna del schema debe existir en la guía (mismo orden que el schema).
+    const byColumna = new Map(guide.fields.map((f) => [normKey(f.columna), f] as const));
+    guide.fields = rules.map((rule) => {
+      const existing = byColumna.get(normKey(rule.columna));
+      const base: GuideField = existing ?? {
+        columna: rule.columna,
+        ejemplo: "",
+        requerido: false,
+        nota: "",
+        ...(rule.target ? { target: rule.target } : {}),
+      };
+      // 2) Obligatoriedad y nota derivadas del schema.
+      return {
+        ...base,
+        columna: rule.columna,
+        target: rule.target ?? base.target,
+        requerido: !!rule.required,
+        nota: rule.hint,
+      };
+    });
+  });
+})();
+
 function normKey(s: string) { return String(s).toLowerCase().trim().replace(/\s+/g, "_"); }
+
 
 function getCell(row: Record<string, any>, columna: string) {
   if (row[columna] !== undefined) return row[columna];
