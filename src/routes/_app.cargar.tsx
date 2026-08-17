@@ -494,18 +494,32 @@ function CargarPage() {
     toast.success("Template descargado");
   };
 
-  // ───────── ETL de formateo por cada cargue ─────────
+  // ───────── ETL de formateo por cada cargue (derivado del template guía) ─────────
   const buildEtl = (tipo: Tipo) => {
     const g = GUIDES[tipo];
-    const ejemploPorColumna = new Map(g.fields.map((f) => [f.columna, f.ejemplo] as const));
+    const formatoDe = (columna: string): "texto" | "telefono" | "fecha" | "digitos" | "numero" => {
+      const k = normKey(columna);
+      if (/tele|telefono|msisdn|celular/.test(k)) return "telefono";
+      if (/fecha|checkin/.test(k)) return "fecha";
+      if (/imei|iccid/.test(k)) return "digitos";
+      if (/valor|cfm|costo|precio/.test(k)) return "numero";
+      return "texto";
+    };
     return buildEtlScript({
       tipo,
       titulo: g.titulo,
       archivoSalida: g.archivo.replace(/\.(csv|xlsx)$/i, "") + "_limpio.xlsx",
       dateFormat: tipo === "dispositivos" ? "DD-MM-YYYY" : "YYYY-MM-DD",
-      fields: SCHEMAS[tipo].map((r) => ({ ...r, ejemplo: ejemploPorColumna.get(r.columna) ?? "" })),
+      fields: g.fields.map((f) => ({
+        columna: f.columna,
+        requerido: f.requerido,
+        ejemplo: f.ejemplo,
+        nota: f.nota,
+        formato: formatoDe(f.columna),
+      })),
     });
   };
+
 
   const descargarEtl = (tipo: Tipo) => {
     const blob = new Blob([buildEtl(tipo)], { type: "text/plain;charset=utf-8" });
