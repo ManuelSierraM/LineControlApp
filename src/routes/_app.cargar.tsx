@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter, Download, AlertTriangle, XCircle, X, FileCode2, Copy } from "lucide-react";
+import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter, Download, AlertTriangle, XCircle, X, FileCode2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -494,7 +494,7 @@ function CargarPage() {
     toast.success("Template descargado");
   };
 
-  // ───────── ETL en Python (Google Colab) por cada cargue ─────────
+  // ───────── ETL de formateo por cada cargue ─────────
   const buildEtl = (tipo: Tipo) => {
     const g = GUIDES[tipo];
     const ejemploPorColumna = new Map(g.fields.map((f) => [f.columna, f.ejemplo] as const));
@@ -508,25 +508,16 @@ function CargarPage() {
   };
 
   const descargarEtl = (tipo: Tipo) => {
-    const blob = new Blob([buildEtl(tipo)], { type: "text/x-python;charset=utf-8" });
+    const blob = new Blob([buildEtl(tipo)], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `etl_${tipo}_colab.py`;
+    a.download = `etl_formateo_${tipo}.txt`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    toast.success("Script ETL descargado");
-  };
-
-  const copiarEtl = async (tipo: Tipo) => {
-    try {
-      await navigator.clipboard.writeText(buildEtl(tipo));
-      toast.success("Script ETL copiado al portapapeles");
-    } catch {
-      toast.error("No se pudo copiar el script");
-    }
+    toast.success("ETL de formateo descargado");
   };
 
 
@@ -733,13 +724,10 @@ function CargarPage() {
                   <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar template Excel
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => descargarEtl(guideTipo)}>
-                  <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL Python (Colab)
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => copiarEtl(guideTipo)}>
-                  <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar ETL
+                  <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
                 </Button>
                 <p className="w-full text-xs text-muted-foreground">
-                  El ETL es específico de este cargue y replica su validación previa: normaliza teléfonos, fechas, IMEI/ICCID y montos, descarta filas inválidas y entrega un Excel listo para subir.
+                  El ETL de formateo es específico de este cargue y replica su validación previa: normaliza teléfonos, fechas, IMEI/ICCID y montos, descarta filas inválidas y entrega un Excel listo para subir.
                 </p>
               </div>
             )}
