@@ -1,16 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertCircle, Wifi, AlertTriangle, MapPin, Info, Copy } from "lucide-react";
+import { AlertCircle, Wifi, AlertTriangle, MapPin, Info, Copy, PhoneOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
+import { isCountryCode, normalizePhone } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/alertas")({ component: AlertasPage });
 
 
-type TabKey = "sin_uso" | "sin_equipo" | "sobredim" | "pops_sin_centro" | "inconsistencias" | "imei_duplicado";
+type TabKey = "sin_uso" | "sin_equipo" | "sobredim" | "pops_sin_centro" | "inconsistencias" | "imei_duplicado" | "pops_tel_invalido";
 
 const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: "sin_uso", label: "Sin uso", icon: AlertCircle },
@@ -19,7 +20,9 @@ const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: "pops_sin_centro", label: "POPS sin centro", icon: MapPin },
   { key: "inconsistencias", label: "Sin línea asociada", icon: Info },
   { key: "imei_duplicado", label: "IMEI duplicado", icon: Copy },
+  { key: "pops_tel_invalido", label: "Líneas POPS Inconsistentes", icon: PhoneOff },
 ];
+
 
 function fmtMoney(n: number) {
   return `$ ${Number(n ?? 0).toLocaleString("es-CO")}`;
@@ -31,14 +34,7 @@ function diffDays(d?: string | null) {
 }
 
 function normPhone(p?: string | null) {
-  if (!p) return "";
-  const raw = String(p).trim();
-  if (!raw) return "";
-  if (/[a-zA-Z]/.test(raw)) return "";
-  let s = raw.replace(/[^\d]/g, "");
-  if (!s) return "";
-  if (s.startsWith("57") && s.length > 10) s = s.slice(2);
-  return s;
+  return normalizePhone(p);
 }
 
 function dedupeBy<T extends { created_at?: string | null }>(rows: T[], keyFn: (r: T) => string | null | undefined): T[] {
@@ -145,7 +141,7 @@ function AlertasPage() {
       imei: d.imei,
       modelo: d.modelo ?? "—",
       estado: d.estado ?? "—",
-      asignado_a: d.asignado_a ?? "—",
+      numero_telefono: d.numero_telefono ?? "—",
       ultimo_checkin: d.ultimo_checkin,
       fuente: "UEM",
     }));
@@ -161,7 +157,7 @@ function AlertasPage() {
       imei: p.codigo,
       modelo: p.modelo ?? "—",
       estado: p.estado ?? "—",
-      asignado_a: p.centro_costo ?? "—",
+      numero_telefono: p.numero_telefono ?? "—",
       ultimo_checkin: p.fecha_alta ?? p.created_at,
       fuente: "POPS",
     }));
@@ -189,6 +185,56 @@ function AlertasPage() {
     }))
     .sort((a, b) => b.repeticiones - a.repeticiones);
 
+  // "Líneas POPS Inconsistentes": el campo Numero_Telefono del Inventario POPS
+  // se captura como texto libre. Se detectan (a) valores con letras o caracteres
+  // especiales y (b) valores que solo traen el indicativo de país.
+  // Además se cruza con Dispositivos UEM (por IMEI = POPS.codigo) y solo se
+  // muestran los equipos activos: último check-in con 15 días o menos de inactividad.
+  const popsTelInvalido = pops
+    .map((p) => {
+      const raw = p.numero_telefono == null ? "" : String(p.numero_telefono);
+      const v = raw.trim();
+      if (!v) return null;
+      const digitos = v.replace(/\D/g, "");
+      const tieneLetras = /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(v);
+      // Se toleran "+", espacios, guiones y paréntesis como formato habitual.
+      const tieneEspeciales = /[^\d+\s()\-]/.test(v.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
+      const soloIndicativo = digitos.length > 0 && digitos.length <= 3 && isCountryCode(digitos);
+
+      let motivo: string | null = null;
+      if (tieneLetras && tieneEspeciales) motivo = "Letras y caracteres especiales";
+      else if (tieneLetras) motivo = "Contiene letras";
+      else if (tieneEspeciales) motivo = "Caracteres especiales";
+      else if (soloIndicativo) motivo = "Solo indicativo de país";
+      if (!motivo) return null;
+
+      // Cruce con Dispositivos UEM por IMEI
+      const d = p.codigo ? dispByImei.get(String(p.codigo)) : undefined;
+      const dias = diffDays(d?.ultimo_checkin);
+      // Solo dispositivos activos/con actividad reciente (<= 15 días)
+      if (dias == null || dias > 15) return null;
+
+      return {
+        valor_crudo: raw,
+        motivo,
+        digitos: digitos || "—",
+        codigo: p.codigo ?? "—",
+        centro_costo: p.centro_costo ?? "—",
+        ubicacion: p.ubicacion ?? "—",
+        modelo: d?.modelo ?? p.modelo ?? "—",
+        estado: d?.estado ?? p.estado ?? "—",
+        ultimo_checkin: d?.ultimo_checkin ?? "—",
+        dias,
+      };
+    })
+    .filter(Boolean)
+    .sort((a: any, b: any) => (a.dias ?? 0) - (b.dias ?? 0)) as {
+      valor_crudo: string; motivo: string; digitos: string; codigo: string;
+      centro_costo: string; ubicacion: string; modelo: string; estado: string;
+      ultimo_checkin: string; dias: number;
+    }[];
+
+
   const counts: Record<TabKey, number> = {
     sin_uso: sinUso.length,
     sin_equipo: sinEquipo.length,
@@ -196,6 +242,7 @@ function AlertasPage() {
     pops_sin_centro: popsSC.length,
     inconsistencias: inconsist.length,
     imei_duplicado: imeiDup.length,
+    pops_tel_invalido: popsTelInvalido.length,
   };
 
   const total =
@@ -204,7 +251,9 @@ function AlertasPage() {
     counts.sobredim +
     counts.pops_sin_centro +
     counts.inconsistencias +
-    counts.imei_duplicado;
+    counts.imei_duplicado +
+    counts.pops_tel_invalido;
+
 
   return (
     <div>
@@ -314,9 +363,10 @@ function AlertasPage() {
           <DataTable
             title="Dispositivos sin centro asignado"
             rows={popsSC}
-            searchKeys={["codigo", "modelo"]}
+            searchKeys={["codigo", "modelo", "numero_telefono"]}
             columns={[
               { key: "codigo", header: "IMEI" },
+              { key: "numero_telefono", header: "Número Teléfono" },
               { key: "modelo", header: "Modelo" },
               { key: "estado", header: "Estado" },
             ]}
@@ -327,12 +377,12 @@ function AlertasPage() {
           <DataTable
             title="Dispositivos sin línea asociada"
             rows={inconsist}
-            searchKeys={["imei", "modelo", "asignado_a", "fuente"]}
+            searchKeys={["imei", "modelo", "numero_telefono", "fuente"]}
             columns={[
               { key: "imei", header: "IMEI" },
               { key: "modelo", header: "Modelo" },
               { key: "estado", header: "Estado" },
-              { key: "asignado_a", header: "Usuario / Centro" },
+              { key: "numero_telefono", header: "Número de Teléfono" },
               { key: "ultimo_checkin", header: "Último check-in" },
               { key: "fuente", header: "Fuente" },
             ]}
@@ -362,6 +412,48 @@ function AlertasPage() {
             ]}
           />
         )}
+
+        {tab === "pops_tel_invalido" && (
+          <DataTable
+            title="Líneas POPS Inconsistentes (dispositivos activos, ≤15 días)"
+            rows={popsTelInvalido}
+            searchKeys={["valor_crudo", "motivo", "codigo", "centro_costo"]}
+            columns={[
+              {
+                key: "valor_crudo",
+                header: "Valor registrado (sin formato)",
+                render: (r) => (
+                  <span className="font-mono text-xs whitespace-pre-wrap break-all">{r.valor_crudo}</span>
+                ),
+              },
+              {
+                key: "motivo",
+                header: "Motivo",
+                render: (r) => (
+                  <span className="rounded-full bg-warning/20 px-2 py-0.5 text-xs text-warning-foreground">
+                    {r.motivo}
+                  </span>
+                ),
+              },
+              { key: "digitos", header: "Dígitos detectados" },
+              { key: "codigo", header: "IMEI" },
+              { key: "ultimo_checkin", header: "Último check-in" },
+              {
+                key: "dias",
+                header: "Días inactivo",
+                render: (r) => (
+                  <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">
+                    {r.dias} días
+                  </span>
+                ),
+              },
+              { key: "centro_costo", header: "Centro" },
+              { key: "modelo", header: "Modelo" },
+              { key: "estado", header: "Estado" },
+            ]}
+          />
+        )}
+
       </div>
     </div>
   );

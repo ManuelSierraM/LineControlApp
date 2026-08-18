@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
+import { normalizePhone } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/")({ component: Dashboard });
 
@@ -13,14 +14,7 @@ function fmtMoney(n: number) {
 }
 
 function normPhone(p?: string | null) {
-  if (!p) return "";
-  const raw = String(p).trim();
-  if (!raw) return "";
-  if (/[a-zA-Z]/.test(raw)) return "";
-  let s = raw.replace(/[^\d]/g, "");
-  if (!s) return "";
-  if (s.startsWith("57") && s.length > 10) s = s.slice(2);
-  return s;
+  return normalizePhone(p);
 }
 
 function diffDays(d?: string | null) {
@@ -85,7 +79,8 @@ function Dashboard() {
     });
 
 
-  // Lookups por teléfono para resolver IMEI (UEM > POPS)
+  // Lookups por teléfono / IMEI para resolver alertas cruzadas
+  const dispByImei = new Map(disp.map((d) => [d.imei, d]));
   const dispByPhone = new Map<string, (typeof disp)[number]>();
   for (const d of disp) {
     const key = normPhone(d.numero_telefono);
@@ -96,6 +91,7 @@ function Dashboard() {
     const key = normPhone(p.numero_telefono);
     if (key) popsByPhone.set(key, p);
   }
+
 
   // Enriquecimiento de líneas con IMEI resuelto
   const lineas = lineasRaw.map((l) => {
@@ -142,25 +138,55 @@ function Dashboard() {
   }
   const imeiDuplicados = Array.from(imeiCount.values()).filter((n) => n > 1).length;
 
+  // Líneas POPS Inconsistentes: campo Numero_Telefono de POPS con letras, caracteres especiales
+  // o solo indicativo de país. Se cruza con UEM por IMEI y solo se cuenta actividad <= 15 días.
+  const popsTelInvalidoCount = pops
+    .map((p) => {
+      const raw = p.numero_telefono == null ? "" : String(p.numero_telefono);
+      const v = raw.trim();
+      if (!v) return null;
+      const digitos = v.replace(/\D/g, "");
+      const tieneLetras = /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(v);
+      const tieneEspeciales = /[^\d+\s()\-]/.test(v.replace(/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
+      const soloIndicativo = digitos.length > 0 && digitos.length <= 3 && /^0?57$|^\d{1,3}$/.test(digitos);
+
+      let motivo: string | null = null;
+      if (tieneLetras && tieneEspeciales) motivo = "Letras y caracteres especiales";
+      else if (tieneLetras) motivo = "Contiene letras";
+      else if (tieneEspeciales) motivo = "Caracteres especiales";
+      else if (soloIndicativo) motivo = "Solo indicativo de país";
+      if (!motivo) return null;
+
+      const d = p.codigo ? dispByImei.get(String(p.codigo)) : undefined;
+      const dias = diffDays(d?.ultimo_checkin);
+      if (dias == null || dias > 15) return null;
+      return { motivo };
+    })
+    .filter(Boolean).length;
+
   // Ahorros (mismos que Reportes)
   const ahorroSinUso = sinUsoRows.reduce((s, r) => s + r.costo, 0);
   const ahorroSinEquipo = sinEquipoRows.reduce((s, l) => s + costoLinea(l), 0);
   const ahorroTotal = ahorroSinUso + ahorroSinEquipo;
 
+
   const chartData = [
-    { name: "Sin uso", valor: ahorroSinUso },
-    { name: "Sin equipo", valor: ahorroSinEquipo },
-  ];
+    { name: "Sin uso", tableName: "Equipos sin uso >30 días", valor: ahorroSinUso },
+    { name: "Sin equipo", tableName: "Líneas activas sin dispositivo asociado", valor: ahorroSinEquipo },
+  ].filter((d) => d.valor > 0);
+
 
   // Alertas de dispositivos (gráfico vertical): mismos criterios que la sección Alertas.
-  // Cubre "Sin uso" (UEM >30d), "POPS sin centro", "Sin línea asociada" e "IMEI duplicado".
+  // Cubre "Sin uso" (UEM >30d), "POPS sin centro", "Sin línea asociada", "IMEI duplicado" y "Líneas POPS Inconsistentes".
   const dispAlertData = [
-    { name: "Sin uso", cantidad: sinUso30 },
-    { name: "POPS sin centro", cantidad: popsSinCC },
-    { name: "Sin línea asociada", cantidad: inconsistencias },
-    { name: "IMEI duplicado", cantidad: imeiDuplicados },
+    { name: "Sin uso", tableName: "Equipos sin uso >30 días", cantidad: sinUso30 },
+    { name: "POPS sin centro", tableName: "Dispositivos sin centro asignado", cantidad: popsSinCC },
+    { name: "Sin línea asociada", tableName: "Dispositivos sin línea asociada", cantidad: inconsistencias },
+    { name: "IMEI duplicado", tableName: "IMEI duplicados en Dispositivos UEM", cantidad: imeiDuplicados },
+    { name: "Líneas POPS Inconsistentes", tableName: "Líneas POPS con formato inválido", cantidad: popsTelInvalidoCount },
   ].filter((d) => d.cantidad > 0)
     .sort((a, b) => b.cantidad - a.cantidad);
+
 
 
 
@@ -223,6 +249,13 @@ function Dashboard() {
   const totalCostoMensual = topImpacto.reduce((s, r) => s + (r.costo ?? 0), 0);
   const totalCostoAnual = topImpacto.reduce((s, r) => s + (r.costoAnual ?? 0), 0);
   const pctFacturacion = costoTotal > 0 ? (totalCostoMensual / costoTotal) * 100 : 0;
+  // Badges: solo se muestran las categorías con al menos una alerta.
+  const badges = [
+    { tone: "red" as const, count: sinUso30, label: "Sin uso >30d" },
+    { tone: "red" as const, count: sinEquipo, label: "Sin equipo" },
+    { tone: "blue" as const, count: popsSinCC, label: "POPS sin centro" },
+    { tone: "amber" as const, count: inconsistencias, label: "Sin línea asociada" },
+  ].filter((b) => b.count > 0);
 
   return (
     <div>
@@ -235,28 +268,38 @@ function Dashboard() {
           <KpiCard label="Total Dispositivos" value={disp.length.toLocaleString("es-CO")} icon={Smartphone} accent="info" />
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <BadgeStat tone="red" count={sinUso30} label="Sin uso >30d" />
-          <BadgeStat tone="red" count={sinEquipo} label="Sin equipo" />
-          <BadgeStat tone="blue" count={popsSinCC} label="POPS sin centro" />
-          <BadgeStat tone="amber" count={inconsistencias} label="Sin línea asociada" />
-        </div>
+        {badges.length > 0 && (
+          <div className="flex flex-wrap gap-3">
+            {badges.map((b) => (
+              <BadgeStat key={b.label} tone={b.tone} count={b.count} label={b.label} />
+            ))}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <h3 className="font-semibold">Ahorro Potencial por Categoría</h3>
             <p className="text-xs text-muted-foreground">Distribución del ahorro mensual identificado</p>
             <div className="mt-4 h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis type="number" tickFormatter={(v) => fmtMoney(v as number)} stroke="var(--color-muted-foreground)" fontSize={12} />
-                  <YAxis dataKey="name" type="category" stroke="var(--color-muted-foreground)" fontSize={12} width={100} />
-                  <Tooltip formatter={(v: number) => fmtMoney(v)} contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }} />
-                  <Bar dataKey="valor" fill="var(--color-primary)" radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {chartData.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">No se identifico ningún ahorro posible</p>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <XAxis type="number" tickFormatter={(v) => fmtMoney(v as number)} stroke="var(--color-muted-foreground)" fontSize={12} />
+                    <YAxis dataKey="name" type="category" stroke="var(--color-muted-foreground)" fontSize={12} width={100} />
+                    <Tooltip
+                      formatter={(v: number) => fmtMoney(v)}
+                      labelFormatter={(_label, payload: any[]) => payload?.[0]?.payload?.tableName ?? _label}
+                      contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }}
+                    />
+                    <Bar dataKey="valor" fill="var(--color-primary)" radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
+
           </div>
 
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
@@ -279,6 +322,7 @@ function Dashboard() {
                     />
                     <Tooltip
                       formatter={(v: number) => [Number(v).toLocaleString("es-CO"), "Alertas"]}
+                      labelFormatter={(_label, payload: any[]) => payload?.[0]?.payload?.tableName ?? _label}
                       contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 8 }}
                     />
                     <Bar dataKey="cantidad" fill="var(--color-chart-5)" radius={[6, 6, 0, 0]} maxBarSize={64} />

@@ -3,15 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
+import { normalizePhone } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/lineas")({ component: LineasPage });
 
 function operador(msisdn?: string | null) {
   if (!msisdn) return "—";
-  const s = String(msisdn);
-  if (s.startsWith("57300") || s.startsWith("57301") || s.startsWith("57302")) return "Tigo";
-  if (s.startsWith("57310") || s.startsWith("57311") || s.startsWith("57312") || s.startsWith("57313") || s.startsWith("57314")) return "Claro";
-  if (s.startsWith("57320") || s.startsWith("57321") || s.startsWith("57322")) return "Movistar";
+  const s = normalizePhone(msisdn);
+  if (!s) return "—";
+  if (s.startsWith("300") || s.startsWith("301") || s.startsWith("302")) return "Tigo";
+  if (s.startsWith("310") || s.startsWith("311") || s.startsWith("312") || s.startsWith("313") || s.startsWith("314")) return "Claro";
+  if (s.startsWith("320") || s.startsWith("321") || s.startsWith("322")) return "Movistar";
   return "—";
 }
 
@@ -20,14 +22,7 @@ function fmtMoney(n: number) {
 }
 
 function normPhone(p?: string | null) {
-  if (!p) return "";
-  const raw = String(p).trim();
-  if (!raw) return "";
-  if (/[a-zA-Z]/.test(raw)) return "";
-  let s = raw.replace(/[^\d]/g, "");
-  if (!s) return "";
-  if (s.startsWith("57") && s.length > 10) s = s.slice(2);
-  return s;
+  return normalizePhone(p);
 }
 
 function dedupeBy<T extends { created_at?: string | null }>(rows: T[], keyFn: (r: T) => string | null | undefined): T[] {
@@ -50,7 +45,7 @@ function LineasPage() {
     queryFn: async () => {
       const [lineas, disp] = await Promise.all([
         fetchAll<any>("lineas", { orderBy: { column: "created_at", ascending: false } }),
-        fetchAll<any>("dispositivos", { columns: "imei,modelo,asignado_a,numero_telefono,created_at" }),
+        fetchAll<any>("dispositivos", { columns: "id,imei,modelo,asignado_a,numero_telefono,created_at" }),
       ]);
       // Maestro: NO deduplicar por msisdn/imei normalizados — cada fila del cargue
       // es un registro válido; usamos id (único) para preservar la totalidad.

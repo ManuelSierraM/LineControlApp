@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter, Download, AlertTriangle, XCircle, X } from "lucide-react";
+import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter, Download, AlertTriangle, XCircle, X, FileCode2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -12,9 +12,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { useAuth } from "@/lib/auth";
+import { coercePhone, normalizePhone } from "@/lib/utils";
+import { buildEtlScript } from "@/lib/etl-script";
+
 import { useRoles } from "@/lib/roles";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
@@ -32,7 +36,7 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     fields: [
       { columna: "OPERADOR", ejemplo: "CLARO", requerido: true, nota: "Nombre del operador", target: "operador" },
       { columna: "TIPO_DE_LINEA", ejemplo: "VOZ+DATOS", requerido: false, nota: "Tipo de servicio" },
-      { columna: "TELE_NUMB", ejemplo: "3001234567", requerido: false, nota: "Número de la línea (MSISDN). Texto libre, puede venir vacío.", target: "msisdn" },
+      { columna: "TELE_NUMB", ejemplo: "3001234567", requerido: true, nota: "Número de la línea (MSISDN). Obligatorio. Se quita el indicativo de país (+57, 0057, +1, etc.) de cualquier país.", target: "msisdn" },
       { columna: "NOMBRE_CLIENTE", ejemplo: "vigilancia", requerido: false, nota: "Nombre del usuario asignado", target: "nombre_cliente" },
       { columna: "Cod Empresa", ejemplo: "CO0070", requerido: false, nota: "Código de empresa", target: "cod_empresa" },
 
@@ -47,8 +51,8 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     fields: [
       { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del dispositivo", target: "imei" },
       { columna: "Modelo", ejemplo: "Galaxy S22", requerido: false, nota: "Modelo del equipo", target: "modelo" },
-      { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Texto libre, puede venir vacío.", target: "numero_telefono" },
-      { columna: "Last_CheckIn", ejemplo: "2025-04-12", requerido: true, nota: "Último reporte UEM (YYYY-MM-DD)", target: "ultimo_checkin" },
+      { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Se quita el indicativo de país (+57, 0057, +1, etc.) de cualquier país. Puede venir vacío.", target: "numero_telefono" },
+      { columna: "Last_CheckIn", ejemplo: "12-04-2025", requerido: true, nota: "Último reporte UEM (DD-MM-YYYY)", target: "ultimo_checkin" },
       { columna: "Estado_UEM", ejemplo: "ACTIVO", requerido: true, nota: "Estado en plataforma UEM", target: "estado" },
       { columna: "País", ejemplo: "Colombia", requerido: false, nota: "País de operación" },
       { columna: "Usuario", ejemplo: "jperez@empresa.com", requerido: false, nota: "Usuario asignado", target: "asignado_a" },
@@ -58,8 +62,8 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     titulo: "Inventario POPS",
     archivo: "POPS_Inventory.xlsx",
     fields: [
-      { columna: "IMEI", ejemplo: "356938035643809", requerido: false, nota: "IMEI del equipo. Puede venir vacío.", target: "codigo" },
-      { columna: "Numero_Telefono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Texto libre, puede venir vacío.", target: "numero_telefono" },
+      { columna: "IMEI", ejemplo: "356938035643809", requerido: false, nota: "IMEI del equipo. Solo dígitos, 14–16 caracteres. Puede venir vacío.", target: "codigo" },
+      { columna: "Numero_Telefono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Se quita el indicativo de país (+57, 0057, +1, etc.) de cualquier país. Texto libre, puede venir vacío.", target: "numero_telefono" },
       { columna: "Centro", ejemplo: "CC-100", requerido: false, nota: "Centro de costo. Puede venir vacío.", target: "centro_costo" },
       { columna: "Delegación", ejemplo: "Bogotá Norte", requerido: false, nota: "Delegación o sede. Puede venir vacío.", target: "ubicacion" },
       { columna: "Fecha_Alta", ejemplo: "2024-01-15", requerido: false, nota: "Fecha de alta del equipo (YYYY-MM-DD)", target: "fecha_alta" },
@@ -82,41 +86,75 @@ type FieldRule = {
   max?: number;
   enum?: string[];
   unique?: boolean;
+  normalize?: "phone" | "phone-strict";
   hint: string;
 };
 
 const SCHEMAS: Record<Tipo, FieldRule[]> = {
   lineas: [
-    { columna: "OPERADOR", target: "operador", required: true, type: "text", maxLen: 50, hint: "Texto, ej. CLARO / TIGO / MOVISTAR (máx. 50)." },
-    { columna: "TIPO_DE_LINEA", type: "text", maxLen: 50, hint: "Texto, ej. VOZ+DATOS." },
-    { columna: "TELE_NUMB", target: "msisdn", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
-    { columna: "NOMBRE_CLIENTE", target: "nombre_cliente", type: "text", maxLen: 100, hint: "Texto (máx. 100)." },
-    { columna: "Cod Empresa", target: "cod_empresa", type: "text", maxLen: 30, hint: "Texto corto, ej. CO0070 (máx. 30)." },
-    { columna: "ICCID", target: "iccid", required: true, type: "digits", minLen: 18, maxLen: 22, hint: "Solo dígitos, 18–22 caracteres." },
-    { columna: "PLAN_DESC", target: "plan", type: "text", maxLen: 100, hint: "Texto (máx. 100)." },
-    { columna: "VALOR_CFM", target: "valor_plan", required: true, type: "number", min: 0, hint: "Número ≥ 0. Sin símbolos $, ni texto." },
+    { columna: "OPERADOR", target: "operador", required: true, type: "text", maxLen: 50, hint: "Operador de la línea. Texto obligatorio, ej. CLARO / TIGO / MOVISTAR (máx. 50)." },
+    { columna: "TIPO_DE_LINEA", type: "text", maxLen: 50, hint: "Tipo de servicio. Texto opcional, ej. VOZ+DATOS (máx. 50)." },
+    { columna: "TELE_NUMB", target: "msisdn", required: true, type: "text", normalize: "phone-strict", hint: "Número de la línea (MSISDN). Obligatorio. Se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.)." },
+    { columna: "NOMBRE_CLIENTE", target: "nombre_cliente", type: "text", maxLen: 100, hint: "Nombre del usuario asignado. Texto opcional (máx. 100)." },
+    { columna: "Cod Empresa", target: "cod_empresa", type: "text", maxLen: 30, hint: "Código de empresa. Texto corto opcional, ej. CO0070 (máx. 30)." },
+    { columna: "ICCID", target: "iccid", required: true, type: "digits", minLen: 18, maxLen: 22, hint: "Serial de la SIM. Obligatorio, solo dígitos, 18–22 caracteres." },
+    { columna: "PLAN_DESC", target: "plan", type: "text", maxLen: 250, hint: "Descripción del plan. Texto opcional (máx. 250)." },
+    { columna: "VALOR_CFM", target: "valor_plan", required: true, type: "number", min: 0, hint: "Costo del plan. Obligatorio, número ≥ 0, sin símbolos $ ni texto." },
   ],
   dispositivos: [
-    { columna: "IMEI", target: "imei", required: true, type: "digits", minLen: 14, maxLen: 16, hint: "Solo dígitos, 14–16 caracteres. Se permiten repetidos (se reportan en la alerta IMEI duplicado)." },
-    { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Texto (máx. 60)." },
-    { columna: "Número_Teléfono", target: "numero_telefono", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
-    { columna: "Last_CheckIn", target: "ultimo_checkin", required: true, type: "date", hint: "Fecha YYYY-MM-DD (ej. 2025-04-12)." },
-    { columna: "Estado_UEM", target: "estado", required: true, type: "text", maxLen: 30, enum: ["ACTIVO","INACTIVO","SUSPENDIDO","BAJA","ENROLADO"], hint: "Valores recomendados: ACTIVO, INACTIVO, SUSPENDIDO, BAJA, ENROLADO." },
-    { columna: "País", type: "text", maxLen: 40, hint: "Texto (máx. 40)." },
-    { columna: "Usuario", target: "asignado_a", type: "text", maxLen: 120, hint: "Texto / correo (máx. 120)." },
+    { columna: "IMEI", target: "imei", required: true, type: "digits", minLen: 14, maxLen: 16, hint: "IMEI del dispositivo. Obligatorio, solo dígitos, 14–16 caracteres. Se permiten repetidos (se reportan en la alerta IMEI duplicado)." },
+    { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Modelo del equipo. Texto opcional (máx. 60)." },
+    { columna: "Número_Teléfono", target: "numero_telefono", type: "text", normalize: "phone-strict", hint: "Línea asociada. Texto opcional; se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.)." },
+    { columna: "Last_CheckIn", target: "ultimo_checkin", required: true, type: "date", hint: "Último reporte UEM. Obligatorio, fecha DD-MM-YYYY (ej. 12-04-2025)." },
+    { columna: "Estado_UEM", target: "estado", required: true, type: "text", maxLen: 30, hint: "Estado en plataforma UEM. Obligatorio, texto (máx. 30)." },
+    { columna: "País", type: "text", maxLen: 40, hint: "País de operación. Texto opcional (máx. 40)." },
+    { columna: "Usuario", target: "asignado_a", type: "text", maxLen: 120, hint: "Usuario asignado. Texto / correo opcional (máx. 120)." },
   ],
   pops: [
-    { columna: "IMEI", target: "codigo", required: false, type: "text", unique: true, hint: "Texto libre. Puede venir vacío." },
-    { columna: "Numero_Telefono", target: "numero_telefono", type: "text", hint: "Texto libre. Puede contener letras, símbolos o venir vacío." },
-    { columna: "Centro", target: "centro_costo", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
-    { columna: "Delegación", target: "ubicacion", required: false, type: "text", hint: "Texto libre. Puede venir vacío." },
-    { columna: "Fecha_Alta", target: "fecha_alta", type: "date", hint: "Fecha YYYY-MM-DD." },
-    { columna: "Fecha_Baja", target: "fecha_baja", type: "date", hint: "Fecha YYYY-MM-DD." },
-    { columna: "Modelo", target: "modelo", type: "text", hint: "Texto libre." },
+    { columna: "IMEI", target: "codigo", required: false, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "IMEI del equipo. Opcional; si viene, solo dígitos, 14–16 caracteres." },
+    { columna: "Numero_Telefono", target: "numero_telefono", type: "text", normalize: "phone", hint: "Línea asociada. Texto libre opcional; se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.). Se conservan letras o símbolos para alertas de inconsistencia." },
+    { columna: "Centro", target: "centro_costo", required: false, type: "text", hint: "Centro de costo. Texto libre opcional." },
+    { columna: "Delegación", target: "ubicacion", required: false, type: "text", hint: "Delegación o sede. Texto libre opcional." },
+    { columna: "Fecha_Alta", target: "fecha_alta", type: "date", hint: "Fecha de alta del equipo. Opcional, formato YYYY-MM-DD." },
+    { columna: "Fecha_Baja", target: "fecha_baja", type: "date", hint: "Fecha de baja si aplica. Opcional, formato YYYY-MM-DD." },
+    { columna: "Modelo", target: "modelo", type: "text", hint: "Modelo del equipo. Texto libre opcional." },
   ],
 };
 
+
+// ───────── Sincronización guía ⇄ validación previa ─────────
+// El formato guía (UI) y el template descargable se derivan del SCHEMA:
+// obligatoriedad y nota siempre reflejan exactamente la validación previa.
+(function syncGuidesWithSchemas() {
+  (Object.keys(GUIDES) as Tipo[]).forEach((tipo) => {
+    const rules = SCHEMAS[tipo];
+    const guide = GUIDES[tipo];
+
+    // 1) Toda columna del schema debe existir en la guía (mismo orden que el schema).
+    const byColumna = new Map(guide.fields.map((f) => [normKey(f.columna), f] as const));
+    guide.fields = rules.map((rule) => {
+      const existing = byColumna.get(normKey(rule.columna));
+      const base: GuideField = existing ?? {
+        columna: rule.columna,
+        ejemplo: "",
+        requerido: false,
+        nota: "",
+        ...(rule.target ? { target: rule.target } : {}),
+      };
+      // 2) Obligatoriedad y nota derivadas del schema.
+      return {
+        ...base,
+        columna: rule.columna,
+        target: rule.target ?? base.target,
+        requerido: !!rule.required,
+        nota: rule.hint,
+      };
+    });
+  });
+})();
+
 function normKey(s: string) { return String(s).toLowerCase().trim().replace(/\s+/g, "_"); }
+
 
 function getCell(row: Record<string, any>, columna: string) {
   if (row[columna] !== undefined) return row[columna];
@@ -227,6 +265,7 @@ function CargarPage() {
   const [guideTipo, setGuideTipo] = useState<Tipo | null>(null);
   const [borrarOpen, setBorrarOpen] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<"todos" | Tipo>("todos");
+  const [filtroUsuario, setFiltroUsuario] = useState<string>("todos");
   const [filtroDesde, setFiltroDesde] = useState("");
   const [filtroHasta, setFiltroHasta] = useState("");
   const [purgarDatos, setPurgarDatos] = useState(false);
@@ -281,14 +320,26 @@ function CargarPage() {
     },
   });
 
+  // Usuarios presentes en el historial visible (para el filtro de borrado).
+  const usuariosHistorial = Array.from(
+    new Map(
+      (historial ?? []).map((h: any) => [
+        h.user_id,
+        (h.profiles as { email?: string } | null)?.email ?? "Usuario desconocido",
+      ]),
+    ).entries(),
+  ).map(([id, email]) => ({ id, email }));
+
   const matchesFilter = (h: any) => {
     if (filtroTipo !== "todos" && h.tipo !== filtroTipo) return false;
+    if (filtroUsuario !== "todos" && h.user_id !== filtroUsuario) return false;
     const t = new Date(h.created_at).getTime();
     if (filtroDesde && t < new Date(filtroDesde).getTime()) return false;
     if (filtroHasta && t > new Date(filtroHasta).getTime() + 86400000) return false;
     return true;
   };
   const afectados = (historial ?? []).filter(matchesFilter);
+
 
   const eliminarRegistroIndividual = async (h: any) => {
     if (!user) return;
@@ -301,7 +352,15 @@ function CargarPage() {
     if (!user) return;
     setDeleting(true);
     try {
-      let q = supabase.from("archivos_carga").delete().eq("user_id", user.id);
+      // Usuarios objetivo: el seleccionado, o todos los presentes en los
+      // registros que coinciden con los filtros actuales.
+      const targetUserIds =
+        filtroUsuario !== "todos"
+          ? [filtroUsuario]
+          : [...new Set(afectados.map((h: any) => h.user_id as string))];
+      if (targetUserIds.length === 0) targetUserIds.push(user.id);
+
+      let q = supabase.from("archivos_carga").delete().in("user_id", targetUserIds);
       if (filtroTipo !== "todos") q = q.eq("tipo", filtroTipo);
       if (filtroDesde) q = q.gte("created_at", filtroDesde);
       if (filtroHasta) q = q.lte("created_at", new Date(new Date(filtroHasta).getTime() + 86400000).toISOString());
@@ -311,7 +370,7 @@ function CargarPage() {
       if (purgarDatos) {
         const tipos: Tipo[] = filtroTipo === "todos" ? ["lineas", "dispositivos", "pops"] : [filtroTipo];
         for (const t of tipos) {
-          await supabase.from(t).delete().eq("user_id", user.id);
+          await supabase.from(t).delete().in("user_id", targetUserIds);
         }
         // NOTA: no tocamos la tabla "alertas" — se preserva el histórico para auditoría
         // y para la tarjeta "HISTORICO ALERTAS" en Reportes.
@@ -436,6 +495,47 @@ function CargarPage() {
     toast.success("Template descargado");
   };
 
+  // ───────── ETL de formateo por cada cargue (derivado del template guía) ─────────
+  const buildEtl = (tipo: Tipo) => {
+    const g = GUIDES[tipo];
+    const formatoDe = (columna: string): "texto" | "telefono" | "fecha" | "digitos" | "numero" => {
+      const k = normKey(columna);
+      if (/tele|telefono|msisdn|celular/.test(k)) return "telefono";
+      if (/fecha|checkin/.test(k)) return "fecha";
+      if (/imei|iccid/.test(k)) return "digitos";
+      if (/valor|cfm|costo|precio/.test(k)) return "numero";
+      return "texto";
+    };
+    return buildEtlScript({
+      tipo,
+      titulo: g.titulo,
+      archivoSalida: g.archivo.replace(/\.(csv|xlsx)$/i, "") + "_limpio.xlsx",
+      dateFormat: tipo === "dispositivos" ? "DD-MM-YYYY" : "YYYY-MM-DD",
+      fields: g.fields.map((f) => ({
+        columna: f.columna,
+        requerido: f.requerido,
+        ejemplo: f.ejemplo,
+        nota: f.nota,
+        formato: formatoDe(f.columna),
+      })),
+    });
+  };
+
+
+  const descargarEtl = (tipo: Tipo) => {
+    const blob = new Blob([buildEtl(tipo)], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `etl_formateo_${tipo}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success("ETL de formateo descargado");
+  };
+
+
   const handleUpload = async (tipo: Tipo, file: File) => {
     if (!user) return;
     setBusy(tipo);
@@ -482,6 +582,12 @@ function CargarPage() {
           }
           if (res.warn) warnings.push({ row: rowNum, field: rule.columna, warn: res.warn });
           if (rule.target) coerced[rule.target] = res.coerced;
+          if (rule.normalize && rule.target) {
+            const value = coerced[rule.target] ?? raw;
+            coerced[rule.target] = rule.normalize === "phone-strict"
+              ? normalizePhone(value)
+              : coercePhone(value);
+          }
           if (rule.unique && res.coerced != null) {
             const key = String(res.coerced);
             if (!uniqueTrack.has(rule.columna)) uniqueTrack.set(rule.columna, new Map());
@@ -628,12 +734,30 @@ function CargarPage() {
               Archivo sugerido: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{guide?.archivo}</code>
             </DialogDescription>
             {guideTipo && (
-              <div className="pt-2">
+              <div className="flex flex-wrap items-center gap-2 pt-2">
                 <Button size="sm" variant="secondary" onClick={() => descargarTemplate(guideTipo)}>
                   <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar template Excel
                 </Button>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-block">
+                        <Button size="sm" variant="outline" disabled onClick={() => {}}>
+                          <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>En desarrollo</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <p className="w-full text-xs text-muted-foreground">
+                  El ETL de formateo es específico de este cargue y replica su validación previa: normaliza teléfonos, fechas, IMEI/ICCID y montos, descarta filas inválidas y entrega un Excel listo para subir.
+                </p>
               </div>
             )}
+
           </DialogHeader>
           {guide && (
             <div className="max-h-[60vh] overflow-auto rounded-md border border-border">
@@ -684,6 +808,18 @@ function CargarPage() {
                   <SelectItem value="lineas">Maestro de Líneas</SelectItem>
                   <SelectItem value="dispositivos">Devices UEM</SelectItem>
                   <SelectItem value="pops">Inventario POPS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Usuario que cargó</Label>
+              <Select value={filtroUsuario} onValueChange={setFiltroUsuario}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los usuarios</SelectItem>
+                  {usuariosHistorial.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.email}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
