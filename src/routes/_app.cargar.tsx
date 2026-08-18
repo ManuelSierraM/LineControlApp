@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { useAuth } from "@/lib/auth";
@@ -737,9 +738,18 @@ function CargarPage() {
                 <Button size="sm" variant="secondary" onClick={() => descargarTemplate(guideTipo)}>
                   <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar template Excel
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => descargarEtl(guideTipo)}>
-                  <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="sm" variant="outline" disabled onClick={() => {}}>
+                        <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>En desarrollo</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <p className="w-full text-xs text-muted-foreground">
                   El ETL de formateo es específico de este cargue y replica su validación previa: normaliza teléfonos, fechas, IMEI/ICCID y montos, descarta filas inválidas y entrega un Excel listo para subir.
                 </p>
