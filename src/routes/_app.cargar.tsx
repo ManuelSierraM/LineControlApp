@@ -738,14 +738,16 @@ function CargarPage() {
                 <Button size="sm" variant="secondary" onClick={() => descargarTemplate(guideTipo)}>
                   <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar template Excel
                 </Button>
-                <TooltipProvider>
+                <TooltipProvider delayDuration={0}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button size="sm" variant="outline" disabled onClick={() => {}}>
-                        <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
-                      </Button>
+                      <span className="inline-block">
+                        <Button size="sm" variant="outline" disabled onClick={() => {}}>
+                          <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
+                        </Button>
+                      </span>
                     </TooltipTrigger>
-                    <TooltipContent>
+                    <TooltipContent side="bottom">
                       <p>En desarrollo</p>
                     </TooltipContent>
                   </Tooltip>
