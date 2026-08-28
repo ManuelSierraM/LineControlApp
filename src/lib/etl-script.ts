@@ -7,6 +7,8 @@ export type EtlField = {
   requerido?: boolean;
   ejemplo?: string;
   nota?: string;
+  /** Nombres alternativos con los que puede venir la columna en el archivo origen. */
+  alias?: string[];
   /** Limpieza ligera aplicada a la columna. */
   formato?: "texto" | "telefono" | "fecha" | "digitos" | "numero";
 };
@@ -23,6 +25,7 @@ const py = (v: unknown): string => {
   if (v === undefined || v === null) return "None";
   if (typeof v === "boolean") return v ? "True" : "False";
   if (typeof v === "number") return String(v);
+  if (Array.isArray(v)) return `[${v.map(py).join(", ")}]`;
   return `"${String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ")}"`;
 };
 
@@ -32,10 +35,11 @@ function fieldsBlock(fields: EtlField[]): string {
       (f) =>
         `    {"columna": ${py(f.columna)}, "formato": ${py(f.formato ?? "texto")}, "requerido": ${py(
           !!f.requerido,
-        )}, "ejemplo": ${py(f.ejemplo ?? "")}},`,
+        )}, "alias": ${py(f.alias ?? [])}, "ejemplo": ${py(f.ejemplo ?? "")}},`,
     )
     .join("\n");
 }
+
 
 export function buildEtlScript(spec: EtlSpec): string {
   return `# =====================================================================
@@ -125,14 +129,20 @@ def limpiar_telefono(v):
     digits = re.sub(r"\\D", "", s)
     if not digits:
         return ""
+    explicito = s.startswith("+") or s.startswith("00")
     if s.startswith("00"):
         digits = digits[2:]
+    # Solo se quita el indicativo si el número viene con prefijo internacional
+    # explícito (+ / 00) o si es más largo que un número nacional (>10 dígitos).
+    if not explicito and len(digits) <= 10:
+        return digits
     for code in SORTED_CODES:
         if digits.startswith(code) and len(digits) > len(code):
             resto = digits[len(code):]
             if 7 <= len(resto) <= 12:
                 return resto
     return digits
+
 
 
 def limpiar_fecha(v):
@@ -214,17 +224,21 @@ print("Filas leídas:", len(df), "| columnas del archivo:", len(df.columns))
 
 # ------------------ 2. EMPAREJAR CON EL TEMPLATE ---------------------
 mapa_manual = {norm_key(k): v for k, v in MAPEO_COLUMNAS.items()}
+
+# Nombre exacto del template y sus alias conocidos del archivo origen.
+mapa_alias = {}
+for campo in CAMPOS:
+    mapa_alias.setdefault(norm_key(campo["columna"]), campo["columna"])
+    for a in campo.get("alias", []):
+        mapa_alias.setdefault(norm_key(a), campo["columna"])
+
 origen_por_columna = {}
 for real in df.columns:
     k = norm_key(real)
-    destino = mapa_manual.get(k)
-    if destino is None:
-        for col in COLUMNAS:
-            if norm_key(col) == k:
-                destino = col
-                break
+    destino = mapa_manual.get(k) or mapa_alias.get(k)
     if destino is not None and destino not in origen_por_columna:
         origen_por_columna[destino] = real
+
 
 encontradas = [c for c in COLUMNAS if c in origen_por_columna]
 faltantes = [c for c in COLUMNAS if c not in origen_por_columna]
