@@ -218,17 +218,21 @@ print("Filas leídas:", len(df), "| columnas del archivo:", len(df.columns))
 
 # ------------------ 2. EMPAREJAR CON EL TEMPLATE ---------------------
 mapa_manual = {norm_key(k): v for k, v in MAPEO_COLUMNAS.items()}
+
+# Nombre exacto del template y sus alias conocidos del archivo origen.
+mapa_alias = {}
+for campo in CAMPOS:
+    mapa_alias.setdefault(norm_key(campo["columna"]), campo["columna"])
+    for a in campo.get("alias", []):
+        mapa_alias.setdefault(norm_key(a), campo["columna"])
+
 origen_por_columna = {}
 for real in df.columns:
     k = norm_key(real)
-    destino = mapa_manual.get(k)
-    if destino is None:
-        for col in COLUMNAS:
-            if norm_key(col) == k:
-                destino = col
-                break
+    destino = mapa_manual.get(k) or mapa_alias.get(k)
     if destino is not None and destino not in origen_por_columna:
         origen_por_columna[destino] = real
+
 
 encontradas = [c for c in COLUMNAS if c in origen_por_columna]
 faltantes = [c for c in COLUMNAS if c not in origen_por_columna]
