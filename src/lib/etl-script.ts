@@ -7,6 +7,8 @@ export type EtlField = {
   requerido?: boolean;
   ejemplo?: string;
   nota?: string;
+  /** Nombres alternativos con los que puede venir la columna en el archivo origen. */
+  alias?: string[];
   /** Limpieza ligera aplicada a la columna. */
   formato?: "texto" | "telefono" | "fecha" | "digitos" | "numero";
 };
@@ -23,6 +25,7 @@ const py = (v: unknown): string => {
   if (v === undefined || v === null) return "None";
   if (typeof v === "boolean") return v ? "True" : "False";
   if (typeof v === "number") return String(v);
+  if (Array.isArray(v)) return `[${v.map(py).join(", ")}]`;
   return `"${String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ")}"`;
 };
 
@@ -32,10 +35,11 @@ function fieldsBlock(fields: EtlField[]): string {
       (f) =>
         `    {"columna": ${py(f.columna)}, "formato": ${py(f.formato ?? "texto")}, "requerido": ${py(
           !!f.requerido,
-        )}, "ejemplo": ${py(f.ejemplo ?? "")}},`,
+        )}, "alias": ${py(f.alias ?? [])}, "ejemplo": ${py(f.ejemplo ?? "")}},`,
     )
     .join("\n");
 }
+
 
 export function buildEtlScript(spec: EtlSpec): string {
   return `# =====================================================================
