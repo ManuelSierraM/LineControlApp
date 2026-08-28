@@ -11,6 +11,8 @@ export type EtlField = {
   alias?: string[];
   /** Limpieza ligera aplicada a la columna. */
   formato?: "texto" | "telefono" | "fecha" | "digitos" | "numero";
+  /** Extracción previa al limpiador (ej. IMEI a la izquierda del "@"). */
+  extraer?: "antes_arroba";
 };
 
 export type EtlSpec = {
@@ -19,6 +21,8 @@ export type EtlSpec = {
   archivoSalida: string;
   dateFormat: "DD-MM-YYYY" | "YYYY-MM-DD";
   fields: EtlField[];
+  /** Filtro de filas sobre una columna del archivo origen (comparación exacta, sin tildes/mayúsculas). */
+  filtro?: { columna: string; alias: string[]; valor: string };
 };
 
 const py = (v: unknown): string => {
@@ -35,7 +39,7 @@ function fieldsBlock(fields: EtlField[]): string {
       (f) =>
         `    {"columna": ${py(f.columna)}, "formato": ${py(f.formato ?? "texto")}, "requerido": ${py(
           !!f.requerido,
-        )}, "alias": ${py(f.alias ?? [])}, "ejemplo": ${py(f.ejemplo ?? "")}},`,
+        )}, "alias": ${py(f.alias ?? [])}, "ejemplo": ${py(f.ejemplo ?? "")}, "extraer": ${py(f.extraer ?? "")}},`,
     )
     .join("\n");
 }
@@ -76,6 +80,9 @@ HOJA = 0                      # hoja de Excel (nombre o índice)
 # Si algún encabezado tuyo no se reconoce, mapéalo aquí:
 #   MAPEO_COLUMNAS = {"CELULAR": "TELE_NUMB"}
 MAPEO_COLUMNAS = {}
+
+# Filtro de filas sobre una columna del archivo origen (o None para no filtrar).
+FILTRO = ${spec.filtro ? `{"columna": ${py(spec.filtro.columna)}, "valor": ${py(spec.filtro.valor)}, "alias": ${py(spec.filtro.alias)}}` : "None"}
 
 # Columnas del template guía de este cargue (mismo orden).
 CAMPOS = [
@@ -222,6 +229,19 @@ df.columns = [str(c) for c in df.columns]
 print("Filas leídas:", len(df), "| columnas del archivo:", len(df.columns))
 
 
+# ---------------------- 1.5 FILTRO DE FILAS --------------------------
+if FILTRO:
+    llaves = [norm_key(FILTRO["columna"])] + [norm_key(a) for a in FILTRO.get("alias", [])]
+    col_filtro = next((c for c in df.columns if norm_key(c) in llaves), None)
+    if col_filtro:
+        antes = len(df)
+        df = df[df[col_filtro].astype(str).str.strip().str.lower() == str(FILTRO["valor"]).strip().lower()]
+        df = df.reset_index(drop=True)
+        print(f'Filtro aplicado: {col_filtro} = "{FILTRO["valor"]}" -> {len(df)} de {antes} filas conservadas')
+    else:
+        print(f'ADVERTENCIA: no se encontró la columna de filtro "{FILTRO["columna"]}"; no se filtró.')
+
+
 # ------------------ 2. EMPAREJAR CON EL TEMPLATE ---------------------
 mapa_manual = {norm_key(k): v for k, v in MAPEO_COLUMNAS.items()}
 
@@ -254,6 +274,9 @@ for campo in CAMPOS:
     col = campo["columna"]
     origen = origen_por_columna.get(col)
     serie = df[origen] if origen else pd.Series([""] * len(df), index=df.index)
+    if campo.get("extraer") == "antes_arroba":
+        # Extrae el valor a la izquierda del "@" (ej. IMEI dentro de un correo).
+        serie = serie.map(lambda v: str(v).split("@")[0] if "@" in str(v) else str(v))
     salida[col] = serie.map(LIMPIADORES.get(campo["formato"], limpiar_texto))
 
 salida = salida[COLUMNAS]

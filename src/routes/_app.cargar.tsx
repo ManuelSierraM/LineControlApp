@@ -508,7 +508,15 @@ function CargarPage() {
       PLAN_DESC: ["PLAN_DESC", "PLAN", "DESCRIPCION PLAN"],
       VALOR_CFM: ["VLR_CFM", "VALOR_CFM", "VLR CFM", "VALOR CFM", "CFM"],
     },
-    dispositivos: {},
+    dispositivos: {
+      IMEI: ["Email Address", "EMAIL", "CORREO"],
+      Modelo: ["Model", "MODELO", "Device Model"],
+      "Número_Teléfono": ["Current Phone Number", "PHONE NUMBER", "NUMERO", "CELULAR"],
+      Last_CheckIn: ["Last Check-In", "LAST CHECKIN", "ULTIMO CHECKIN"],
+      Estado_UEM: ["Status", "ESTADO", "DEVICE STATUS"],
+      País: ["Home Country Name", "COUNTRY", "PAIS"],
+      Usuario: ["User ID", "USER", "USUARIO", "EMAIL USUARIO"],
+    },
     pops: {},
   };
 
@@ -527,6 +535,10 @@ function CargarPage() {
       titulo: g.titulo,
       archivoSalida: g.archivo.replace(/\.(csv|xlsx)$/i, "") + "_limpio.xlsx",
       dateFormat: tipo === "dispositivos" ? "DD-MM-YYYY" : "YYYY-MM-DD",
+      // En Devices UEM solo interesan los dispositivos con país "Colombia".
+      filtro: tipo === "dispositivos"
+        ? { columna: "Home Country Name", alias: ["País", "COUNTRY", "PAIS"], valor: "Colombia" }
+        : undefined,
       fields: g.fields.map((f) => ({
         columna: f.columna,
         requerido: f.requerido,
@@ -534,6 +546,8 @@ function CargarPage() {
         nota: f.nota,
         alias: ETL_ALIASES[tipo][f.columna] ?? [],
         formato: formatoDe(f.columna),
+        // En Devices UEM el IMEI viene dentro del correo (ej. 357974102217747@prosegur.com).
+        extraer: tipo === "dispositivos" && normKey(f.columna) === "imei" ? "antes_arroba" as const : undefined,
       })),
     });
   };
@@ -756,7 +770,7 @@ function CargarPage() {
                 <Button size="sm" variant="secondary" onClick={() => descargarTemplate(guideTipo)}>
                   <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar template Excel
                 </Button>
-                {guideTipo === "lineas" ? (
+                {guideTipo === "lineas" || guideTipo === "dispositivos" ? (
                   <Button size="sm" variant="outline" onClick={() => descargarEtl(guideTipo)}>
                     <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
                   </Button>
