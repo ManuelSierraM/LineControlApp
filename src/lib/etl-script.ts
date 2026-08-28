@@ -129,14 +129,20 @@ def limpiar_telefono(v):
     digits = re.sub(r"\\D", "", s)
     if not digits:
         return ""
+    explicito = s.startswith("+") or s.startswith("00")
     if s.startswith("00"):
         digits = digits[2:]
+    # Solo se quita el indicativo si el número viene con prefijo internacional
+    # explícito (+ / 00) o si es más largo que un número nacional (>10 dígitos).
+    if not explicito and len(digits) <= 10:
+        return digits
     for code in SORTED_CODES:
         if digits.startswith(code) and len(digits) > len(code):
             resto = digits[len(code):]
             if 7 <= len(resto) <= 12:
                 return resto
     return digits
+
 
 
 def limpiar_fecha(v):
