@@ -756,20 +756,27 @@ function CargarPage() {
                 <Button size="sm" variant="secondary" onClick={() => descargarTemplate(guideTipo)}>
                   <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar template Excel
                 </Button>
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-block">
-                        <Button size="sm" variant="outline" disabled onClick={() => {}}>
-                          <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>En desarrollo</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {guideTipo === "lineas" ? (
+                  <Button size="sm" variant="outline" onClick={() => descargarEtl(guideTipo)}>
+                    <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
+                  </Button>
+                ) : (
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-block">
+                          <Button size="sm" variant="outline" disabled onClick={() => {}}>
+                            <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>En desarrollo</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+
                 <p className="w-full text-xs text-muted-foreground">
                   El ETL de formateo es específico de este cargue y replica su validación previa: normaliza teléfonos, fechas, IMEI/ICCID y montos, descarta filas inválidas y entrega un Excel listo para subir.
                 </p>
