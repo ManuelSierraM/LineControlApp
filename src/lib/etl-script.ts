@@ -11,6 +11,8 @@ export type EtlField = {
   alias?: string[];
   /** Limpieza ligera aplicada a la columna. */
   formato?: "texto" | "telefono" | "fecha" | "digitos" | "numero";
+  /** Extracción previa al limpiador (ej. IMEI a la izquierda del "@"). */
+  extraer?: "antes_arroba";
 };
 
 export type EtlSpec = {
@@ -19,6 +21,8 @@ export type EtlSpec = {
   archivoSalida: string;
   dateFormat: "DD-MM-YYYY" | "YYYY-MM-DD";
   fields: EtlField[];
+  /** Filtro de filas sobre una columna del archivo origen (comparación exacta, sin tildes/mayúsculas). */
+  filtro?: { columna: string; alias: string[]; valor: string };
 };
 
 const py = (v: unknown): string => {
@@ -35,7 +39,7 @@ function fieldsBlock(fields: EtlField[]): string {
       (f) =>
         `    {"columna": ${py(f.columna)}, "formato": ${py(f.formato ?? "texto")}, "requerido": ${py(
           !!f.requerido,
-        )}, "alias": ${py(f.alias ?? [])}, "ejemplo": ${py(f.ejemplo ?? "")}},`,
+        )}, "alias": ${py(f.alias ?? [])}, "ejemplo": ${py(f.ejemplo ?? "")}, "extraer": ${py(f.extraer ?? "")}},`,
     )
     .join("\n");
 }
