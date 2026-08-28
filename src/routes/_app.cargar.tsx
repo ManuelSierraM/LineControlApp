@@ -496,6 +496,22 @@ function CargarPage() {
   };
 
   // ───────── ETL de formateo por cada cargue (derivado del template guía) ─────────
+  // Alias: nombres con los que suele venir la columna en los archivos origen.
+  const ETL_ALIASES: Record<Tipo, Record<string, string[]>> = {
+    lineas: {
+      OPERADOR: ["OPERADOR"],
+      TIPO_DE_LINEA: ["TIPO LINEA", "TIPO_LINEA", "TIPO DE LINEA"],
+      TELE_NUMB: ["TELE_NUMB", "TELE NUMB", "NUMERO", "CELULAR"],
+      NOMBRE_CLIENTE: ["NOMBRE_CLIENTE", "NOMBRE CLIENTE"],
+      "Cod Empresa": ["Cod Empresa", "COD_EMPRESA", "CODIGO EMPRESA"],
+      ICCID: ["ICCID", "SIM", "SERIAL SIM"],
+      PLAN_DESC: ["PLAN_DESC", "PLAN", "DESCRIPCION PLAN"],
+      VALOR_CFM: ["VLR_CFM", "VALOR_CFM", "VLR CFM", "VALOR CFM", "CFM"],
+    },
+    dispositivos: {},
+    pops: {},
+  };
+
   const buildEtl = (tipo: Tipo) => {
     const g = GUIDES[tipo];
     const formatoDe = (columna: string): "texto" | "telefono" | "fecha" | "digitos" | "numero" => {
@@ -516,10 +532,12 @@ function CargarPage() {
         requerido: f.requerido,
         ejemplo: f.ejemplo,
         nota: f.nota,
+        alias: ETL_ALIASES[tipo][f.columna] ?? [],
         formato: formatoDe(f.columna),
       })),
     });
   };
+
 
 
   const descargarEtl = (tipo: Tipo) => {
