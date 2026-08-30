@@ -13,6 +13,9 @@ export type EtlField = {
   formato?: "texto" | "telefono" | "fecha" | "digitos" | "numero";
   /** Extracción previa al limpiador (ej. IMEI a la izquierda del "@"). */
   extraer?: "antes_arroba" | "primeros6";
+  /** Longitud mínima/máxima para campos de tipo "digitos". Si se sale del rango se deja vacío. */
+  minLen?: number;
+  maxLen?: number;
 };
 
 export type EtlSpec = {
