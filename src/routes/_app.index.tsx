@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
-import { normalizePhone } from "@/lib/utils";
+import { isValidImei, normalizePhone } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/")({ component: Dashboard });
 

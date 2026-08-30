@@ -11,7 +11,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
-import { normalizePhone } from "@/lib/utils";
+import { isValidImei, normalizePhone } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/reportes")({ component: ReportesPage });
