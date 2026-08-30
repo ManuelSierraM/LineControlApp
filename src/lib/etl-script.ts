@@ -13,6 +13,9 @@ export type EtlField = {
   formato?: "texto" | "telefono" | "fecha" | "digitos" | "numero";
   /** Extracción previa al limpiador (ej. IMEI a la izquierda del "@"). */
   extraer?: "antes_arroba" | "primeros6";
+  /** Longitud mínima/máxima para campos de tipo "digitos". Si se sale del rango se deja vacío. */
+  minLen?: number;
+  maxLen?: number;
 };
 
 export type EtlSpec = {
@@ -39,7 +42,9 @@ function fieldsBlock(fields: EtlField[]): string {
       (f) =>
         `    {"columna": ${py(f.columna)}, "formato": ${py(f.formato ?? "texto")}, "requerido": ${py(
           !!f.requerido,
-        )}, "alias": ${py(f.alias ?? [])}, "ejemplo": ${py(f.ejemplo ?? "")}, "extraer": ${py(f.extraer ?? "")}},`,
+        )}, "alias": ${py(f.alias ?? [])}, "ejemplo": ${py(f.ejemplo ?? "")}, "extraer": ${py(
+          f.extraer ?? "",
+        )}, "minLen": ${py(f.minLen ?? null)}, "maxLen": ${py(f.maxLen ?? null)}},`,
     )
     .join("\n");
 }
@@ -171,7 +176,7 @@ def limpiar_fecha(v):
     return ts.strftime("%d-%m-%Y" if FORMATO_FECHA == "DD-MM-YYYY" else "%Y-%m-%d")
 
 
-def limpiar_digitos(v):
+def limpiar_digitos(v, minLen=None, maxLen=None):
     s = limpiar_texto(v)
     if not s:
         return ""
@@ -180,7 +185,14 @@ def limpiar_digitos(v):
             s = format(float(s), ".0f")
         except ValueError:
             pass
-    return re.sub(r"\\D", "", s)
+    s = re.sub(r"\\D", "", s)
+    if not s:
+        return ""
+    if minLen is not None and len(s) < minLen:
+        return ""
+    if maxLen is not None and len(s) > maxLen:
+        return ""
+    return s
 
 
 def limpiar_numero(v):
@@ -285,7 +297,14 @@ for campo in CAMPOS:
     if campo.get("extraer") == "primeros6":
         # Conserva solo los primeros 6 caracteres (ej. código de delegación).
         serie = serie.map(lambda v: str(v).strip()[:6])
-    salida[col] = serie.map(LIMPIADORES.get(campo["formato"], limpiar_texto))
+    if campo["formato"] == "digitos":
+        # Si el campo tiene rango de longitud definido, los valores fuera de él
+        # se dejan vacíos (no se eliminan filas). Esto limpia IMEI/ICCID basura.
+        salida[col] = serie.map(
+            lambda v: limpiar_digitos(v, campo.get("minLen"), campo.get("maxLen"))
+        )
+    else:
+        salida[col] = serie.map(LIMPIADORES.get(campo["formato"], limpiar_texto))
 
 salida = salida[COLUMNAS]
 

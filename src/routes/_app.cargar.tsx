@@ -540,6 +540,7 @@ function CargarPage() {
 
   const buildEtl = (tipo: Tipo) => {
     const g = GUIDES[tipo];
+    const ruleByColumna = new Map(SCHEMAS[tipo].map((r) => [r.columna, r] as const));
     const formatoDe = (columna: string): "texto" | "telefono" | "fecha" | "digitos" | "numero" => {
       const k = normKey(columna);
       if (/tele|telefono|msisdn|celular/.test(k)) return "telefono";
@@ -557,19 +558,26 @@ function CargarPage() {
       filtro: tipo === "dispositivos"
         ? { columna: "Home Country Name", alias: ["País", "COUNTRY", "PAIS"], valor: "Colombia" }
         : undefined,
-      fields: g.fields.map((f) => ({
-        columna: f.columna,
-        requerido: f.requerido,
-        ejemplo: f.ejemplo,
-        nota: f.nota,
-        alias: ETL_ALIASES[tipo][f.columna] ?? [],
-        formato: formatoDe(f.columna),
-        // En Devices UEM el IMEI viene dentro del correo (ej. 357974102217747@prosegur.com).
-        // En POPS la Delegación se recorta a sus primeros 6 caracteres (código, ej. C01V0).
-        extraer: tipo === "dispositivos" && normKey(f.columna) === "imei" ? "antes_arroba" as const
-          : tipo === "pops" && /delegaci/i.test(f.columna) ? "primeros6" as const
-          : undefined,
-      })),
+      fields: g.fields.map((f) => {
+        const rule = ruleByColumna.get(f.columna);
+        return {
+          columna: f.columna,
+          requerido: f.requerido,
+          ejemplo: f.ejemplo,
+          nota: f.nota,
+          alias: ETL_ALIASES[tipo][f.columna] ?? [],
+          formato: formatoDe(f.columna),
+          // Propaga el rango de longitud definido en el schema; el ETL vaciará
+          // silenciosamente los dígitos que queden fuera del rango.
+          minLen: rule?.minLen,
+          maxLen: rule?.maxLen,
+          // En Devices UEM el IMEI viene dentro del correo (ej. 357974102217747@prosegur.com).
+          // En POPS la Delegación se recorta a sus primeros 6 caracteres (código, ej. C01V0).
+          extraer: tipo === "dispositivos" && normKey(f.columna) === "imei" ? "antes_arroba" as const
+            : tipo === "pops" && /delegaci/i.test(f.columna) ? "primeros6" as const
+            : undefined,
+        };
+      }),
     });
   };
 
