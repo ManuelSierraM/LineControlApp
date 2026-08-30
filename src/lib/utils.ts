@@ -85,3 +85,10 @@ export function coercePhone(p?: string | null): string | null {
 export function isCountryCode(digits: string): boolean {
   return COUNTRY_CODES.includes(digits);
 }
+
+/** Valida que un IMEI sea numérico puro y tenga entre 14 y 16 dígitos. */
+export function isValidImei(v?: string | number | null): boolean {
+  if (v == null) return false;
+  const s = String(v).trim();
+  return /^\d{14,16}$/.test(s);
+}
