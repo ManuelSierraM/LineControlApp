@@ -112,7 +112,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
     { columna: "Usuario", target: "asignado_a", type: "text", maxLen: 120, hint: "Usuario asignado. Texto / correo opcional (máx. 120)." },
   ],
   pops: [
-    { columna: "IMEI", target: "codigo", required: false, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "IMEI del equipo. Opcional; si viene, solo dígitos, 14–16 caracteres." },
+    { columna: "IMEI", target: "codigo", required: false, type: "digits", minLen: 14, maxLen: 16, unique: true, strict: true, hint: "IMEI del equipo. Opcional; si viene, solo dígitos sin letras ni símbolos, 14–16 caracteres." },
     { columna: "Numero_Telefono", target: "numero_telefono", type: "text", normalize: "phone", hint: "Línea asociada. Texto libre opcional; se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.). Se conservan letras o símbolos para alertas de inconsistencia." },
     { columna: "Centro", target: "centro_costo", required: false, type: "text", hint: "Centro de costo. Texto libre opcional." },
     { columna: "Delegación", target: "ubicacion", required: false, type: "text", hint: "Delegación o sede. Texto libre opcional." },
