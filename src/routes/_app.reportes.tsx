@@ -159,8 +159,8 @@ function ReportesPage() {
   const sinEquipo = lineas.filter((l) => !l.imei);
   const sinEquipoMes = sinEquipo.filter((l) => isCurrentMonth(l.created_at));
 
-  // POPS sin centro (igual que Alertas)
-  const popsSC = pops.filter((p) => !p.centro_costo);
+  // POPS sin centro (igual que Alertas): solo registros con IMEI numérico 14-16 dígitos
+  const popsSC = pops.filter((p) => !p.centro_costo && isValidImei(p.codigo));
   const popsSCMes = popsSC.filter((p) => isCurrentMonth(p.created_at));
 
   // Inconsistencias: dispositivos (UEM/POPS) con IMEI pero sin teléfono válido (igual que Alertas).
