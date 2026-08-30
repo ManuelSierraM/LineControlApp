@@ -297,7 +297,14 @@ for campo in CAMPOS:
     if campo.get("extraer") == "primeros6":
         # Conserva solo los primeros 6 caracteres (ej. código de delegación).
         serie = serie.map(lambda v: str(v).strip()[:6])
-    salida[col] = serie.map(LIMPIADORES.get(campo["formato"], limpiar_texto))
+    if campo["formato"] == "digitos":
+        # Si el campo tiene rango de longitud definido, los valores fuera de él
+        # se dejan vacíos (no se eliminan filas). Esto limpia IMEI/ICCID basura.
+        salida[col] = serie.map(
+            lambda v: limpiar_digitos(v, campo.get("minLen"), campo.get("maxLen"))
+        )
+    else:
+        salida[col] = serie.map(LIMPIADORES.get(campo["formato"], limpiar_texto))
 
 salida = salida[COLUMNAS]
 
