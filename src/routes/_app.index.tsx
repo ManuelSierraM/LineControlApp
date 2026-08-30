@@ -313,9 +313,17 @@ function Dashboard() {
                 <p className="py-8 text-center text-sm text-muted-foreground">Sin alertas de dispositivos</p>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dispAlertData} margin={{ left: 8, right: 20, top: 8 }}>
+                  <BarChart data={dispAlertData} margin={{ left: 8, right: 20, top: 8, bottom: 40 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                    <XAxis dataKey="name" stroke="var(--color-muted-foreground)" fontSize={12} />
+                    <XAxis
+                      dataKey="name"
+                      stroke="var(--color-muted-foreground)"
+                      fontSize={11}
+                      angle={-35}
+                      textAnchor="end"
+                      height={60}
+                      interval={0}
+                    />
                     <YAxis
                       allowDecimals={false}
                       tickFormatter={(v) => Number(v).toLocaleString("es-CO")}
