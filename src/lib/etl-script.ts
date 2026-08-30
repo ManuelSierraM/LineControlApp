@@ -176,7 +176,7 @@ def limpiar_fecha(v):
     return ts.strftime("%d-%m-%Y" if FORMATO_FECHA == "DD-MM-YYYY" else "%Y-%m-%d")
 
 
-def limpiar_digitos(v):
+def limpiar_digitos(v, minLen=None, maxLen=None):
     s = limpiar_texto(v)
     if not s:
         return ""
@@ -185,7 +185,14 @@ def limpiar_digitos(v):
             s = format(float(s), ".0f")
         except ValueError:
             pass
-    return re.sub(r"\\D", "", s)
+    s = re.sub(r"\\D", "", s)
+    if not s:
+        return ""
+    if minLen is not None and len(s) < minLen:
+        return ""
+    if maxLen is not None and len(s) > maxLen:
+        return ""
+    return s
 
 
 def limpiar_numero(v):
