@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
-import { normalizePhone } from "@/lib/utils";
+import { isValidImei, normalizePhone } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/")({ component: Dashboard });
 
@@ -120,8 +120,8 @@ function Dashboard() {
   const sinEquipoRows = lineas.filter((l) => !l.imei);
   const sinEquipo = sinEquipoRows.length;
 
-  // POPS sin centro
-  const popsSinCC = pops.filter((p) => !p.centro_costo).length;
+  // POPS sin centro: solo registros con IMEI numérico 14-16 dígitos
+  const popsSinCC = pops.filter((p) => !p.centro_costo && isValidImei(p.codigo)).length;
 
   // Sin línea asociada: dispositivos (UEM+POPS) con IMEI pero sin teléfono válido.
   // UEM solo en estados ACTIVE o WIPE_PENDING (sin importar mayúsculas/minúsculas).

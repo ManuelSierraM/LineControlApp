@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
-import { isCountryCode, normalizePhone } from "@/lib/utils";
+import { isCountryCode, isValidImei, normalizePhone } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/alertas")({ component: AlertasPage });
 
@@ -133,7 +133,7 @@ function AlertasPage() {
     (l) => Number(l.costo_mensual ?? l.valor_plan ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100,
   );
 
-  const popsSC = pops.filter((p) => !p.centro_costo);
+  const popsSC = pops.filter((p) => !p.centro_costo && isValidImei(p.codigo));
 
   // "Sin línea asociada": dispositivos (UEM/POPS) con IMEI pero sin número de línea válido.
   // Para UEM solo se rastrean estados ACTIVE o WIPE_PENDING (sin importar mayúsculas/minúsculas).

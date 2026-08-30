@@ -11,7 +11,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
-import { normalizePhone } from "@/lib/utils";
+import { isValidImei, normalizePhone } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/reportes")({ component: ReportesPage });
@@ -159,8 +159,8 @@ function ReportesPage() {
   const sinEquipo = lineas.filter((l) => !l.imei);
   const sinEquipoMes = sinEquipo.filter((l) => isCurrentMonth(l.created_at));
 
-  // POPS sin centro (igual que Alertas)
-  const popsSC = pops.filter((p) => !p.centro_costo);
+  // POPS sin centro (igual que Alertas): solo registros con IMEI numérico 14-16 dígitos
+  const popsSC = pops.filter((p) => !p.centro_costo && isValidImei(p.codigo));
   const popsSCMes = popsSC.filter((p) => isCurrentMonth(p.created_at));
 
   // Inconsistencias: dispositivos (UEM/POPS) con IMEI pero sin teléfono válido (igual que Alertas).
