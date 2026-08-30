@@ -120,6 +120,7 @@ function AlertasPage() {
         modelo: d.modelo ?? pop?.modelo ?? "—",
         cliente: linea?.nombre_cliente ?? "—",
         centro_costo: pop?.centro_costo ?? linea?.centro_costo ?? "—",
+        estado: d.estado ?? "—",
         dias: diffDays(d.ultimo_checkin),
       };
     })
