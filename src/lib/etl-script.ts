@@ -42,7 +42,9 @@ function fieldsBlock(fields: EtlField[]): string {
       (f) =>
         `    {"columna": ${py(f.columna)}, "formato": ${py(f.formato ?? "texto")}, "requerido": ${py(
           !!f.requerido,
-        )}, "alias": ${py(f.alias ?? [])}, "ejemplo": ${py(f.ejemplo ?? "")}, "extraer": ${py(f.extraer ?? "")}},`,
+        )}, "alias": ${py(f.alias ?? [])}, "ejemplo": ${py(f.ejemplo ?? "")}, "extraer": ${py(
+          f.extraer ?? "",
+        )}, "minLen": ${py(f.minLen ?? null)}, "maxLen": ${py(f.maxLen ?? null)}},`,
     )
     .join("\n");
 }
