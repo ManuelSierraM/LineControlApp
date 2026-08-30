@@ -86,6 +86,8 @@ type FieldRule = {
   enum?: string[];
   unique?: boolean;
   normalize?: "phone" | "phone-strict";
+  /** Si es true, rechaza letras y símbolos en campos de tipo dígitos (solo espacios y notación científica de Excel se limpian). */
+  strict?: boolean;
   hint: string;
 };
 
@@ -110,7 +112,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
     { columna: "Usuario", target: "asignado_a", type: "text", maxLen: 120, hint: "Usuario asignado. Texto / correo opcional (máx. 120)." },
   ],
   pops: [
-    { columna: "IMEI", target: "codigo", required: false, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "IMEI del equipo. Opcional; si viene, solo dígitos, 14–16 caracteres." },
+    { columna: "IMEI", target: "codigo", required: false, type: "digits", minLen: 14, maxLen: 16, unique: true, strict: true, hint: "IMEI del equipo. Opcional; si viene, solo dígitos sin letras ni símbolos, 14–16 caracteres." },
     { columna: "Numero_Telefono", target: "numero_telefono", type: "text", normalize: "phone", hint: "Línea asociada. Texto libre opcional; se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.). Se conservan letras o símbolos para alertas de inconsistencia." },
     { columna: "Centro", target: "centro_costo", required: false, type: "text", hint: "Centro de costo. Texto libre opcional." },
     { columna: "Delegación", target: "ubicacion", required: false, type: "text", hint: "Delegación o sede. Texto libre opcional." },
@@ -215,6 +217,15 @@ function validateValue(rule: FieldRule, raw: any): { ok: boolean; reason?: strin
       return { ok: true, coerced: d };
     }
     case "digits": {
+      const rawStr = String(raw).trim();
+      if (rule.strict) {
+        const compact = rawStr.replace(/\s/g, "");
+        const pure = /^\d+$/.test(compact);
+        const scientific = /^\d+(\.\d+)?[eE][+-]?\d+$/.test(compact);
+        if (!pure && !scientific) {
+          return { ok: false, reason: `solo se permiten dígitos — ${rule.hint}` };
+        }
+      }
       const s = coerceDigits(raw);
       if (!s) return { ok: false, reason: `no contiene dígitos — ${rule.hint}` };
       if (rule.minLen && s.length < rule.minLen) return { ok: false, reason: `longitud ${s.length}, mínimo ${rule.minLen} — ${rule.hint}` };
