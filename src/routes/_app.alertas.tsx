@@ -120,6 +120,7 @@ function AlertasPage() {
         modelo: d.modelo ?? pop?.modelo ?? "—",
         cliente: linea?.nombre_cliente ?? "—",
         centro_costo: pop?.centro_costo ?? linea?.centro_costo ?? "—",
+        estado: d.estado ?? "—",
         dias: diffDays(d.ultimo_checkin),
       };
     })
@@ -288,11 +289,12 @@ function AlertasPage() {
           <DataTable
             title="Equipos sin uso >30 días"
             rows={sinUso}
-            searchKeys={["imei", "msisdn", "modelo", "centro_costo"]}
+            searchKeys={["imei", "msisdn", "modelo", "centro_costo", "estado"]}
             columns={[
               { key: "imei", header: "IMEI" },
               { key: "msisdn", header: "Número" },
               { key: "modelo", header: "Modelo" },
+              { key: "estado", header: "Estado" },
               {
                 key: "dias",
                 header: "Días sin uso",
