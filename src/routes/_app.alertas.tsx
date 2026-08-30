@@ -133,7 +133,7 @@ function AlertasPage() {
     (l) => Number(l.costo_mensual ?? l.valor_plan ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100,
   );
 
-  const popsSC = pops.filter((p) => !p.centro_costo);
+  const popsSC = pops.filter((p) => !p.centro_costo && isValidImei(p.codigo));
 
   // "Sin línea asociada": dispositivos (UEM/POPS) con IMEI pero sin número de línea válido.
   // Para UEM solo se rastrean estados ACTIVE o WIPE_PENDING (sin importar mayúsculas/minúsculas).
