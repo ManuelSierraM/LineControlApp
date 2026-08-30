@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { useAuth } from "@/lib/auth";
@@ -517,7 +516,15 @@ function CargarPage() {
       País: ["Home Country Name", "COUNTRY", "PAIS"],
       Usuario: ["User ID", "USER", "USUARIO", "EMAIL USUARIO"],
     },
-    pops: {},
+    pops: {
+      IMEI: ["IMEI"],
+      Numero_Telefono: ["Nº Teléfono", "N° Teléfono", "NO TELEFONO", "TELEFONO", "NUMERO TELEFONO"],
+      Centro: ["Código Centro", "CODIGO CENTRO"],
+      "Delegación": ["Delegación", "DELEGACION"],
+      Fecha_Alta: ["Fecha de Alta", "FECHA ALTA"],
+      Fecha_Baja: ["Fecha baja", "FECHA BAJA"],
+      Modelo: ["Modelo", "MODEL"],
+    },
   };
 
   const buildEtl = (tipo: Tipo) => {
@@ -547,7 +554,10 @@ function CargarPage() {
         alias: ETL_ALIASES[tipo][f.columna] ?? [],
         formato: formatoDe(f.columna),
         // En Devices UEM el IMEI viene dentro del correo (ej. 357974102217747@prosegur.com).
-        extraer: tipo === "dispositivos" && normKey(f.columna) === "imei" ? "antes_arroba" as const : undefined,
+        // En POPS la Delegación se recorta a sus primeros 6 caracteres (código, ej. C01V0).
+        extraer: tipo === "dispositivos" && normKey(f.columna) === "imei" ? "antes_arroba" as const
+          : tipo === "pops" && /delegaci/i.test(f.columna) ? "primeros6" as const
+          : undefined,
       })),
     });
   };
@@ -770,26 +780,9 @@ function CargarPage() {
                 <Button size="sm" variant="secondary" onClick={() => descargarTemplate(guideTipo)}>
                   <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar template Excel
                 </Button>
-                {guideTipo === "lineas" || guideTipo === "dispositivos" ? (
-                  <Button size="sm" variant="outline" onClick={() => descargarEtl(guideTipo)}>
-                    <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
-                  </Button>
-                ) : (
-                  <TooltipProvider delayDuration={0}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-block">
-                          <Button size="sm" variant="outline" disabled onClick={() => {}}>
-                            <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <p>En desarrollo</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
+                <Button size="sm" variant="outline" onClick={() => descargarEtl(guideTipo)}>
+                  <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
+                </Button>
 
                 <p className="w-full text-xs text-muted-foreground">
                   El ETL de formateo es específico de este cargue y replica su validación previa: normaliza teléfonos, fechas, IMEI/ICCID y montos, descarta filas inválidas y entrega un Excel listo para subir.

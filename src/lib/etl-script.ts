@@ -12,7 +12,7 @@ export type EtlField = {
   /** Limpieza ligera aplicada a la columna. */
   formato?: "texto" | "telefono" | "fecha" | "digitos" | "numero";
   /** Extracción previa al limpiador (ej. IMEI a la izquierda del "@"). */
-  extraer?: "antes_arroba";
+  extraer?: "antes_arroba" | "primeros6";
 };
 
 export type EtlSpec = {
@@ -156,11 +156,16 @@ def limpiar_fecha(v):
     s = limpiar_texto(v)
     if not s:
         return ""
+    # Quita sufijos tipo "(UTC -5)" que traen algunas plataformas
+    s = re.sub(r"\\s*\\(UTC[^)]*\\)", "", s).strip()
     # Fecha serial de Excel
     if re.fullmatch(r"\\d{5}", s):
         ts = pd.to_datetime(int(s), unit="D", origin="1899-12-30", errors="coerce")
     else:
-        ts = pd.to_datetime(s, errors="coerce", dayfirst=(FORMATO_FECHA == "DD-MM-YYYY"))
+        # Los archivos origen suelen venir en DD-MM-YYYY (formato Colombia)
+        ts = pd.to_datetime(s, errors="coerce", dayfirst=True)
+        if pd.isna(ts):
+            ts = pd.to_datetime(s, errors="coerce", dayfirst=False)
     if pd.isna(ts):
         return s
     return ts.strftime("%d-%m-%Y" if FORMATO_FECHA == "DD-MM-YYYY" else "%Y-%m-%d")
@@ -277,6 +282,9 @@ for campo in CAMPOS:
     if campo.get("extraer") == "antes_arroba":
         # Extrae el valor a la izquierda del "@" (ej. IMEI dentro de un correo).
         serie = serie.map(lambda v: str(v).split("@")[0] if "@" in str(v) else str(v))
+    if campo.get("extraer") == "primeros6":
+        # Conserva solo los primeros 6 caracteres (ej. código de delegación).
+        serie = serie.map(lambda v: str(v).strip()[:6])
     salida[col] = serie.map(LIMPIADORES.get(campo["formato"], limpiar_texto))
 
 salida = salida[COLUMNAS]
