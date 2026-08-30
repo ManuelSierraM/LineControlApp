@@ -50,7 +50,7 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     fields: [
       { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del dispositivo", target: "imei" },
       { columna: "Modelo", ejemplo: "Galaxy S22", requerido: false, nota: "Modelo del equipo", target: "modelo" },
-      { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Se quita el indicativo de país (+57, 0057, +1, etc.) de cualquier país. Puede venir vacío.", target: "numero_telefono" },
+      { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Se quita el indicativo de país (+57, 0057, +1, etc.) de cualquier país. Texto libre, puede venir vacío; letras o símbolos se conservan para la alerta \"Sin línea asociada\".", target: "numero_telefono" },
       { columna: "Last_CheckIn", ejemplo: "12-04-2025", requerido: true, nota: "Último reporte UEM (DD-MM-YYYY)", target: "ultimo_checkin" },
       { columna: "Estado_UEM", ejemplo: "ACTIVO", requerido: true, nota: "Estado en plataforma UEM", target: "estado" },
       { columna: "País", ejemplo: "Colombia", requerido: false, nota: "País de operación" },
@@ -105,7 +105,7 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
   dispositivos: [
     { columna: "IMEI", target: "imei", required: true, type: "digits", minLen: 14, maxLen: 16, hint: "IMEI del dispositivo. Obligatorio, solo dígitos, 14–16 caracteres. Se permiten repetidos (se reportan en la alerta IMEI duplicado)." },
     { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Modelo del equipo. Texto opcional (máx. 60)." },
-    { columna: "Número_Teléfono", target: "numero_telefono", type: "text", normalize: "phone-strict", hint: "Línea asociada. Texto opcional; se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.)." },
+    { columna: "Número_Teléfono", target: "numero_telefono", type: "text", normalize: "phone", hint: "Línea asociada. Texto libre opcional; se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.). Se conservan letras o símbolos para la alerta \"Sin línea asociada\"." },
     { columna: "Last_CheckIn", target: "ultimo_checkin", required: true, type: "date", hint: "Último reporte UEM. Obligatorio, fecha DD-MM-YYYY (ej. 12-04-2025)." },
     { columna: "Estado_UEM", target: "estado", required: true, type: "text", maxLen: 30, hint: "Estado en plataforma UEM. Obligatorio, texto (máx. 30)." },
     { columna: "País", type: "text", maxLen: 40, hint: "País de operación. Texto opcional (máx. 40)." },

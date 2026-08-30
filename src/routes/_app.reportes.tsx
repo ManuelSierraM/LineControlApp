@@ -163,9 +163,11 @@ function ReportesPage() {
   const popsSC = pops.filter((p) => !p.centro_costo);
   const popsSCMes = popsSC.filter((p) => isCurrentMonth(p.created_at));
 
-  // Inconsistencias: dispositivos (UEM/POPS) con IMEI pero sin teléfono válido (igual que Alertas)
+  // Inconsistencias: dispositivos (UEM/POPS) con IMEI pero sin teléfono válido (igual que Alertas).
+  // UEM solo en estados ACTIVE o WIPE_PENDING (sin importar mayúsculas/minúsculas).
   const buildInconsist = (srcDisp: typeof disp, srcPops: typeof pops) => {
     const ui = srcDisp
+      .filter((d) => ["active", "wipe_pending"].includes(String(d.estado ?? "").trim().toLowerCase()))
       .filter((d) => d.imei && !normPhone(d.numero_telefono))
       .map((d) => ({ imei: d.imei, modelo: d.modelo, fuente: "UEM", created_at: d.created_at }));
     const ids = new Set(ui.map((d) => d.imei));

@@ -123,8 +123,11 @@ function Dashboard() {
   // POPS sin centro
   const popsSinCC = pops.filter((p) => !p.centro_costo).length;
 
-  // Sin línea asociada: dispositivos (UEM+POPS) con IMEI pero sin teléfono válido
-  const uemIncon = disp.filter((d) => d.imei && !normPhone(d.numero_telefono));
+  // Sin línea asociada: dispositivos (UEM+POPS) con IMEI pero sin teléfono válido.
+  // UEM solo en estados ACTIVE o WIPE_PENDING (sin importar mayúsculas/minúsculas).
+  const uemIncon = disp.filter((d) =>
+    ["active", "wipe_pending"].includes(String(d.estado ?? "").trim().toLowerCase()) &&
+    d.imei && !normPhone(d.numero_telefono));
   const uemIds = new Set(uemIncon.map((d) => d.imei));
   const popsIncon = pops.filter((p) => p.codigo && !uemIds.has(p.codigo) && !normPhone(p.numero_telefono));
   const inconsistencias = uemIncon.length + popsIncon.length;

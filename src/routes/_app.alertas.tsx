@@ -134,8 +134,11 @@ function AlertasPage() {
 
   const popsSC = pops.filter((p) => !p.centro_costo);
 
-  // "Inconsistencias": dispositivos (UEM/POPS) con IMEI pero sin número de línea válido
+  // "Sin línea asociada": dispositivos (UEM/POPS) con IMEI pero sin número de línea válido.
+  // Para UEM solo se rastrean estados ACTIVE o WIPE_PENDING (sin importar mayúsculas/minúsculas).
+  const ESTADOS_RASTREABLES = new Set(["active", "wipe_pending"]);
   const inconsistUem = disp
+    .filter((d) => ESTADOS_RASTREABLES.has(String(d.estado ?? "").trim().toLowerCase()))
     .filter((d) => d.imei && !normPhone(d.numero_telefono))
     .map((d) => ({
       imei: d.imei,
