@@ -217,6 +217,15 @@ function validateValue(rule: FieldRule, raw: any): { ok: boolean; reason?: strin
       return { ok: true, coerced: d };
     }
     case "digits": {
+      const rawStr = String(raw).trim();
+      if (rule.strict) {
+        const compact = rawStr.replace(/\s/g, "");
+        const pure = /^\d+$/.test(compact);
+        const scientific = /^\d+(\.\d+)?[eE][+-]?\d+$/.test(compact);
+        if (!pure && !scientific) {
+          return { ok: false, reason: `solo se permiten dígitos — ${rule.hint}` };
+        }
+      }
       const s = coerceDigits(raw);
       if (!s) return { ok: false, reason: `no contiene dígitos — ${rule.hint}` };
       if (rule.minLen && s.length < rule.minLen) return { ok: false, reason: `longitud ${s.length}, mínimo ${rule.minLen} — ${rule.hint}` };
