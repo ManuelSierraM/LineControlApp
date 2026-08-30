@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
-import { isCountryCode, normalizePhone } from "@/lib/utils";
+import { isCountryCode, isValidImei, normalizePhone } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/alertas")({ component: AlertasPage });
 
