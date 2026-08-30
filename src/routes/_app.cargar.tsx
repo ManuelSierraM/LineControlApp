@@ -86,6 +86,8 @@ type FieldRule = {
   enum?: string[];
   unique?: boolean;
   normalize?: "phone" | "phone-strict";
+  /** Si es true, rechaza letras y símbolos en campos de tipo dígitos (solo espacios y notación científica de Excel se limpian). */
+  strict?: boolean;
   hint: string;
 };
 
