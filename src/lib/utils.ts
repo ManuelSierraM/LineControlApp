@@ -43,8 +43,13 @@ export function normalizePhone(p?: string | null): string {
   // Detecta prefijo internacional explícito: +XX o 00XX
   const hasPlus = raw.startsWith("+");
   const hasDoubleZero = raw.startsWith("00");
+  const explicito = hasPlus || hasDoubleZero;
 
   if (hasDoubleZero) digits = digits.slice(2);
+
+  // Solo se quita el indicativo si el número viene con prefijo internacional
+  // explícito (+ / 00) o si es más largo que un número nacional (>10 dígitos).
+  if (!explicito && digits.length <= 10) return digits;
 
   for (const code of SORTED_CODES) {
     if (digits.startsWith(code) && digits.length > code.length) {
@@ -58,6 +63,7 @@ export function normalizePhone(p?: string | null): string {
   // Si venía con "+" pero no logramos identificar un indicativo conocido,
   // devolvemos los dígitos tal cual (ya se quitó el "+").
   return digits;
+
 }
 
 /**
