@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
-import { isCountryCode, normalizePhone } from "@/lib/utils";
+import { isCountryCode, isValidImei, normalizePhone } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/alertas")({ component: AlertasPage });
 
@@ -120,6 +120,7 @@ function AlertasPage() {
         modelo: d.modelo ?? pop?.modelo ?? "—",
         cliente: linea?.nombre_cliente ?? "—",
         centro_costo: pop?.centro_costo ?? linea?.centro_costo ?? "—",
+        estado: d.estado ?? "—",
         dias: diffDays(d.ultimo_checkin),
       };
     })
@@ -132,10 +133,13 @@ function AlertasPage() {
     (l) => Number(l.costo_mensual ?? l.valor_plan ?? 0) > 50 && Number(l.consumo_mb ?? 0) < 100,
   );
 
-  const popsSC = pops.filter((p) => !p.centro_costo);
+  const popsSC = pops.filter((p) => !p.centro_costo && isValidImei(p.codigo));
 
-  // "Inconsistencias": dispositivos (UEM/POPS) con IMEI pero sin número de línea válido
+  // "Sin línea asociada": dispositivos (UEM/POPS) con IMEI pero sin número de línea válido.
+  // Para UEM solo se rastrean estados ACTIVE o WIPE_PENDING (sin importar mayúsculas/minúsculas).
+  const ESTADOS_RASTREABLES = new Set(["active", "wipe_pending"]);
   const inconsistUem = disp
+    .filter((d) => ESTADOS_RASTREABLES.has(String(d.estado ?? "").trim().toLowerCase()))
     .filter((d) => d.imei && !normPhone(d.numero_telefono))
     .map((d) => ({
       imei: d.imei,
@@ -285,11 +289,12 @@ function AlertasPage() {
           <DataTable
             title="Equipos sin uso >30 días"
             rows={sinUso}
-            searchKeys={["imei", "msisdn", "modelo", "centro_costo"]}
+            searchKeys={["imei", "msisdn", "modelo", "centro_costo", "estado"]}
             columns={[
               { key: "imei", header: "IMEI" },
               { key: "msisdn", header: "Número" },
               { key: "modelo", header: "Modelo" },
+              { key: "estado", header: "Estado" },
               {
                 key: "dias",
                 header: "Días sin uso",

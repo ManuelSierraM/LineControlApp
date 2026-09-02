@@ -7,8 +7,15 @@ export type EtlField = {
   requerido?: boolean;
   ejemplo?: string;
   nota?: string;
+  /** Nombres alternativos con los que puede venir la columna en el archivo origen. */
+  alias?: string[];
   /** Limpieza ligera aplicada a la columna. */
   formato?: "texto" | "telefono" | "fecha" | "digitos" | "numero";
+  /** Extracción previa al limpiador (ej. IMEI a la izquierda del "@"). */
+  extraer?: "antes_arroba" | "primeros6";
+  /** Longitud mínima/máxima para campos de tipo "digitos". Si se sale del rango se deja vacío. */
+  minLen?: number;
+  maxLen?: number;
 };
 
 export type EtlSpec = {
@@ -17,12 +24,15 @@ export type EtlSpec = {
   archivoSalida: string;
   dateFormat: "DD-MM-YYYY" | "YYYY-MM-DD";
   fields: EtlField[];
+  /** Filtro de filas sobre una columna del archivo origen (comparación exacta, sin tildes/mayúsculas). */
+  filtro?: { columna: string; alias: string[]; valor: string };
 };
 
 const py = (v: unknown): string => {
   if (v === undefined || v === null) return "None";
   if (typeof v === "boolean") return v ? "True" : "False";
   if (typeof v === "number") return String(v);
+  if (Array.isArray(v)) return `[${v.map(py).join(", ")}]`;
   return `"${String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ")}"`;
 };
 
@@ -32,10 +42,13 @@ function fieldsBlock(fields: EtlField[]): string {
       (f) =>
         `    {"columna": ${py(f.columna)}, "formato": ${py(f.formato ?? "texto")}, "requerido": ${py(
           !!f.requerido,
-        )}, "ejemplo": ${py(f.ejemplo ?? "")}},`,
+        )}, "alias": ${py(f.alias ?? [])}, "ejemplo": ${py(f.ejemplo ?? "")}, "extraer": ${py(
+          f.extraer ?? "",
+        )}, "minLen": ${py(f.minLen ?? null)}, "maxLen": ${py(f.maxLen ?? null)}},`,
     )
     .join("\n");
 }
+
 
 export function buildEtlScript(spec: EtlSpec): string {
   return `# =====================================================================
@@ -72,6 +85,9 @@ HOJA = 0                      # hoja de Excel (nombre o índice)
 # Si algún encabezado tuyo no se reconoce, mapéalo aquí:
 #   MAPEO_COLUMNAS = {"CELULAR": "TELE_NUMB"}
 MAPEO_COLUMNAS = {}
+
+# Filtro de filas sobre una columna del archivo origen (o None para no filtrar).
+FILTRO = ${spec.filtro ? `{"columna": ${py(spec.filtro.columna)}, "valor": ${py(spec.filtro.valor)}, "alias": ${py(spec.filtro.alias)}}` : "None"}
 
 # Columnas del template guía de este cargue (mismo orden).
 CAMPOS = [
@@ -125,8 +141,13 @@ def limpiar_telefono(v):
     digits = re.sub(r"\\D", "", s)
     if not digits:
         return ""
+    explicito = s.startswith("+") or s.startswith("00")
     if s.startswith("00"):
         digits = digits[2:]
+    # Solo se quita el indicativo si el número viene con prefijo internacional
+    # explícito (+ / 00) o si es más largo que un número nacional (>10 dígitos).
+    if not explicito and len(digits) <= 10:
+        return digits
     for code in SORTED_CODES:
         if digits.startswith(code) and len(digits) > len(code):
             resto = digits[len(code):]
@@ -135,21 +156,27 @@ def limpiar_telefono(v):
     return digits
 
 
+
 def limpiar_fecha(v):
     s = limpiar_texto(v)
     if not s:
         return ""
+    # Quita sufijos tipo "(UTC -5)" que traen algunas plataformas
+    s = re.sub(r"\\s*\\(UTC[^)]*\\)", "", s).strip()
     # Fecha serial de Excel
     if re.fullmatch(r"\\d{5}", s):
         ts = pd.to_datetime(int(s), unit="D", origin="1899-12-30", errors="coerce")
     else:
-        ts = pd.to_datetime(s, errors="coerce", dayfirst=(FORMATO_FECHA == "DD-MM-YYYY"))
+        # Los archivos origen suelen venir en DD-MM-YYYY (formato Colombia)
+        ts = pd.to_datetime(s, errors="coerce", dayfirst=True)
+        if pd.isna(ts):
+            ts = pd.to_datetime(s, errors="coerce", dayfirst=False)
     if pd.isna(ts):
         return s
     return ts.strftime("%d-%m-%Y" if FORMATO_FECHA == "DD-MM-YYYY" else "%Y-%m-%d")
 
 
-def limpiar_digitos(v):
+def limpiar_digitos(v, minLen=None, maxLen=None):
     s = limpiar_texto(v)
     if not s:
         return ""
@@ -158,7 +185,14 @@ def limpiar_digitos(v):
             s = format(float(s), ".0f")
         except ValueError:
             pass
-    return re.sub(r"\\D", "", s)
+    s = re.sub(r"\\D", "", s)
+    if not s:
+        return ""
+    if minLen is not None and len(s) < minLen:
+        return ""
+    if maxLen is not None and len(s) > maxLen:
+        return ""
+    return s
 
 
 def limpiar_numero(v):
@@ -212,19 +246,36 @@ df.columns = [str(c) for c in df.columns]
 print("Filas leídas:", len(df), "| columnas del archivo:", len(df.columns))
 
 
+# ---------------------- 1.5 FILTRO DE FILAS --------------------------
+if FILTRO:
+    llaves = [norm_key(FILTRO["columna"])] + [norm_key(a) for a in FILTRO.get("alias", [])]
+    col_filtro = next((c for c in df.columns if norm_key(c) in llaves), None)
+    if col_filtro:
+        antes = len(df)
+        df = df[df[col_filtro].astype(str).str.strip().str.lower() == str(FILTRO["valor"]).strip().lower()]
+        df = df.reset_index(drop=True)
+        print(f'Filtro aplicado: {col_filtro} = "{FILTRO["valor"]}" -> {len(df)} de {antes} filas conservadas')
+    else:
+        print(f'ADVERTENCIA: no se encontró la columna de filtro "{FILTRO["columna"]}"; no se filtró.')
+
+
 # ------------------ 2. EMPAREJAR CON EL TEMPLATE ---------------------
 mapa_manual = {norm_key(k): v for k, v in MAPEO_COLUMNAS.items()}
+
+# Nombre exacto del template y sus alias conocidos del archivo origen.
+mapa_alias = {}
+for campo in CAMPOS:
+    mapa_alias.setdefault(norm_key(campo["columna"]), campo["columna"])
+    for a in campo.get("alias", []):
+        mapa_alias.setdefault(norm_key(a), campo["columna"])
+
 origen_por_columna = {}
 for real in df.columns:
     k = norm_key(real)
-    destino = mapa_manual.get(k)
-    if destino is None:
-        for col in COLUMNAS:
-            if norm_key(col) == k:
-                destino = col
-                break
+    destino = mapa_manual.get(k) or mapa_alias.get(k)
     if destino is not None and destino not in origen_por_columna:
         origen_por_columna[destino] = real
+
 
 encontradas = [c for c in COLUMNAS if c in origen_por_columna]
 faltantes = [c for c in COLUMNAS if c not in origen_por_columna]
@@ -240,7 +291,20 @@ for campo in CAMPOS:
     col = campo["columna"]
     origen = origen_por_columna.get(col)
     serie = df[origen] if origen else pd.Series([""] * len(df), index=df.index)
-    salida[col] = serie.map(LIMPIADORES.get(campo["formato"], limpiar_texto))
+    if campo.get("extraer") == "antes_arroba":
+        # Extrae el valor a la izquierda del "@" (ej. IMEI dentro de un correo).
+        serie = serie.map(lambda v: str(v).split("@")[0] if "@" in str(v) else str(v))
+    if campo.get("extraer") == "primeros6":
+        # Conserva solo los primeros 6 caracteres (ej. código de delegación).
+        serie = serie.map(lambda v: str(v).strip()[:6])
+    if campo["formato"] == "digitos":
+        # Si el campo tiene rango de longitud definido, los valores fuera de él
+        # se dejan vacíos (no se eliminan filas). Esto limpia IMEI/ICCID basura.
+        salida[col] = serie.map(
+            lambda v: limpiar_digitos(v, campo.get("minLen"), campo.get("maxLen"))
+        )
+    else:
+        salida[col] = serie.map(LIMPIADORES.get(campo["formato"], limpiar_texto))
 
 salida = salida[COLUMNAS]
 

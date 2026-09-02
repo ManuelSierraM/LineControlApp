@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
-import { normalizePhone } from "@/lib/utils";
+import { isValidImei, normalizePhone } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/")({ component: Dashboard });
 
@@ -120,11 +120,14 @@ function Dashboard() {
   const sinEquipoRows = lineas.filter((l) => !l.imei);
   const sinEquipo = sinEquipoRows.length;
 
-  // POPS sin centro
-  const popsSinCC = pops.filter((p) => !p.centro_costo).length;
+  // POPS sin centro: solo registros con IMEI numérico 14-16 dígitos
+  const popsSinCC = pops.filter((p) => !p.centro_costo && isValidImei(p.codigo)).length;
 
-  // Sin línea asociada: dispositivos (UEM+POPS) con IMEI pero sin teléfono válido
-  const uemIncon = disp.filter((d) => d.imei && !normPhone(d.numero_telefono));
+  // Sin línea asociada: dispositivos (UEM+POPS) con IMEI pero sin teléfono válido.
+  // UEM solo en estados ACTIVE o WIPE_PENDING (sin importar mayúsculas/minúsculas).
+  const uemIncon = disp.filter((d) =>
+    ["active", "wipe_pending"].includes(String(d.estado ?? "").trim().toLowerCase()) &&
+    d.imei && !normPhone(d.numero_telefono));
   const uemIds = new Set(uemIncon.map((d) => d.imei));
   const popsIncon = pops.filter((p) => p.codigo && !uemIds.has(p.codigo) && !normPhone(p.numero_telefono));
   const inconsistencias = uemIncon.length + popsIncon.length;
@@ -310,9 +313,17 @@ function Dashboard() {
                 <p className="py-8 text-center text-sm text-muted-foreground">Sin alertas de dispositivos</p>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dispAlertData} margin={{ left: 8, right: 20, top: 8 }}>
+                  <BarChart data={dispAlertData} margin={{ left: 8, right: 20, top: 8, bottom: 40 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                    <XAxis dataKey="name" stroke="var(--color-muted-foreground)" fontSize={12} />
+                    <XAxis
+                      dataKey="name"
+                      stroke="var(--color-muted-foreground)"
+                      fontSize={11}
+                      angle={-35}
+                      textAnchor="end"
+                      height={60}
+                      interval={0}
+                    />
                     <YAxis
                       allowDecimals={false}
                       tickFormatter={(v) => Number(v).toLocaleString("es-CO")}

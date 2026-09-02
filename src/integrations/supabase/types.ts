@@ -83,30 +83,6 @@ export type Database = {
         }
         Relationships: []
       }
-      centros_costo: {
-        Row: {
-          codigo: string
-          created_at: string
-          id: string
-          nombre: string
-          user_id: string
-        }
-        Insert: {
-          codigo: string
-          created_at?: string
-          id?: string
-          nombre: string
-          user_id: string
-        }
-        Update: {
-          codigo?: string
-          created_at?: string
-          id?: string
-          nombre?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       dispositivos: {
         Row: {
           asignado_a: string | null

@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { useAuth } from "@/lib/auth";
@@ -51,7 +50,7 @@ const GUIDES: Record<Tipo, { titulo: string; archivo: string; fields: GuideField
     fields: [
       { columna: "IMEI", ejemplo: "356938035643809", requerido: true, nota: "IMEI del dispositivo", target: "imei" },
       { columna: "Modelo", ejemplo: "Galaxy S22", requerido: false, nota: "Modelo del equipo", target: "modelo" },
-      { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Se quita el indicativo de país (+57, 0057, +1, etc.) de cualquier país. Puede venir vacío.", target: "numero_telefono" },
+      { columna: "Número_Teléfono", ejemplo: "3001234567", requerido: false, nota: "Línea asociada. Se quita el indicativo de país (+57, 0057, +1, etc.) de cualquier país. Texto libre, puede venir vacío; letras o símbolos se conservan para la alerta \"Sin línea asociada\".", target: "numero_telefono" },
       { columna: "Last_CheckIn", ejemplo: "12-04-2025", requerido: true, nota: "Último reporte UEM (DD-MM-YYYY)", target: "ultimo_checkin" },
       { columna: "Estado_UEM", ejemplo: "ACTIVO", requerido: true, nota: "Estado en plataforma UEM", target: "estado" },
       { columna: "País", ejemplo: "Colombia", requerido: false, nota: "País de operación" },
@@ -87,6 +86,8 @@ type FieldRule = {
   enum?: string[];
   unique?: boolean;
   normalize?: "phone" | "phone-strict";
+  /** Si es true, rechaza letras y símbolos en campos de tipo dígitos (solo espacios y notación científica de Excel se limpian). */
+  strict?: boolean;
   hint: string;
 };
 
@@ -104,14 +105,14 @@ const SCHEMAS: Record<Tipo, FieldRule[]> = {
   dispositivos: [
     { columna: "IMEI", target: "imei", required: true, type: "digits", minLen: 14, maxLen: 16, hint: "IMEI del dispositivo. Obligatorio, solo dígitos, 14–16 caracteres. Se permiten repetidos (se reportan en la alerta IMEI duplicado)." },
     { columna: "Modelo", target: "modelo", type: "text", maxLen: 60, hint: "Modelo del equipo. Texto opcional (máx. 60)." },
-    { columna: "Número_Teléfono", target: "numero_telefono", type: "text", normalize: "phone-strict", hint: "Línea asociada. Texto opcional; se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.)." },
+    { columna: "Número_Teléfono", target: "numero_telefono", type: "text", normalize: "phone", hint: "Línea asociada. Texto libre opcional; se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.). Se conservan letras o símbolos para la alerta \"Sin línea asociada\"." },
     { columna: "Last_CheckIn", target: "ultimo_checkin", required: true, type: "date", hint: "Último reporte UEM. Obligatorio, fecha DD-MM-YYYY (ej. 12-04-2025)." },
     { columna: "Estado_UEM", target: "estado", required: true, type: "text", maxLen: 30, hint: "Estado en plataforma UEM. Obligatorio, texto (máx. 30)." },
     { columna: "País", type: "text", maxLen: 40, hint: "País de operación. Texto opcional (máx. 40)." },
     { columna: "Usuario", target: "asignado_a", type: "text", maxLen: 120, hint: "Usuario asignado. Texto / correo opcional (máx. 120)." },
   ],
   pops: [
-    { columna: "IMEI", target: "codigo", required: false, type: "digits", minLen: 14, maxLen: 16, unique: true, hint: "IMEI del equipo. Opcional; si viene, solo dígitos, 14–16 caracteres." },
+    { columna: "IMEI", target: "codigo", required: false, type: "digits", minLen: 14, maxLen: 16, unique: true, strict: true, hint: "IMEI del equipo. Opcional; si viene, solo dígitos sin letras ni símbolos, 14–16 caracteres." },
     { columna: "Numero_Telefono", target: "numero_telefono", type: "text", normalize: "phone", hint: "Línea asociada. Texto libre opcional; se normaliza quitando el indicativo de país de cualquier país (+57, 0057, +1, etc.). Se conservan letras o símbolos para alertas de inconsistencia." },
     { columna: "Centro", target: "centro_costo", required: false, type: "text", hint: "Centro de costo. Texto libre opcional." },
     { columna: "Delegación", target: "ubicacion", required: false, type: "text", hint: "Delegación o sede. Texto libre opcional." },
@@ -216,6 +217,15 @@ function validateValue(rule: FieldRule, raw: any): { ok: boolean; reason?: strin
       return { ok: true, coerced: d };
     }
     case "digits": {
+      const rawStr = String(raw).trim();
+      if (rule.strict) {
+        const compact = rawStr.replace(/\s/g, "");
+        const pure = /^\d+$/.test(compact);
+        const scientific = /^\d+(\.\d+)?[eE][+-]?\d+$/.test(compact);
+        if (!pure && !scientific) {
+          return { ok: false, reason: `solo se permiten dígitos — ${rule.hint}` };
+        }
+      }
       const s = coerceDigits(raw);
       if (!s) return { ok: false, reason: `no contiene dígitos — ${rule.hint}` };
       if (rule.minLen && s.length < rule.minLen) return { ok: false, reason: `longitud ${s.length}, mínimo ${rule.minLen} — ${rule.hint}` };
@@ -496,8 +506,41 @@ function CargarPage() {
   };
 
   // ───────── ETL de formateo por cada cargue (derivado del template guía) ─────────
+  // Alias: nombres con los que suele venir la columna en los archivos origen.
+  const ETL_ALIASES: Record<Tipo, Record<string, string[]>> = {
+    lineas: {
+      OPERADOR: ["OPERADOR"],
+      TIPO_DE_LINEA: ["TIPO LINEA", "TIPO_LINEA", "TIPO DE LINEA"],
+      TELE_NUMB: ["TELE_NUMB", "TELE NUMB", "NUMERO", "CELULAR"],
+      NOMBRE_CLIENTE: ["NOMBRE_CLIENTE", "NOMBRE CLIENTE"],
+      "Cod Empresa": ["Cod Empresa", "COD_EMPRESA", "CODIGO EMPRESA"],
+      ICCID: ["ICCID", "SIM", "SERIAL SIM"],
+      PLAN_DESC: ["PLAN_DESC", "PLAN", "DESCRIPCION PLAN"],
+      VALOR_CFM: ["VLR_CFM", "VALOR_CFM", "VLR CFM", "VALOR CFM", "CFM"],
+    },
+    dispositivos: {
+      IMEI: ["Email Address", "EMAIL", "CORREO"],
+      Modelo: ["Model", "MODELO", "Device Model"],
+      "Número_Teléfono": ["Current Phone Number", "PHONE NUMBER", "NUMERO", "CELULAR"],
+      Last_CheckIn: ["Last Check-In", "LAST CHECKIN", "ULTIMO CHECKIN"],
+      Estado_UEM: ["Status", "ESTADO", "DEVICE STATUS"],
+      País: ["Home Country Name", "COUNTRY", "PAIS"],
+      Usuario: ["User ID", "USER", "USUARIO", "EMAIL USUARIO"],
+    },
+    pops: {
+      IMEI: ["IMEI"],
+      Numero_Telefono: ["Nº Teléfono", "N° Teléfono", "NO TELEFONO", "TELEFONO", "NUMERO TELEFONO"],
+      Centro: ["Código Centro", "CODIGO CENTRO"],
+      "Delegación": ["Delegación", "DELEGACION"],
+      Fecha_Alta: ["Fecha de Alta", "FECHA ALTA"],
+      Fecha_Baja: ["Fecha baja", "FECHA BAJA"],
+      Modelo: ["Modelo", "MODEL"],
+    },
+  };
+
   const buildEtl = (tipo: Tipo) => {
     const g = GUIDES[tipo];
+    const ruleByColumna = new Map(SCHEMAS[tipo].map((r) => [r.columna, r] as const));
     const formatoDe = (columna: string): "texto" | "telefono" | "fecha" | "digitos" | "numero" => {
       const k = normKey(columna);
       if (/tele|telefono|msisdn|celular/.test(k)) return "telefono";
@@ -511,15 +554,33 @@ function CargarPage() {
       titulo: g.titulo,
       archivoSalida: g.archivo.replace(/\.(csv|xlsx)$/i, "") + "_limpio.xlsx",
       dateFormat: tipo === "dispositivos" ? "DD-MM-YYYY" : "YYYY-MM-DD",
-      fields: g.fields.map((f) => ({
-        columna: f.columna,
-        requerido: f.requerido,
-        ejemplo: f.ejemplo,
-        nota: f.nota,
-        formato: formatoDe(f.columna),
-      })),
+      // En Devices UEM solo interesan los dispositivos con país "Colombia".
+      filtro: tipo === "dispositivos"
+        ? { columna: "Home Country Name", alias: ["País", "COUNTRY", "PAIS"], valor: "Colombia" }
+        : undefined,
+      fields: g.fields.map((f) => {
+        const rule = ruleByColumna.get(f.columna);
+        return {
+          columna: f.columna,
+          requerido: f.requerido,
+          ejemplo: f.ejemplo,
+          nota: f.nota,
+          alias: ETL_ALIASES[tipo][f.columna] ?? [],
+          formato: formatoDe(f.columna),
+          // Propaga el rango de longitud definido en el schema; el ETL vaciará
+          // silenciosamente los dígitos que queden fuera del rango.
+          minLen: rule?.minLen,
+          maxLen: rule?.maxLen,
+          // En Devices UEM el IMEI viene dentro del correo (ej. 357974102217747@prosegur.com).
+          // En POPS la Delegación se recorta a sus primeros 6 caracteres (código, ej. C01V0).
+          extraer: tipo === "dispositivos" && normKey(f.columna) === "imei" ? "antes_arroba" as const
+            : tipo === "pops" && /delegaci/i.test(f.columna) ? "primeros6" as const
+            : undefined,
+        };
+      }),
     });
   };
+
 
 
   const descargarEtl = (tipo: Tipo) => {
@@ -738,20 +799,10 @@ function CargarPage() {
                 <Button size="sm" variant="secondary" onClick={() => descargarTemplate(guideTipo)}>
                   <Download className="mr-1.5 h-3.5 w-3.5" /> Descargar template Excel
                 </Button>
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-block">
-                        <Button size="sm" variant="outline" disabled onClick={() => {}}>
-                          <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>En desarrollo</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Button size="sm" variant="outline" onClick={() => descargarEtl(guideTipo)}>
+                  <FileCode2 className="mr-1.5 h-3.5 w-3.5" /> Descargar ETL de formateo
+                </Button>
+
                 <p className="w-full text-xs text-muted-foreground">
                   El ETL de formateo es específico de este cargue y replica su validación previa: normaliza teléfonos, fechas, IMEI/ICCID y montos, descarta filas inválidas y entrega un Excel listo para subir.
                 </p>
