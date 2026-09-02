@@ -1,0 +1,102 @@
+erDiagram
+    auth_users["auth.users"] {
+        uuid id PK
+        text email
+        text encrypted_password
+    }
+
+    profiles["profiles"] {
+        uuid id PK,FK
+        text email
+        text full_name
+        timestamptz created_at
+        boolean active
+    }
+
+    user_roles["user_roles"] {
+        uuid id PK
+        uuid user_id FK
+        app_role role
+        timestamptz created_at
+    }
+
+    dispositivos["dispositivos"] {
+        uuid id PK
+        uuid user_id FK
+        text imei
+        text modelo
+        text fabricante
+        text so
+        text estado
+        date ultimo_checkin
+        text asignado_a
+        timestamptz created_at
+        text numero_telefono
+    }
+
+    lineas["lineas"] {
+        uuid id PK
+        uuid user_id FK
+        text msisdn
+        text imei
+        text plan
+        numeric costo_mensual
+        text centro_costo
+        text estado
+        date ultimo_uso
+        numeric consumo_mb
+        timestamptz created_at
+        text iccid
+        numeric valor_plan
+        numeric valor_datos
+        text nombre_cliente
+        text cod_empresa
+        text operador
+    }
+
+    pops["pops"] {
+        uuid id PK
+        uuid user_id FK
+        text codigo
+        text ubicacion
+        text centro_costo
+        text estado
+        timestamptz created_at
+        text numero_telefono
+        date fecha_alta
+        date fecha_baja
+        text modelo
+    }
+
+    archivos_carga["archivos_carga"] {
+        uuid id PK
+        uuid user_id FK
+        text nombre
+        text tipo
+        integer registros
+        text estado
+        timestamptz created_at
+    }
+
+    alertas["alertas"] {
+        uuid id PK
+        uuid user_id FK
+        text tipo
+        text severidad
+        text entidad
+        text referencia
+        text mensaje
+        text detalle
+        boolean resuelta
+        timestamptz created_at
+    }
+
+    auth_users ||--|| profiles : "1:1"
+    auth_users ||--o{ user_roles : "1:N"
+    auth_users ||--o{ dispositivos : "1:N"
+    auth_users ||--o{ lineas : "1:N"
+    auth_users ||--o{ pops : "1:N"
+    auth_users ||--o{ archivos_carga : "1:N"
+    auth_users ||--o{ alertas : "1:N"
+
+    dispositivos ||--o{ lineas : "join logico por IMEI"
