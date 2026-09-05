@@ -1,26 +1,28 @@
-## Cambios
+# Limpieza de paquetes sin uso
 
-### 1. `src/routes/_app.cargar.tsx` — Template y mapeo de Maestro de Líneas
-- Eliminar la fila `IMEI` del arreglo `GUIDES.lineas.fields` (línea 38). Con esto desaparece automáticamente de:
-  - La tarjeta "Formato guía" en la UI.
-  - El template Excel descargable (encabezados y nota de obligatoriedad).
-  - La validación de columnas requeridas al cargar.
-- En el mapeo de filas del Excel de líneas, dejar `imei` como `null` (ya no se intenta leer la columna IMEI desde el origen).
-- No se tocan los templates de Devices UEM ni POPS.
+Verificación hecha: se recorrió el árbol completo de importaciones desde todas las pantallas, el enrutador y el código de servidor (incluyendo importaciones dinámicas). Lo único que la app alcanza hoy es: base de datos, enrutador, consultas, gráficos, lectura de CSV, las dos librerías de Excel, notificaciones, íconos, utilidades de estilos y 10 piezas de interfaz de Radix.
 
-### 2. `src/routes/_app.lineas.tsx` — Derivar IMEI desde POPS por coincidencia de teléfono
-Hoy la tabla de líneas hace `byImei` con `dispositivos`. El cambio:
-- Cargar también `pops` (campos `numero_telefono`, `codigo`).
-- Normalizar el teléfono (quitar prefijo `57`, espacios, guiones, `+`) tanto para el `msisdn` de la línea como para `numero_telefono` de POPS, para que casen formatos como `573001234567` ↔ `3001234567`.
-- Construir un mapa `popsByPhone: phoneNormalizado → pops.codigo` y usarlo como fuente del IMEI mostrado en la columna "IMEI" cuando `lineas.imei` esté vacío.
-- Orden de resolución del IMEI por línea: `lineas.imei` (si existiera de cargas previas) → POPS por teléfono → `"—"`.
-- El join con `dispositivos` para `modelo` / `cliente` se mantiene, pero ahora se hace por el IMEI resuelto (línea o POPS), no solo por `lineas.imei`.
+Ninguno de los paquetes propuestos aparece en esa ruta: ni en pantallas, ni en el panel lateral, ni en el código de servidor.
 
-### 3. Verificación
-- Probar con un Excel real de líneas (sin columna IMEI) + un Excel de POPS que contenga los mismos teléfonos: la tabla de Maestro de Líneas debe mostrar el IMEI traído desde POPS.
-- Confirmar que la carga ya no rechaza el archivo por falta de columna IMEI.
+## Qué se quita
 
-## Notas
-- No se modifica el esquema de la base de datos: `lineas.imei` sigue existiendo y se respeta si viniera con valor; simplemente ya no se exige en el template.
-- Si en el futuro el origen vuelve a incluir IMEI, basta con reintroducir la fila en `GUIDES.lineas.fields`.
-- POPS sigue siendo la fuente "oficial" del IMEI por equipo físico, lo cual es consistente con cómo ya se usa `pops.codigo` como IMEI en la vista de POPS.
+Paquetes (24):
+- react-hook-form, @hookform/resolvers, zod
+- react-day-picker, date-fns
+- embla-carousel-react, vaul, cmdk, input-otp, react-resizable-panels
+- Radix: accordion, aspect-ratio, avatar, collapsible, context-menu, hover-card, menubar, navigation-menu, popover, progress, radio-group, scroll-area, slider, switch, toggle, toggle-group
+
+Archivos de interfaz que quedan huérfanos y se eliminan: accordion, alert, aspect-ratio, avatar, breadcrumb, calendar, carousel, chart, collapsible, command, context-menu, drawer, form, hover-card, input-otp, menubar, navigation-menu, pagination, popover, progress, radio-group, resizable, scroll-area, slider, switch, textarea, toggle, toggle-group.
+
+## Qué NO se toca
+
+Gráficos (recharts), lectura de CSV, Excel, notificaciones, íconos, base de datos, enrutador, estilos y las piezas de interfaz en uso: botón, tarjeta, insignia, diálogo, diálogo de confirmación, menú desplegable, campo de texto, etiqueta, casilla, selector, panel lateral, tabla, pestañas, notificaciones, hoja lateral, separador, tooltip, esqueleto.
+
+## Optimización adicional (opcional, incluida)
+
+- Mover a dependencias de desarrollo lo que solo sirve para compilar: vite-tsconfig-paths, @cloudflare/vite-plugin, @tanstack/router-plugin, nitro, tailwindcss, @types/papaparse.
+- Cargar la librería de lectura de Excel solo al procesar un archivo (igual que ya se hace con la de plantillas), para aligerar el arranque.
+
+## Verificación posterior
+
+Compilar y abrir cada pantalla (Panel, Líneas, Dispositivos, POPS, Cargar, Alertas, Reportes, Administración) para confirmar que todo sigue igual.
