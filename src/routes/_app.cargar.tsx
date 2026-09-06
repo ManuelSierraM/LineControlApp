@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
+
 import { Upload, Wifi, Smartphone, MapPin, HelpCircle, Loader2, CheckCircle2, Trash2, Filter, Download, AlertTriangle, XCircle, X, FileCode2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -414,8 +414,9 @@ function CargarPage() {
       reader.readAsText(f);
     } else {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
+          const XLSX = await import("xlsx");
           const wb = XLSX.read(e.target?.result, { type: "array" });
           const ws = wb.Sheets[wb.SheetNames[0]];
           resolve(XLSX.utils.sheet_to_json(ws));
