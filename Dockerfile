@@ -3,11 +3,36 @@ FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-# Stage 2: Runtimeq
+# Install bun
+RUN npm install -g bun
+
+# ARG for Supabase
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_PUBLISHABLE_KEY
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY
+
+# Copy dependency files
+COPY package.json bun.lock ./
+
+# Install all dependencies (dev + production)
+RUN bun install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN bun run build
+
+# Stage 2: Runtime
+FROM node:24-alpine
+
+WORKDIR /app
+
 # Install bun for runtime
 RUN npm install -g bun
 
-# ✅ ADD THIS LINE:
+# ✅ SET PORT
 ENV PORT=3000
 
 # Copy package files for production install
