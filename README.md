@@ -38,7 +38,7 @@ LineControl es una aplicación web responsiva que permite a las áreas de tecnol
 - 📱 **Líneas móviles** corporativas (MSISDN, ICCID, planes, operador, consumos).
 - 💻 **Dispositivos UEM** (IMEI, modelo, fabricante, estado de enrolamiento).
 - 🏪 **POPS** (puntos operativos con SIM o terminal fija).
-- 🏷️ **Centros de costo** para imputación contable.
+- 🏷️ **Centro de costo** asociado a líneas, dispositivos y POPS.
 - 📥 **Cargas masivas** desde archivos con historial trazable.
 - 🚨 **Alertas** con niveles de severidad.
 - 📊 **Reportes** consolidados.
