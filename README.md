@@ -38,7 +38,7 @@ LineControl es una aplicación web responsiva que permite a las áreas de tecnol
 - 📱 **Líneas móviles** corporativas (MSISDN, ICCID, planes, operador, consumos).
 - 💻 **Dispositivos UEM** (IMEI, modelo, fabricante, estado de enrolamiento).
 - 🏪 **POPS** (puntos operativos con SIM o terminal fija).
-- 🏷️ **Centros de costo** para imputación contable.
+- 🏷️ **Centro de costo** asociado a líneas, dispositivos y POPS.
 - 📥 **Cargas masivas** desde archivos con historial trazable.
 - 🚨 **Alertas** con niveles de severidad.
 - 📊 **Reportes** consolidados.
@@ -192,11 +192,17 @@ Sí. La interfaz es responsiva. La barra lateral se colapsa automáticamente en 
 
 ---
 
-## 📚 Documentación técnica
+## 📚 Documentación
 
+<<<<<<< HEAD
 Para detalles de arquitectura, modelo de datos, diagrama entidad-relación y estándares de desarrollo, consulta:
 
 - [`docs/DOCUMENTACION_TECNICA.md`](docs/DOCUMENTACION_TECNICA.md) — Documentación técnica completa (IEEE 1016).
+=======
+- [`.docs/MANUAL_DE_USUARIO.md`](.docs/MANUAL_DE_USUARIO.md) — Guía práctica para usuarios, supervisores y administradores.
+- [`.docs/DOCUMENTACION_TECNICA.md`](.docs/DOCUMENTACION_TECNICA.md) — Documentación técnica completa (IEEE 1016).
+- [`.docs/diagrama_er_fisico.mmd`](.docs/diagrama_er_fisico.mmd) — Diagrama Entidad-Relación físico (Mermaid).
+>>>>>>> f1f0c2b3412ebd0f6c0d26b45fc987629a3baf9f
 
 ---
 
