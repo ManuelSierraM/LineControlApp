@@ -182,12 +182,11 @@ Sí. La interfaz es responsiva. La barra lateral se colapsa automáticamente en 
 
 ---
 
-## 📚 Documentación técnica
+## 📚 Documentación
 
-Para detalles de arquitectura, modelo de datos, diagrama entidad-relación y estándares de desarrollo, consulta:
-
-- [`docs/DOCUMENTACION_TECNICA.md`](docs/DOCUMENTACION_TECNICA.md) — Documentación técnica completa (IEEE 1016).
-- [`docs/diagrama_er_fisico.mmd`](docs/diagrama_er_fisico.mmd) — Diagrama Entidad-Relación físico (Mermaid).
+- [`.docs/MANUAL_DE_USUARIO.md`](.docs/MANUAL_DE_USUARIO.md) — Guía práctica para usuarios, supervisores y administradores.
+- [`.docs/DOCUMENTACION_TECNICA.md`](.docs/DOCUMENTACION_TECNICA.md) — Documentación técnica completa (IEEE 1016).
+- [`.docs/diagrama_er_fisico.mmd`](.docs/diagrama_er_fisico.mmd) — Diagrama Entidad-Relación físico (Mermaid).
 
 ---
 
