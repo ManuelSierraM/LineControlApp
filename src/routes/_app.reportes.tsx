@@ -55,12 +55,22 @@ function dedupeBy<T extends { created_at?: string | null }>(rows: T[], keyFn: (r
 
 
 
+// Los montos vienen de columnas numeric y arrastran decimales; se exportan enteros.
+function csvValue(v: unknown): string {
+  if (v == null) return "";
+  if (typeof v === "number" && Number.isFinite(v)) return String(Math.round(v));
+  if (typeof v === "string" && /^-?\d+([.,]\d+)?$/.test(v.trim()) && /[.,]\d/.test(v)) {
+    return String(Math.round(Number(v.trim().replace(",", "."))));
+  }
+  return String(v);
+}
+
 function toCsv(rows: any[]): string {
   if (!rows.length) return "";
   const headers = Object.keys(rows[0]);
   return [
     headers.join(","),
-    ...rows.map((r) => headers.map((h) => `"${String(r[h] ?? "").replaceAll('"', '""')}"`).join(",")),
+    ...rows.map((r) => headers.map((h) => `"${csvValue(r[h]).replaceAll('"', '""')}"`).join(",")),
   ].join("\n");
 }
 

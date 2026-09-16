@@ -59,12 +59,23 @@ export function DataTable<T extends Record<string, any>>({
   const paged = useMemo(() => filtered.slice(start, start + pageSize), [filtered, start, pageSize]);
 
 
+  // Los valores numéricos se exportan como enteros: los montos vienen de columnas
+  // numeric y arrastran decimales (.00 / .9999) que Excel muestra mal.
+  const csvValue = (v: unknown) => {
+    if (v == null) return "";
+    if (typeof v === "number" && Number.isFinite(v)) return String(Math.round(v));
+    if (typeof v === "string" && /^-?\d+([.,]\d+)?$/.test(v.trim()) && /[.,]\d/.test(v)) {
+      return String(Math.round(Number(v.trim().replace(",", "."))));
+    }
+    return String(v);
+  };
+
   const exportCsv = () => {
     const header = columns.map((c) => `"${c.header}"`).join(",");
     const lines = filtered.map((r) =>
       columns.map((c) => {
         const v = c.accessor ? c.accessor(r) : (r as any)[c.key];
-        return `"${String(v ?? "").replaceAll('"', '""')}"`;
+        return `"${csvValue(v).replaceAll('"', '""')}"`;
       }).join(",")
     );
     // BOM UTF-8 para que Excel reconozca tildes y caracteres especiales (—, á, í...).
