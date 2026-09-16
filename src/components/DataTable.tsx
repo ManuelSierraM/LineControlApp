@@ -67,7 +67,8 @@ export function DataTable<T extends Record<string, any>>({
         return `"${String(v ?? "").replaceAll('"', '""')}"`;
       }).join(",")
     );
-    const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv;charset=utf-8;" });
+    // BOM UTF-8 para que Excel reconozca tildes y caracteres especiales (—, á, í...).
+    const blob = new Blob(["\uFEFF" + [header, ...lines].join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = `${title.toLowerCase().replace(/\s+/g, "_")}.csv`;
