@@ -321,6 +321,14 @@ function AlertasPage() {
               {
                 key: "costo",
                 header: "Costo",
+                accessor: (r) => {
+                  const match = lineaByPhone.get(normPhone(r.msisdn));
+                  return Math.round(
+                    Number(
+                      match?.valor_plan ?? match?.costo_mensual ?? r.valor_plan ?? r.costo_mensual ?? 0,
+                    ),
+                  );
+                },
                 render: (r) => {
                   const match = lineaByPhone.get(normPhone(r.msisdn));
                   return fmtMoney(
