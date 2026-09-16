@@ -363,8 +363,8 @@ function Dashboard() {
             },
             { key: "dias", header: "Días sin uso", render: (r) => r.dias != null ? `${r.dias} días` : "—" },
             { key: "centro_costo", header: "Centro" },
-            { key: "costo", header: "Costo mensual", render: (r) => fmtMoney(r.costo) },
-            { key: "costoAnual", header: "Costo anualizado", render: (r) => fmtMoney(r.costoAnual) },
+            { key: "costo", header: "Costo mensual", accessor: (r) => Math.round(Number(r.costo ?? 0)), render: (r) => fmtMoney(r.costo) },
+            { key: "costoAnual", header: "Costo anualizado", accessor: (r) => Math.round(Number(r.costoAnual ?? 0)), render: (r) => fmtMoney(r.costoAnual) },
           ]}
           searchKeys={["msisdn", "imei", "plan", "categoria", "centro_costo"]}
           footer={
