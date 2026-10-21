@@ -120,8 +120,8 @@ export function limpiarNumero(v: unknown): string {
   else if (s.includes(",")) s = s.replace(/,/g, ".");
   else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
   if (s === "" || isNaN(Number(s))) return "";
-  const n = Number(s);
-  return Number.isInteger(n) ? String(n) : String(n);
+  // Redondea a 15 cifras significativas (como Excel/Colab) para quitar residuos de coma flotante.
+  return String(Number(Number(s).toPrecision(15)));
 }
 
 function limpiar(f: EtlField, v: unknown, spec: EtlSpec): string {
