@@ -630,7 +630,9 @@ function CargarPage() {
       const rawRows = await parseFile(file);
       if (tipo === "pops") {
         const headers = Array.from(new Set(rawRows.flatMap((r) => Object.keys(r))));
-        const faltan = checkRequiredColumns(headers, autoEtl[tipo] ? POPS_ORIGEN_COLUMNS : POPS_FORMATEADO_COLUMNS);
+        const faltanFmt = checkRequiredColumns(headers, POPS_FORMATEADO_COLUMNS);
+        // Con formateo activo se acepta el original o un archivo ya formateado por el ETL de Colab.
+        const faltan = autoEtl[tipo] && faltanFmt.length ? checkRequiredColumns(headers, POPS_ORIGEN_COLUMNS) : faltanFmt;
         if (faltan.length) {
           toast.error(`Este archivo no corresponde a Inventario POPS${autoEtl[tipo] ? "" : " formateado"}. Faltan: ${faltan.join(", ")}`, { duration: 10000 });
           return;
