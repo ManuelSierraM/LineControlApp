@@ -16,7 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { useAuth } from "@/lib/auth";
 import { coercePhone, normalizePhone } from "@/lib/utils";
-import { buildEtlScript } from "@/lib/etl-script";
+import { buildEtlScript, type EtlSpec } from "@/lib/etl-script";
+import { runEtl, type EtlRunSummary } from "@/lib/etl-runtime";
 
 import { useRoles } from "@/lib/roles";
 import { PageHeader } from "@/components/PageHeader";
@@ -302,8 +303,19 @@ function CargarPage() {
     duplicateIssues: DuplicateIssue[];
     warnings: WarnIssue[];
     canContinue: boolean;
+    etl?: EtlRunSummary;
   };
   const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [autoEtl, setAutoEtl] = useState(true);
+
+  const descargarFormateado = async () => {
+    if (!validation) return;
+    const XLSX = await import("xlsx");
+    const ws = XLSX.utils.json_to_sheet(validation.rows, { header: GUIDES[validation.tipo].fields.map((f) => f.columna) });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Datos");
+    XLSX.writeFile(wb, GUIDES[validation.tipo].archivo.replace(/\.(csv|xlsx)$/i, "") + "_limpio.xlsx");
+  };
   const [inserting, setInserting] = useState(false);
   const [regenerando, setRegenerando] = useState(false);
 
@@ -419,7 +431,7 @@ function CargarPage() {
           const XLSX = await import("xlsx");
           const wb = XLSX.read(e.target?.result, { type: "array" });
           const ws = wb.Sheets[wb.SheetNames[0]];
-          resolve(XLSX.utils.sheet_to_json(ws));
+          resolve(XLSX.utils.sheet_to_json(ws, { defval: "" }));
         } catch (err) { reject(err); }
       };
       reader.onerror = reject;
@@ -539,7 +551,9 @@ function CargarPage() {
     },
   };
 
-  const buildEtl = (tipo: Tipo) => {
+  const buildEtl = (tipo: Tipo) => buildEtlScript(buildEtlSpec(tipo));
+
+  const buildEtlSpec = (tipo: Tipo): EtlSpec => {
     const g = GUIDES[tipo];
     const ruleByColumna = new Map(SCHEMAS[tipo].map((r) => [r.columna, r] as const));
     const formatoDe = (columna: string): "texto" | "telefono" | "fecha" | "digitos" | "numero" => {
@@ -550,7 +564,7 @@ function CargarPage() {
       if (/valor|cfm|costo|precio/.test(k)) return "numero";
       return "texto";
     };
-    return buildEtlScript({
+    return ({
       tipo,
       titulo: g.titulo,
       archivoSalida: g.archivo.replace(/\.(csv|xlsx)$/i, "") + "_limpio.xlsx",
@@ -602,7 +616,14 @@ function CargarPage() {
     if (!user) return;
     setBusy(tipo);
     try {
-      const rows = await parseFile(file);
+      const rawRows = await parseFile(file);
+      let rows: Record<string, any>[] = rawRows;
+      let etl: EtlRunSummary | undefined;
+      if (autoEtl) {
+        const res = runEtl(buildEtlSpec(tipo), rawRows);
+        rows = res.rows;
+        etl = res.summary;
+      }
       const fields = GUIDES[tipo].fields;
       const schema = SCHEMAS[tipo];
       const schemaByCol = new Map(schema.map((r) => [r.columna.toLowerCase().trim(), r]));
@@ -692,6 +713,7 @@ function CargarPage() {
         duplicateIssues,
         warnings,
         canContinue,
+        etl,
       });
     } catch (e: any) {
       console.error(e);
@@ -743,6 +765,13 @@ function CargarPage() {
     <div>
       <PageHeader title="Cargar Archivos" subtitle="Sube los maestros para ejecutar el cruce de información y generar alertas." />
       <div className="space-y-6 p-6">
+        <label className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm">
+          <Checkbox checked={autoEtl} onCheckedChange={(v) => setAutoEtl(v === true)} />
+          <span>
+            <strong>Aplicar ETL automático</strong>
+            <span className="text-muted-foreground"> — formatea el Excel original con el ETL de su cargue antes de la validación previa (ya no es necesario usar Google Colab).</span>
+          </span>
+        </label>
         {CARDS.map((c) => (
           <UploadCard
             key={c.tipo}
@@ -958,6 +987,28 @@ function CargarPage() {
                   <p className="font-medium text-[#E26B0A]">Cargue inválido</p>
                   <p className="text-xs text-muted-foreground">Realice los cambios indicados en el Excel y vuelva a intentarlo.</p>
                 </div>
+              )}
+
+              {validation.etl && (
+                <section>
+                  <h4 className="mb-1.5 flex items-center justify-between gap-1.5 text-sm font-semibold">
+                    <span className="flex items-center gap-1.5"><FileCode2 className="h-4 w-4 text-primary" /> ETL aplicado automáticamente</span>
+                    <Button size="sm" variant="outline" onClick={descargarFormateado}>
+                      <Download className="mr-1 h-3.5 w-3.5" /> Excel formateado
+                    </Button>
+                  </h4>
+                  <ul className="space-y-1 rounded-md border border-border bg-muted/30 p-3 text-xs">
+                    <li>· Filas leídas: <strong>{validation.etl.filasLeidas}</strong> → filas resultantes: <strong>{validation.etl.filasSalida}</strong></li>
+                    {validation.etl.filtro && (
+                      <li>· Filtro {validation.etl.filtro.columna ? <>"{validation.etl.filtro.columna}" = {validation.etl.filtro.valor}: {validation.etl.filtro.conservadas} de {validation.etl.filtro.antes} filas conservadas</> : <>no aplicado (no se encontró la columna de país)</>}</li>
+                    )}
+                    <li>· Columnas reconocidas: {validation.etl.reconocidas.join(", ") || "ninguna"}</li>
+                    {validation.etl.faltantes.length > 0 && <li>· Columnas no encontradas (quedan vacías): {validation.etl.faltantes.join(", ")}</li>}
+                    {Object.entries(validation.etl.vaciados).map(([c, n]) => (
+                      <li key={c}>· {c}: {n} valor(es) vaciados por formato inválido</li>
+                    ))}
+                  </ul>
+                </section>
               )}
 
               {/* Correcto */}
