@@ -24,6 +24,6 @@ describe("ETL runtime (equivalente al script de Colab)", () => {
         fields: [{ columna: "Delegación", formato: "texto", extraer: "primeros6" }] },
       [{ "Delegacion": "C01V0 - Bogotá" }],
     );
-    expect(rows[0]["Delegación"]).toBe("C01V0 ");
+    expect(rows[0]["Delegación"]).toBe("C01V0");
   });
 });
