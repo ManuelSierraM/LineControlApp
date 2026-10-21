@@ -6,7 +6,8 @@ describe("ETL runtime (equivalente al script de Colab)", () => {
   it("quita sufijo (UTC -5) y formatea DD-MM-YYYY", () => expect(limpiarFecha("12/04/2025 10:00 (UTC -5)", "DD-MM-YYYY")).toBe("12-04-2025"));
   it("vacía IMEI fuera de 14–16 dígitos", () => expect(limpiarDigitos("12345", 14, 16)).toBe(""));
   it("número 45.000 -> 45000", () => expect(limpiarNumero("$45.000")).toBe("45000"));
-  it("VALOR_CFM 30615.299999999996 -> 30615.3", () => expect(limpiarNumero(30615.299999999996)).toBe("30615.3"));
+  it("VALOR_CFM 30615.299999999996 -> 30615", () => expect(limpiarNumero(30615.299999999996)).toBe("30615"));
+  it("VALOR_CFM 30615.5 -> 30616", () => expect(limpiarNumero(30615.5)).toBe("30616"));
 
   it("UEM: filtra Colombia y extrae IMEI antes del @", () => {
     const { rows } = runEtl(
