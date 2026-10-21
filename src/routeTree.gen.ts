@@ -9,27 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
-import { Route as AppReportesRouteImport } from './routes/_app.reportes'
-import { Route as AppPopsRouteImport } from './routes/_app.pops'
-import { Route as AppLineasRouteImport } from './routes/_app.lineas'
-import { Route as AppDispositivosRouteImport } from './routes/_app.dispositivos'
-import { Route as AppCargarRouteImport } from './routes/_app.cargar'
-import { Route as AppAlertasRouteImport } from './routes/_app.alertas'
 import { Route as AppAdminRouteImport } from './routes/_app.admin'
+import { Route as AppAlertasRouteImport } from './routes/_app.alertas'
+import { Route as AppCargarRouteImport } from './routes/_app.cargar'
+import { Route as AppDispositivosRouteImport } from './routes/_app.dispositivos'
+import { Route as AppLineasRouteImport } from './routes/_app.lineas'
+import { Route as AppPopsRouteImport } from './routes/_app.pops'
+import { Route as AppReportesRouteImport } from './routes/_app.reportes'
 
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -37,8 +31,14 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -46,29 +46,9 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppReportesRoute = AppReportesRouteImport.update({
-  id: '/reportes',
-  path: '/reportes',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPopsRoute = AppPopsRouteImport.update({
-  id: '/pops',
-  path: '/pops',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppLineasRoute = AppLineasRouteImport.update({
-  id: '/lineas',
-  path: '/lineas',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDispositivosRoute = AppDispositivosRouteImport.update({
-  id: '/dispositivos',
-  path: '/dispositivos',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppCargarRoute = AppCargarRouteImport.update({
-  id: '/cargar',
-  path: '/cargar',
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAlertasRoute = AppAlertasRouteImport.update({
@@ -76,9 +56,29 @@ const AppAlertasRoute = AppAlertasRouteImport.update({
   path: '/alertas',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAdminRoute = AppAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const AppCargarRoute = AppCargarRouteImport.update({
+  id: '/cargar',
+  path: '/cargar',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDispositivosRoute = AppDispositivosRouteImport.update({
+  id: '/dispositivos',
+  path: '/dispositivos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLineasRoute = AppLineasRouteImport.update({
+  id: '/lineas',
+  path: '/lineas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPopsRoute = AppPopsRouteImport.update({
+  id: '/pops',
+  path: '/pops',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReportesRoute = AppReportesRouteImport.update({
+  id: '/reportes',
+  path: '/reportes',
   getParentRoute: () => AppRoute,
 } as any)
 
@@ -175,18 +175,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -196,11 +189,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app': {
-      id: '/_app'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AppRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -210,39 +210,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/reportes': {
-      id: '/_app/reportes'
-      path: '/reportes'
-      fullPath: '/reportes'
-      preLoaderRoute: typeof AppReportesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/pops': {
-      id: '/_app/pops'
-      path: '/pops'
-      fullPath: '/pops'
-      preLoaderRoute: typeof AppPopsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/lineas': {
-      id: '/_app/lineas'
-      path: '/lineas'
-      fullPath: '/lineas'
-      preLoaderRoute: typeof AppLineasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/dispositivos': {
-      id: '/_app/dispositivos'
-      path: '/dispositivos'
-      fullPath: '/dispositivos'
-      preLoaderRoute: typeof AppDispositivosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/cargar': {
-      id: '/_app/cargar'
-      path: '/cargar'
-      fullPath: '/cargar'
-      preLoaderRoute: typeof AppCargarRouteImport
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/alertas': {
@@ -252,11 +224,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAlertasRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/admin': {
-      id: '/_app/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AppAdminRouteImport
+    '/_app/cargar': {
+      id: '/_app/cargar'
+      path: '/cargar'
+      fullPath: '/cargar'
+      preLoaderRoute: typeof AppCargarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dispositivos': {
+      id: '/_app/dispositivos'
+      path: '/dispositivos'
+      fullPath: '/dispositivos'
+      preLoaderRoute: typeof AppDispositivosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/lineas': {
+      id: '/_app/lineas'
+      path: '/lineas'
+      fullPath: '/lineas'
+      preLoaderRoute: typeof AppLineasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/pops': {
+      id: '/_app/pops'
+      path: '/pops'
+      fullPath: '/pops'
+      preLoaderRoute: typeof AppPopsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reportes': {
+      id: '/_app/reportes'
+      path: '/reportes'
+      fullPath: '/reportes'
+      preLoaderRoute: typeof AppReportesRouteImport
       parentRoute: typeof AppRoute
     }
   }
