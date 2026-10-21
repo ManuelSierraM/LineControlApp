@@ -431,7 +431,7 @@ function CargarPage() {
           const XLSX = await import("xlsx");
           const wb = XLSX.read(e.target?.result, { type: "array" });
           const ws = wb.Sheets[wb.SheetNames[0]];
-          resolve(XLSX.utils.sheet_to_json(ws));
+          resolve(XLSX.utils.sheet_to_json(ws, { defval: "" }));
         } catch (err) { reject(err); }
       };
       reader.onerror = reject;
@@ -713,6 +713,7 @@ function CargarPage() {
         duplicateIssues,
         warnings,
         canContinue,
+        etl,
       });
     } catch (e: any) {
       console.error(e);
