@@ -18,6 +18,9 @@ Usuario sube Excel crudo -> ETL del cargue (automático) -> Validación previa -
 - Botón opcional "Descargar Excel formateado" para revisar el resultado.
 - Se conserva la descarga del script Colab como respaldo.
 
+## Restricción
+Los ETLs actuales (scripts de Colab en `src/lib/etl-script.ts`) no se modifican en absoluto. Solo se agrega una copia equivalente que corre dentro de la app.
+
 ## Detalles técnicos
 - Nuevo módulo `src/lib/etl-runtime.ts` con funciones `etlLineas`, `etlUem`, `etlPops` que reproducen exactamente `src/lib/etl-script.ts` (mismo mapeo de columnas y limpiadores: texto, teléfono, fecha, dígitos 14–16, número).
 - En `src/routes/_app.cargar.tsx`, tras `parseFile` y antes de `validateRequiredFields`/`validateValue`, se llama al ETL del tipo.
