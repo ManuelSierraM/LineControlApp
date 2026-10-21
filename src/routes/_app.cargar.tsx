@@ -19,6 +19,7 @@ import { coercePhone, normalizePhone } from "@/lib/utils";
 import { buildEtlScript, type EtlSpec } from "@/lib/etl-script";
 import { runEtl, type EtlRunSummary } from "@/lib/etl-runtime";
 import { parseExcelUpload } from "@/lib/parse-excel-upload";
+import { allKeyColumnsEmpty, checkRequiredColumns, POPS_FORMATEADO_COLUMNS, POPS_ORIGEN_COLUMNS } from "@/lib/upload-columns";
 
 import { useRoles } from "@/lib/roles";
 import { PageHeader } from "@/components/PageHeader";
@@ -627,12 +628,24 @@ function CargarPage() {
     setBusy(tipo);
     try {
       const rawRows = await parseFile(file);
+      if (tipo === "pops") {
+        const headers = Array.from(new Set(rawRows.flatMap((r) => Object.keys(r))));
+        const faltan = checkRequiredColumns(headers, autoEtl[tipo] ? POPS_ORIGEN_COLUMNS : POPS_FORMATEADO_COLUMNS);
+        if (faltan.length) {
+          toast.error(`Este archivo no corresponde a Inventario POPS${autoEtl[tipo] ? "" : " formateado"}. Faltan: ${faltan.join(", ")}`, { duration: 10000 });
+          return;
+        }
+      }
       let rows: Record<string, any>[] = rawRows;
       let etl: EtlRunSummary | undefined;
       if (autoEtl[tipo]) {
         const res = runEtl(buildEtlSpec(tipo), rawRows);
         rows = res.rows;
         etl = res.summary;
+      }
+      if (tipo === "pops" && rows.length > 0 && allKeyColumnsEmpty(rows, ["IMEI", "Numero_Telefono", "Centro"])) {
+        toast.error("Este archivo no corresponde a Inventario POPS: IMEI, teléfono y centro vienen vacíos en todas las filas.", { duration: 10000 });
+        return;
       }
       const fields = GUIDES[tipo].fields;
       const schema = SCHEMAS[tipo];
