@@ -306,7 +306,7 @@ function CargarPage() {
     etl?: EtlRunSummary;
   };
   const [validation, setValidation] = useState<ValidationResult | null>(null);
-  const [autoEtl, setAutoEtl] = useState(true);
+  const [autoEtl, setAutoEtl] = useState<Record<Tipo, boolean>>({ lineas: true, dispositivos: true, pops: true });
 
   const descargarFormateado = async () => {
     if (!validation) return;
@@ -619,7 +619,7 @@ function CargarPage() {
       const rawRows = await parseFile(file);
       let rows: Record<string, any>[] = rawRows;
       let etl: EtlRunSummary | undefined;
-      if (autoEtl) {
+      if (autoEtl[tipo]) {
         const res = runEtl(buildEtlSpec(tipo), rawRows);
         rows = res.rows;
         etl = res.summary;
@@ -765,18 +765,13 @@ function CargarPage() {
     <div>
       <PageHeader title="Cargar Archivos" subtitle="Sube los maestros para ejecutar el cruce de información y generar alertas." />
       <div className="space-y-6 p-6">
-        <label className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm">
-          <Checkbox checked={autoEtl} onCheckedChange={(v) => setAutoEtl(v === true)} />
-          <span>
-            <strong>Aplicar ETL automático</strong>
-            <span className="text-muted-foreground"> — formatea el Excel original con el ETL de su cargue antes de la validación previa (ya no es necesario usar Google Colab).</span>
-          </span>
-        </label>
         {CARDS.map((c) => (
           <UploadCard
             key={c.tipo}
             card={{ ...c, titulo: GUIDES[c.tipo].titulo }}
             busy={busy === c.tipo}
+            autoEtl={autoEtl[c.tipo]}
+            onAutoEtl={(v) => setAutoEtl((s) => ({ ...s, [c.tipo]: v }))}
             onFile={(f) => handleUpload(c.tipo, f)}
             onGuide={() => setGuideTipo(c.tipo)}
           />
@@ -1129,10 +1124,12 @@ function CargarPage() {
 }
 
 function UploadCard({
-  card, busy, onFile, onGuide,
+  card, busy, autoEtl, onAutoEtl, onFile, onGuide,
 }: {
   card: { tipo: Tipo; titulo: string; descripcion: string; icon: React.ComponentType<any> };
   busy: boolean;
+  autoEtl: boolean;
+  onAutoEtl: (v: boolean) => void;
   onFile: (f: File) => void;
   onGuide: () => void;
 }) {
@@ -1152,12 +1149,21 @@ function UploadCard({
             <p className="text-sm text-muted-foreground">{card.descripcion}</p>
           </div>
         </div>
-        <button
-          onClick={onGuide}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-        >
-          <HelpCircle className="h-4 w-4" /> Ver formato guía
-        </button>
+        <div className="flex flex-wrap items-center justify-end gap-4">
+          <label
+            className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground"
+            title="Formatea el Excel original con el ETL de este cargue antes de la validación previa (ya no es necesario usar Google Colab)."
+          >
+            <Checkbox checked={autoEtl} onCheckedChange={(v) => onAutoEtl(v === true)} />
+            <span className="font-medium text-foreground">ETL automático</span>
+          </label>
+          <button
+            onClick={onGuide}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+          >
+            <HelpCircle className="h-4 w-4" /> Ver formato guía
+          </button>
+        </div>
       </div>
 
       <div className="px-5 pb-5">
