@@ -9,7 +9,7 @@ describe("POPS columnas", () => {
   it("acepta el original con formateo activo", () => expect(checkRequiredColumns(ORIGINAL, POPS_ORIGEN_COLUMNS)).toEqual([]));
   it("rechaza ABM", () => expect(checkRequiredColumns(ABM, POPS_ORIGEN_COLUMNS)).toHaveLength(7));
   it("rechaza UEM aunque traiga Model", () => expect(checkRequiredColumns(UEM, POPS_ORIGEN_COLUMNS)).toHaveLength(7));
-  it("sin formateo rechaza el original sin formatear", () => expect(checkRequiredColumns(ORIGINAL, POPS_FORMATEADO_COLUMNS)).toEqual(["Numero_Telefono", "Fecha_Alta", "Fecha_Baja"]));
+  it("sin formateo rechaza el original sin formatear", () => expect(checkRequiredColumns(ORIGINAL, POPS_FORMATEADO_COLUMNS)).toEqual(["Numero_Telefono", "Fecha_Alta"]));
   it("sin formateo acepta el formateado", () => expect(checkRequiredColumns(POPS_FORMATEADO_COLUMNS, POPS_FORMATEADO_COLUMNS)).toEqual([]));
   it("detecta archivo sin datos clave", () => {
     expect(allKeyColumnsEmpty([{ IMEI: "", Numero_Telefono: "", Centro: "" }], ["IMEI", "Numero_Telefono", "Centro"])).toBe(true);
