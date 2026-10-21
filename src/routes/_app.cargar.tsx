@@ -18,12 +18,23 @@ import { useAuth } from "@/lib/auth";
 import { coercePhone, normalizePhone } from "@/lib/utils";
 import { buildEtlScript, type EtlSpec } from "@/lib/etl-script";
 import { runEtl, type EtlRunSummary } from "@/lib/etl-runtime";
+import { parseExcelUpload } from "@/lib/parse-excel-upload";
 
 import { useRoles } from "@/lib/roles";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_app/cargar")({ component: CargarPage });
+export const Route = createFileRoute("/_app/cargar")({
+  component: CargarPage,
+  head: () => ({ meta: [
+    { title: "Cargar archivos | LineControl" },
+    { name: "description", content: "Carga y validación de archivos de líneas, Devices UEM e inventario POPS en LineControl." },
+    { property: "og:title", content: "Cargar archivos | LineControl" },
+    { property: "og:description", content: "Carga y validación de archivos de líneas, Devices UEM e inventario POPS en LineControl." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
+});
 
 type Tipo = "lineas" | "dispositivos" | "pops";
 
@@ -428,10 +439,9 @@ function CargarPage() {
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
-          const XLSX = await import("xlsx");
-          const wb = XLSX.read(e.target?.result, { type: "array" });
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          resolve(XLSX.utils.sheet_to_json(ws, { defval: "" }));
+          const data = e.target?.result;
+          if (!(data instanceof ArrayBuffer)) throw new Error("No se pudo leer el archivo Excel.");
+          resolve(await parseExcelUpload(data));
         } catch (err) { reject(err); }
       };
       reader.onerror = reject;
